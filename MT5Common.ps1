@@ -78,7 +78,7 @@ function Get-BotInputs([string]$src) {
             $type = $Matches[1]; $name = $Matches[2]; $val = $Matches[3].Trim()
             if ($type -eq "string") { [void]$strings.Add($name); $val = $val.Trim('"') }
             elseif ($enumMap.ContainsKey($val)) { $val = $enumMap[$val] }
-            elseif ($val -match '^[A-Z_]+$') { throw "Chua biet gia tri so cua '$val' (tham so $name). Them vao enumMap trong MT5Common.ps1." }
+            elseif ($val -match '^[A-Z][A-Z0-9_]*$') { throw "Chua biet gia tri so cua '$val' (tham so $name). Them vao enumMap trong MT5Common.ps1." }
             $defaults[$name] = [string]$val
         }
     }

@@ -6,23 +6,30 @@ $ErrorActionPreference = "Stop"
 $Symbol   = "BTCUSDm"
 $Deposit  = 3000
 $Leverage = "1:100"
-$FromDate = (Get-Date).AddYears(-1).ToString("yyyy.MM.dd")
+$Years    = 3       # H4/D1 can nhieu nam de du so lenh; MT5 se bat dau tu ngay co du lieu som nhat
+$FromDate = (Get-Date).AddYears(-$Years).ToString("yyyy.MM.dd")
 $ToDate   = (Get-Date).AddDays(-1).ToString("yyyy.MM.dd")
 
 # Moi lan chay: Ten + cac thong so muon doi (cac thong so khac giu mac dinh trong code)
-# Cau hinh co so cho chien luoc breakout: SL rong, khong TP, trailing ATR (chandelier) tu dau
-$Base = @{ InpMaxDrawdownPct = 0; InpUsePartial = "false"; InpUseBreakeven = "false" }
-$Brk  = @{ InpStrategy = 1; InpTF = 16388; InpHTF = 16408; InpATRMult = 2.5; InpRR = 0; InpUseTrailing = "true";
-           InpTrailStartR = 0; InpTrailATRMult = 3.0; InpUseADX = "false"; InpSkipWeekend = "false";
-           InpBlock1Start = -1; InpBlock2Start = -1; InpDonchianPeriod = 20 }
-function Cfg($a, $b) { $h = $Base.Clone(); foreach ($x in @($a, $b)) { if ($x) { foreach ($k in $x.Keys) { $h[$k] = $x[$k] } } }; $h }
+# $Base: bo loc CHUNG cho moi cau hinh de so sanh cong bang (chi khac nhau o chien luoc / khung)
+$Base = @{ InpMaxDrawdownPct = 0; InpUsePartial = "false"; InpUseBreakeven = "false"; InpUseTrailing = "true";
+           InpUseADX = "false"; InpSkipWeekend = "false"; InpBlock1Start = -1; InpBlock2Start = -1;
+           InpTF = 16388; InpHTF = 16408; InpUseHTF = "true" }
+# EMA pullback: SL 2 ATR, TP 2R, trailing tu 1.5R
+$Ema  = @{ InpStrategy = 0; InpATRMult = 2.0; InpRR = 2.0; InpTrailStartR = 1.5; InpTrailATRMult = 2.0 }
+# Donchian breakout: SL 2.5 ATR, khong TP, trailing 3 ATR tu dau (chandelier)
+$Brk  = @{ InpStrategy = 1; InpATRMult = 2.5; InpRR = 0; InpTrailStartR = 0; InpTrailATRMult = 3.0; InpDonchianPeriod = 20 }
+# Bo loc cu cua EMA (ADX + bo cuoi tuan + nghi gio tin) de doi chieu
+$OldFilters = @{ InpUseADX = "true"; InpSkipWeekend = "true"; InpBlock1Start = 12; InpBlock1End = 14; InpBlock2Start = 18; InpBlock2End = 20 }
+function Cfg { $h = $Base.Clone(); foreach ($x in $args) { if ($x) { foreach ($k in $x.Keys) { $h[$k] = $x[$k] } } }; $h }
 $Runs = @(
-    @{ Name = "A-EMA-H4-cu";        Inputs = (Cfg @{ InpTF = 16388; InpHTF = 16408; InpTrailStartR = 1.5; InpATRMult = 2.0 }) },
-    @{ Name = "B-Donchian20-H4";    Inputs = (Cfg $Brk) },
-    @{ Name = "C-Donchian20-H4-ADX"; Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
-    @{ Name = "D-Donchian55-H4";    Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
-    @{ Name = "E-Donchian20-D1";    Inputs = (Cfg $Brk @{ InpTF = 16408; InpHTF = 32769 }) },
-    @{ Name = "F-Donchian20-H1";    Inputs = (Cfg $Brk @{ InpTF = 16385; InpHTF = 16388 }) }
+    @{ Name = "A-EMA-H4";              Inputs = (Cfg $Ema) },
+    @{ Name = "A0-EMA-H4-locCu";       Inputs = (Cfg $Ema $OldFilters) },
+    @{ Name = "B-Donchian20-H4";       Inputs = (Cfg $Brk) },
+    @{ Name = "C-Donchian20-H4-ADX";   Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
+    @{ Name = "D-Donchian55-H4";       Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
+    @{ Name = "E-Donchian20-D1";       Inputs = (Cfg $Brk @{ InpTF = 16408; InpUseHTF = "false" }) },  # D1: khong dung EMA200 W1 (can ~4 nam du lieu)
+    @{ Name = "F-Donchian20-H1";       Inputs = (Cfg $Brk @{ InpTF = 16385; InpHTF = 16388 }) }
 )
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 

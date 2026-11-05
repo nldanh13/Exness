@@ -6,7 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#property version   "2.30"
+#define  BOT_VERSION "2.4"
+#property version   "2.40"
 #property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
 
 #include <Trade\Trade.mqh>
@@ -45,7 +46,7 @@ input double          InpPartialR        = 1.0;       // Chot khi lai dat (R)
 input double          InpPartialPct      = 50.0;      // % khoi luong chot
 input bool            InpUseBreakeven    = true;      // Doi SL ve hoa von
 input double          InpBreakevenR      = 1.0;       // Khi lai dat (R)
-input int             InpBEBufferPoints  = 100;       // Cong them vao muc hoa von (point), ngoai phi + swap
+input double          InpBEBufferR       = 0.05;      // Cong them vao muc hoa von (tinh theo R), ngoai phi + swap
 input bool            InpUseTrailing     = true;      // Trailing stop theo ATR
 input double          InpTrailStartR     = 1.0;       // Bat dau trailing khi lai dat (R)
 input double          InpTrailATRMult    = 2.0;       // Khoang trailing = ATR x he so
@@ -273,6 +274,10 @@ double FloatingPL()
 
 double BotEquity() { return GVGet("base") + g_closedPL + FloatingPL(); }
 
+// Von dung de xet gioi han: chi tru phan lo dang chay (duoi gia vao), KHONG tinh lai dang chay.
+// Nho vay, lenh dang lai ma tra bot lai lai khong bi coi la lo ngay / sut giam.
+double BotEquityForLimits() { return GVGet("base") + g_closedPL + MathMin(0.0, FloatingPL()); }
+
 // Dat moc von cua bot (lan dau chay, hoac khi InpResetHalt = true)
 void ResetBaseline()
 {
@@ -282,7 +287,7 @@ void ResetBaseline()
    GlobalVariableDel(GVName("dayId"));
    g_plDirty = true;
    RefreshClosedPL();
-   GlobalVariableSet(GVName("peak"), BotEquity());
+   GlobalVariableSet(GVName("peak"), BotEquityForLimits());
 }
 
 // Von cua bot luc dau ngay duoc luu vao Global Variable, nen khoi dong lai giua ngay khong reset
@@ -301,14 +306,15 @@ void UpdateDay()
          dayStartEquity = GVGet("dayEq");
       else
       {
-         dayStartEquity = BotEquity();
+         dayStartEquity = BotEquityForLimits();
          GlobalVariableSet(GVName("dayId"), dayId);
          GlobalVariableSet(GVName("dayEq"), dayStartEquity);
       }
    }
 }
 
-double DayPL() { return BotEquity() - dayStartEquity; }
+// Lai/lo trong ngay de xet gioi han = lai/lo da dong hom nay + phan lo dang chay (neu co)
+double DayPL() { return g_closedToday + MathMin(0.0, FloatingPL()); }
 
 bool DailyLossHit()
 {
@@ -319,7 +325,9 @@ bool DailyLossHit()
 // Kiem tra lo ngay moi tick: chan lenh moi va (tuy chon) dong lenh dang mo
 void CheckDailyLoss()
 {
-   if(!DailyLossHit()) return;
+   static int hits = 0;
+   if(!DailyLossHit()) { hits = 0; return; }
+   if(++hits < 2) return;
    if(!dailyNotified)
    {
       Notify(StringFormat("[%s] Cham gioi han lo ngay %.1f%% (%.2f). Ngung vao lenh den mai%s.",
@@ -331,13 +339,34 @@ void CheckDailyLoss()
 
 bool IsHalted() { return GVGet("halt") > 0; }
 
+// Chong "lo gia": ngay sau khi so lenh mo thay doi, lich su giao dich co the chua cap nhat,
+// nen bo qua kiem tra trong 2 tick va chi kich hoat khi dieu kien dung 2 lan lien tiep.
+int  g_lastPosCount = -1;
+int  g_skipTicks    = 0;
+int  CountOwnPositions()
+{
+   int n = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+      if(PositionGetTicket(i) != 0 && IsOwnSelected()) n++;
+   return n;
+}
+bool LimitsReady()
+{
+   int n = CountOwnPositions();
+   if(n != g_lastPosCount) { g_lastPosCount = n; g_plDirty = true; g_skipTicks = 2; }
+   if(g_skipTicks > 0) { g_skipTicks--; return false; }
+   return true;
+}
+
 void CheckDrawdown()
 {
-   double eq   = BotEquity();
+   double eq   = BotEquityForLimits();
    double peak = GVGet("peak");
    if(eq > peak) { GlobalVariableSet(GVName("peak"), eq); peak = eq; }
+   static int hits = 0;
    if(InpMaxDrawdownPct <= 0 || IsHalted() || peak <= 0) return;
-   if(eq <= peak * (1.0 - InpMaxDrawdownPct / 100.0))
+   if(eq > peak * (1.0 - InpMaxDrawdownPct / 100.0)) { hits = 0; return; }
+   if(++hits >= 2)
    {
       GlobalVariableSet(GVName("halt"), 1);
       Notify(StringFormat("[%s] BOT DUNG HAN: von cua bot sut %.1f%% tu dinh %.2f. Dat InpResetHalt=true de chay lai.",
@@ -441,8 +470,32 @@ void ManagePositions()
       string pKey = GVName("P_" + (string)ticket);
       if(!GlobalVariableCheck(rKey))
       {
-         if(sl <= 0) continue;
-         GlobalVariableSet(rKey, MathAbs(open - sl));
+         // 1) Nhan lai trang thai tu ten bien cua ban cu (truoc v2.3: chi co magic)
+         string oldR = "BTCEA_" + (string)InpMagic + "_R_" + (string)ticket;
+         string oldP = "BTCEA_" + (string)InpMagic + "_P_" + (string)ticket;
+         if(GlobalVariableCheck(oldR))
+         {
+            GlobalVariableSet(rKey, GlobalVariableGet(oldR));
+            if(GlobalVariableCheck(oldP)) GlobalVariableSet(pKey, GlobalVariableGet(oldP));
+            GlobalVariableDel(oldR); GlobalVariableDel(oldP);
+         }
+         else
+         {
+            if(sl <= 0) continue;
+            bool slOnProfitSide = isBuy ? (sl >= open) : (sl <= open);
+            double estR = haveAtr ? atr * InpATRMult : 0;
+            if(slOnProfitSide || (estR > 0 && MathAbs(open - sl) < 0.3 * estR))
+            {
+               // 2) Mat trang thai va SL da doi ve hoa von/lai: khong suy ra duoc 1R that.
+               //    Uoc luong 1R bang ATR x he so, va coi nhu da chot mot phan de khong chot nham.
+               if(estR <= 0) continue;
+               GlobalVariableSet(rKey, estR);
+               GlobalVariableSet(pKey, 1);
+               PrintFormat("Lenh #%s: khong co trang thai cu, uoc luong 1R = %.2f", (string)ticket, estR);
+            }
+            else
+               GlobalVariableSet(rKey, MathAbs(open - sl));
+         }
       }
       double risk = GlobalVariableGet(rKey);
       if(risk <= 0) continue;
@@ -465,7 +518,7 @@ void ManagePositions()
       double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
       double costMoney = GlobalVariableGet(cKey) * vol * 2.0 + MathMax(0.0, -PositionGetDouble(POSITION_SWAP));
       double costPrice = (tickSize > 0 && tickValue > 0) ? costMoney / (tickValue * vol) * tickSize : 0;
-      double beOffset  = costPrice + InpBEBufferPoints * _Point;
+      double beOffset  = costPrice + InpBEBufferR * risk;
       double beLevel   = isBuy ? open + beOffset : open - beOffset;
 
       double price = isBuy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
@@ -540,7 +593,7 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
 
    Comment(StringFormat(
-      "BTC bot v2.2 (%s)  |  %s\n"
+      "BTC bot v" + BOT_VERSION + " (%s)  |  %s\n"
       "Trang thai: %s\n"
       "Von cua bot: %.2f %s\n"
       "Lai/lo hom nay: %.2f %s (%.2f%%)\n"
@@ -580,7 +633,7 @@ int OnInit()
    g_plDirty = true;
    RefreshClosedPL();
    UpdateDay();
-   Notify(StringFormat("[%s] Bot v2 khoi dong. Equity %.2f %s", _Symbol,
+   Notify(StringFormat("[%s] Bot v" + BOT_VERSION + " khoi dong. Equity %.2f %s", _Symbol,
                        AccountInfoDouble(ACCOUNT_EQUITY), AccountInfoString(ACCOUNT_CURRENCY)));
    return INIT_SUCCEEDED;
 }
@@ -598,12 +651,13 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   bool ready = LimitsReady();
    RefreshClosedPL();
    UpdateDay();
-   CheckDrawdown();
+   if(ready) CheckDrawdown();
    // Da dung han ma van con lenh (vd. dong that bai lan truoc) thi thu dong lai moi tick
    if(IsHalted() && InpCloseOnHalt && HasOwnPosition()) CloseAll();
-   CheckDailyLoss();
+   if(ready) CheckDailyLoss();
    ManagePositions();
    UpdatePanel();
 
@@ -723,9 +777,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    }
    else if(entry == DEAL_ENTRY_OUT || entry == DEAL_ENTRY_OUT_BY)
    {
-      double pnl = HistoryDealGetDouble(trans.deal, DEAL_PROFIT) +
-                   HistoryDealGetDouble(trans.deal, DEAL_SWAP) +
-                   HistoryDealGetDouble(trans.deal, DEAL_COMMISSION);
+      double pnl = DealNet(trans.deal);
       Notify(StringFormat("[%s] THOAT %.2f lot @ %s | Lai/lo: %.2f %s | Equity: %.2f",
                           _Symbol, vol, DoubleToString(price, _Digits), pnl, cur,
                           AccountInfoDouble(ACCOUNT_EQUITY)));
@@ -739,8 +791,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
             {
                ulong d = HistoryDealGetTicket(i);
                if(d == 0) continue;
-               total += HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) +
-                        HistoryDealGetDouble(d, DEAL_COMMISSION);
+               total += DealNet(d);
                if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) inVol += HistoryDealGetDouble(d, DEAL_VOLUME);
             }
          string rKey      = GVName("R_" + (string)posId);

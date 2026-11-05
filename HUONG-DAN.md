@@ -1,6 +1,6 @@
-# Hướng dẫn bot BTC v2.3 (MT5)
+# Hướng dẫn bot BTC v2.4 (MT5)
 
-> **v2.3:** giới hạn lỗ ngày và sụt giảm chỉ tính **lãi/lỗ của chính bot** (theo magic + symbol), nên không bị lệch khi nạp/rút tiền hoặc khi chạy EA khác. Chạm lỗ ngày thì có thể đóng luôn lệnh đang mở (`InpCloseOnDailyLoss`). Mức hòa vốn đã cộng phí + swap (`InpBEBufferPoints`). Trạng thái được lưu theo tài khoản + symbol + magic và giữ lại khi khởi động lại.
+> **v2.4:** giới hạn lỗ ngày và sụt giảm chỉ tính **lãi/lỗ đã đóng + phần lỗ đang chạy của chính bot** (lệnh đang lãi trả bớt lãi không bị tính là lỗ) (theo magic + symbol), nên không bị lệch khi nạp/rút tiền hoặc khi chạy EA khác. Chạm lỗ ngày thì có thể đóng luôn lệnh đang mở (`InpCloseOnDailyLoss`). Mức hòa vốn đã cộng phí + swap + buffer theo R (`InpBEBufferR`). Trạng thái được lưu theo tài khoản + symbol + magic và giữ lại khi khởi động lại.
 
 > v2.2 có 2 chiến lược, chọn bằng `InpStrategy`:
 > - **EMA pullback** (mặc định): vào lệnh khi giá hồi về EMA20 theo xu hướng.
@@ -14,7 +14,7 @@ Mở thư mục bot bằng VS Code. Các lệnh nằm ở **Terminal → Run Tas
 | **Bot: tu dong cap nhat khi luu** | Tự bật khi mở thư mục. Sửa `.mq5` rồi Ctrl+S là bot trên MT5 được cập nhật. |
 | **Bot: cap nhat ngay** (Ctrl+Shift+B) | Chép và compile ngay. |
 | **Bot: chay backtest** | Mở MT5 và chạy 1 lần backtest với cài đặt mặc định. |
-| **Bot: so sanh cac cau hinh** | Tự chạy lần lượt 6 cấu hình (khoảng 25–30 phút), rồi tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude** để phân tích. |
+| **Bot: so sanh cac cau hinh** | Tự chạy lần lượt 7 cấu hình trên 3 năm dữ liệu (có thể mất 30–60 phút), rồi tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude** để phân tích. |
 
 Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayThuNghiem.ps1`.
 
@@ -85,3 +85,6 @@ Các khung giờ nghỉ tính theo **giờ server** (cột thời gian trong Mar
 - `InpAllowBuy` / `InpAllowSell`: bật/tắt từng chiều.
 - `InpMaxTradesPerDay`: số lệnh tối đa mỗi ngày (0 = tắt).
 - `InpCooldownBars`: nghỉ N nến sau một lệnh thua (0 = tắt).
+
+## Nâng cấp bot khi đang có lệnh mở
+Nên cập nhật bot khi **không có lệnh mở**. Nếu buộc phải cập nhật lúc có lệnh, bot sẽ cố nhận lại trạng thái cũ; nếu không được và SL đã ở mức hòa vốn, bot ước lượng 1R = ATR × `InpATRMult` và bỏ qua bước chốt một phần cho lệnh đó.
