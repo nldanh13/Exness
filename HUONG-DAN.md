@@ -1,6 +1,10 @@
-# Hướng dẫn bot BTC v2.9 (MT5)
+# Hướng dẫn bot BTC v3.0 (MT5)
 
-> **v2.9:** cài đặt mặc định chuyển sang cấu hình tốt nhất của lần so sánh 3 năm (11/2026): **Donchian 20, khung H4, lọc ADX + EMA200 D1**, SL 2,5 ATR, không TP, trailing 3 ATR, không chốt một phần / hòa vốn, không nghỉ cuối tuần hay giờ tin. Kết quả backtest nhanh: +962 USD trên vốn 3.000 (+32%), PF 2,09, sụt giảm tối đa 4,6%, 86 lệnh. Đây là kết quả quá khứ, không bảo đảm tương lai.
+> **v3.0:** bảng kết quả có thêm cột `BoQuaLot` (số tín hiệu bị bỏ vì lot tính ra nhỏ hơn 0,01) và `LaiTheoNam` (lãi/lỗ từng năm). Lượt so sánh mới kiểm tra độ bền của Donchian H4: vốn 30.000, cặp ETHUSDm, và giai đoạn 3 năm trước đó (dữ liệu chưa dùng để chọn). Khi mở VS Code, bot chỉ compile code đang có trên máy, **không tự kéo code từ GitHub** nữa.
+>
+> **Quan trọng khi đổi cài đặt mặc định:** EA đang gắn trên chart vẫn giữ tham số cũ. Muốn dùng mặc định mới, gỡ EA khỏi chart rồi gắn lại, hoặc mở tab *Inputs* và bấm *Reset*.
+
+> **v2.9:** cài đặt mặc định chuyển sang cấu hình tốt nhất của lần so sánh 3 năm (11/2026): **Donchian 20, khung H4, lọc ADX + EMA200 D1**, SL 2,5 ATR, không TP, trailing 3 ATR, không chốt một phần / hòa vốn, không nghỉ cuối tuần hay giờ tin. Kết quả backtest nhanh: +962 USD trên vốn 3.000 (+32%), PF 2,09, sụt giảm tối đa 4,6%, 86 lệnh. Con số này được chọn trên chính dữ liệu đã dùng để so sánh và mẫu dưới 100 lệnh, nên chưa đáng tin cho tới khi qua lượt kiểm tra độ bền của v3.0.
 
 > **v2.8:** bot đối soát định kỳ để biết lệnh đã đóng hết (không phụ thuộc thứ tự sự kiện), nên cooldown và dọn trạng thái không bị sót; chốt một phần trên tài khoản Netting dùng lệnh ngược chiều; script backtest đóng MT5 rồi mới compile. **Lưu ý:** đóng MT5 để backtest sẽ dừng mọi bot đang chạy trên MT5 đó. Nếu chạy bot trên tài khoản thật, hãy backtest bằng một bản MT5 cài riêng. Lưu file `.mq5` khi đang bật "tự cập nhật" cũng làm bot trên chart nạp lại (trạng thái vẫn giữ nhờ Global Variables).
 
@@ -17,12 +21,14 @@
 > - **Donchian breakout**: vào lệnh khi giá phá đỉnh/đáy của N nến gần nhất (`InpDonchianPeriod`), SL rộng, không đặt TP, thoát bằng trailing ATR. Đặt `InpRR = 0` để bỏ TP.
 
 ## Dùng hằng ngày với VS Code (khuyên dùng)
-Mở thư mục bot bằng VS Code. Không cần bấm Sync: mỗi nút dưới đây **tự lấy code mới nhất từ GitHub** rồi mới chạy, và khi mở VS Code bot cũng tự được cập nhật vào MT5. Các nút nằm ở **Terminal → Run Task…**:
+Mở thư mục bot bằng VS Code. Không cần bấm Sync: mỗi nút dưới đây **tự lấy code mới nhất từ GitHub** rồi mới chạy. Khi mở VS Code, code đang có trên máy được compile vào MT5 (không tự kéo code mới). Các nút nằm ở **Terminal → Run Task…**:
 
 | Nút | Khi nào dùng |
 |---|---|
-| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 7 cấu hình trên 3 năm, xong tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude.** |
+| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 9 cấu hình trên 3 năm, xong tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude.** |
 | **2. Cap nhat bot vao MT5** (Ctrl+Shift+B) | Khi bot đang chạy trên chart và muốn nạp bản mới ngay. |
+
+**Khi chuyển sang tiền thật:** mọi nút ở trên đều kéo code mới từ GitHub và compile thẳng vào MT5, nên bot trên chart sẽ nạp code bạn chưa kịp xem. Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest), và chỉ cập nhật bản đó bằng tay khi đã đọc thay đổi. Muốn tắt hẳn việc tự compile khi mở VS Code, xóa khối `"runOptions"` trong `.vscode/tasks.json`.
 | **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo, để kiểm tra lại cấu hình tốt nhất bằng tick thật. |
 
 Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayThuNghiem.ps1`.
@@ -34,21 +40,19 @@ Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayTh
 
 File bot: `BTC_EMA_Pullback_v2.mq5`.
 
-## Bản 2 làm gì
+## Bot làm gì (cài đặt mặc định)
 
-**Vào lệnh (khung H1):** giá và EMA20 cùng nằm một phía so với EMA200. Nến vừa đóng đã chạm EMA20 rồi đóng cửa trở lại đúng phía xu hướng. Lệnh phải qua thêm các bộ lọc:
-- **Khung H4:** giá đóng cửa H4 cũng phải nằm đúng phía so với EMA200 H4.
+**Vào lệnh (khung H4, chiến lược Donchian breakout):** nến H4 vừa đóng cửa vượt lên trên đỉnh cao nhất của 20 nến trước đó thì Buy, xuống dưới đáy thấp nhất thì Sell. Lệnh phải qua thêm các bộ lọc:
+- **Xu hướng:** giá ở đúng phía EMA200 H4, và giá đóng cửa D1 ở đúng phía EMA200 D1.
 - **ADX ≥ 20:** bỏ qua khi thị trường đi ngang.
-- **Mẫu nến (mặc định tắt):** chỉ vào lệnh khi có pin bar hoặc engulfing.
 
-**SL / TP / lot:** SL = 1,5 × ATR, TP = 2R, lot tự tính để mỗi lệnh chỉ rủi ro 1% vốn.
+**SL / TP / lot:** SL = 2,5 × ATR, **không đặt TP**. Lot tự tính để mỗi lệnh chỉ rủi ro 1% vốn. Nếu lot tính ra nhỏ hơn 0,01 thì bot **bỏ qua tín hiệu** chứ không vào lệnh vượt rủi ro, nên với vốn nhỏ bot có thể vào ít lệnh hơn (xem cột `BoQuaLot`).
 
-**Quản lý lệnh đang mở:**
-1. Lãi đạt 1R thì **chốt 50%** khối lượng.
-2. Dời SL về **hòa vốn**.
-3. **Trailing stop**: SL tự đi theo giá, cách 2 × ATR, chỉ dời theo hướng có lợi.
+**Quản lý lệnh đang mở:** trailing stop cách 3 × ATR, bật ngay từ đầu, chỉ dời theo hướng có lợi. Lệnh thoát khi chạm SL hoặc trailing. Chốt một phần và hòa vốn mặc định tắt (bật lại bằng `InpUsePartial`, `InpUseBreakeven`).
 
-**Bộ lọc thời gian:** không vào lệnh mới vào Thứ 7, Chủ nhật và hai khung giờ hay có tin Mỹ (12–14h và 18–20h **giờ server**). Lệnh đang mở vẫn được quản lý bình thường.
+**Bộ lọc thời gian:** mặc định tắt (BTC giao dịch 24/7). Có thể bật nghỉ cuối tuần (`InpSkipWeekend`) và hai khung giờ tin (`InpBlock1Start`, `InpBlock2Start`).
+
+Chiến lược cũ (EMA pullback H1) vẫn còn: đặt `InpStrategy = STRAT_EMA_PULLBACK`.
 
 **Bảo vệ tài khoản:**
 - Lỗ 3% trong ngày thì ngừng vào lệnh tới hôm sau.

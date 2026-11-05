@@ -28,19 +28,27 @@ $Brk  = @{ InpStrategy = 1; InpATRMult = 2.5; InpRR = 0; InpTrailStartR = 0; Inp
 # Bo loc cu cua EMA (ADX + bo cuoi tuan + nghi gio tin) de doi chieu
 $OldFilters = @{ InpUseADX = "true"; InpSkipWeekend = "true"; InpBlock1Start = 12; InpBlock1End = 14; InpBlock2Start = 18; InpBlock2End = 20 }
 function Cfg { $h = $Base.Clone(); foreach ($x in $args) { if ($x) { foreach ($k in $x.Keys) { $h[$k] = $x[$k] } } }; $h }
+# Lan 3 (11/2026): kiem tra do ben cua Donchian H4. EMA, D1, H1 da loai o lan 2.
+#  - Von 30000: xem lot toi thieu co dang bo bot lenh (so lenh, BoQuaLot, % lai) khong
+#  - ETHUSDm: cung tham so tren cap khac (du lieu chua dung de chon)
+#  - 2020-2023: giai doan truoc 3 nam da dung de chon (ngoai mau)
+# Moi lan co the ghi de: Deposit, Symbol, From, To.
+$OOSFrom = (Get-Date).AddYears(-6).ToString("yyyy.MM.dd")
 $Runs = @(
-    @{ Name = "A-EMA-H4";              Inputs = (Cfg $Ema) },
-    @{ Name = "A0-EMA-H4-locCu";       Inputs = (Cfg $Ema $OldFilters) },
-    @{ Name = "B-Donchian20-H4";       Inputs = (Cfg $Brk) },
-    @{ Name = "C-Donchian20-H4-ADX";   Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
-    @{ Name = "D-Donchian55-H4";       Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
-    @{ Name = "E-Donchian20-D1";       Inputs = (Cfg $Brk @{ InpTF = 16408; InpUseHTF = "false" }) },  # D1: khong dung EMA200 W1. Von 3000 / rui ro 1% qua nho cho SL D1 nen gan nhu khong vao lenh
-    @{ Name = "F-Donchian20-H1";       Inputs = (Cfg $Brk @{ InpTF = 16385; InpHTF = 16388 }) }
+    @{ Name = "B-Donchian20-H4";        Inputs = (Cfg $Brk) },
+    @{ Name = "C-Donchian20-H4-ADX";    Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
+    @{ Name = "D-Donchian55-H4";        Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
+    @{ Name = "B-von30000";             Inputs = (Cfg $Brk);                          Deposit = 30000 },
+    @{ Name = "C-von30000";             Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Deposit = 30000 },
+    @{ Name = "B-ETH";                  Inputs = (Cfg $Brk);                          Symbol = "ETHUSDm" },
+    @{ Name = "C-ETH";                  Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Symbol = "ETHUSDm" },
+    @{ Name = "B-truoc-3nam";           Inputs = (Cfg $Brk);                          From = $OOSFrom; To = $FromDate },
+    @{ Name = "C-truoc-3nam";           Inputs = (Cfg $Brk @{ InpUseADX = "true" });  From = $OOSFrom; To = $FromDate }
 )
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
-# Che do chinh xac chi chay lai 2 cau hinh tot nhat cua lan loc nhanh (11/2026), moi cai ~20 phut.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "D-Donchian55-H4") }) }
+# Che do chinh xac chi chay lai B va C (11/2026), moi cai ~20 phut.
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX") }) }
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -79,7 +87,11 @@ foreach ($run in $Runs) {
     Write-Host "[$i/$($Runs.Count)] $($run.Name) ..." -NoNewline
     $ini = Join-Path $dataDir "$BotName-run$i.ini"
     $ov = $run.Inputs.Clone(); $ov["InpTestLabel"] = $run.Name
-    New-TesterIni $mt5 $Inputs $ov $ini @{ Symbol = $Symbol; From = $FromDate; To = $ToDate; Deposit = $Deposit;
+    $sym = if ($run.Symbol)  { $run.Symbol }  else { $Symbol }
+    $dep = if ($run.Deposit) { $run.Deposit } else { $Deposit }
+    $frm = if ($run.From)    { $run.From }    else { $FromDate }
+    $tod = if ($run.To)      { $run.To }      else { $ToDate }
+    New-TesterIni $mt5 $Inputs $ov $ini @{ Symbol = $sym; From = $frm; To = $tod; Deposit = $dep;
                                            Leverage = $Leverage; Report = "$BotName-$($run.Name)"; Shutdown = $true; Model = $Model }
 
     $sw = [Diagnostics.Stopwatch]::StartNew()

@@ -3,13 +3,15 @@
 #   -Viec sosanh           : so sanh 7 cau hinh, che do nhanh
 #   -Viec sosanh-chinhxac  : so sanh 7 cau hinh, tick that (cham)
 #   -Viec capnhat          : compile ban moi vao MT5
-#   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code)
+#   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code, khong git pull)
 #   -Viec backtest         : backtest 1 lan voi cai dat mac dinh
 param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest')][string]$Viec = 'sosanh')
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # 1) Lay code moi (khong bat buoc: loi mang hay chua cai git thi van chay ban dang co)
-if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
+# "theodoi" tu chay khi mo VS Code nen KHONG tu lay code: chi compile code dang co tren may.
+if ($Viec -eq 'theodoi') { }
+elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
     Write-Host "Dang lay code moi tu GitHub..." -ForegroundColor Cyan
     $out = & git -C $ProjectDir pull --ff-only 2>&1
     if ($LASTEXITCODE -eq 0) { Write-Host "  $($out | Select-Object -Last 1)" -ForegroundColor Green }

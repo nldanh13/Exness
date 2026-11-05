@@ -6,9 +6,9 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "2.9"
-#property version   "2.90"
-#property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
+#define  BOT_VERSION "3.0"
+#property version   "3.00"
+#property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
 
@@ -477,6 +477,7 @@ bool BearCandle()
 }
 
 //--- Khoi luong ----------------------------------------------------
+int g_minLotSkips = 0;   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
 double CalcLots(const double slDistance)
 {
    double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
@@ -495,6 +496,7 @@ double CalcLots(const double slDistance)
    if(lots < minL)
    {
       g_status = "Von qua nho cho SL nay, bo qua lenh";
+      g_minLotSkips++;
       PrintFormat("Can %.4f lot < toi thieu %.2f. Bo qua de khong vuot rui ro.", riskMoney / lossPerLot, minL);
       return 0;
    }
@@ -533,6 +535,8 @@ void FinalizeClosed(const ulong posId)
          }
       }
    string oKey = GVName("O_" + (string)posId);
+   // Vi the tu ban cu chi co R_: gan marker de dong ho "bo sau 1 ngay" bat dau tu bay gio
+   if(!GlobalVariableCheck(oKey)) MarkTracked(posId);
    if(inVol <= 0 || outVol < inVol - 1e-8)
    {
       // Lich su chua ve kip: thu lai sau. Qua 1 ngay van khong co thi bo marker cho khoi ton.
@@ -992,13 +996,32 @@ double OnTester()
    double gLoss    = TesterStatistics(STAT_GROSS_LOSS);
    double pf       = TesterStatistics(STAT_PROFIT_FACTOR);
 
+   // Lai/lo theo tung nam (theo thoi diem dong lenh) de xem co lai deu hay chi nho 1 dot
+   double yearPL[]; int years[];
+   if(HistorySelect(0, TimeCurrent()))
+      for(int i = 0; i < HistoryDealsTotal(); i++)
+      {
+         ulong d = HistoryDealGetTicket(i);
+         if(d == 0) continue;
+         long e = HistoryDealGetInteger(d, DEAL_ENTRY);
+         if(e != DEAL_ENTRY_OUT && e != DEAL_ENTRY_OUT_BY && e != DEAL_ENTRY_INOUT) continue;
+         MqlDateTime t; TimeToStruct((datetime)HistoryDealGetInteger(d, DEAL_TIME), t);
+         int k = -1;
+         for(int j = 0; j < ArraySize(years); j++) if(years[j] == t.year) { k = j; break; }
+         if(k < 0) { k = ArraySize(years); ArrayResize(years, k + 1); ArrayResize(yearPL, k + 1); years[k] = t.year; yearPL[k] = 0; }
+         yearPL[k] += DealNet(d);
+      }
+   string byYear = "";
+   for(int j = 0; j < ArraySize(years); j++)
+      byYear += (j > 0 ? " " : "") + StringFormat("%d=%+.0f", years[j], yearPL[j]);
+
    string file = "BTC_EMA_results.csv";
    int h = FileOpen(file, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
    if(h != INVALID_HANDLE)
    {
       if(FileSize(h) == 0)
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
-                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell");
+                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LaiTheoNam");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1012,7 +1035,9 @@ double OnTester()
                 DoubleToString(TesterStatistics(STAT_RECOVERY_FACTOR), 2),
                 DoubleToString(TesterStatistics(STAT_SHARPE_RATIO), 2),
                 (int)TesterStatistics(STAT_LONG_TRADES),
-                (int)TesterStatistics(STAT_SHORT_TRADES));
+                (int)TesterStatistics(STAT_SHORT_TRADES),
+                g_minLotSkips,
+                byYear);
       FileClose(h);
    }
    else
