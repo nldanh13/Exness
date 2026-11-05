@@ -1,0 +1,9 @@
+# Ket qua backtest va file tam
+ket-qua-backtest-*.zip
+ket-qua-so-sanh.csv
+*.ex5
+*.log
+
+# Thong tin bi mat (token Telegram, mat khau...)
+*.secret
+.env
