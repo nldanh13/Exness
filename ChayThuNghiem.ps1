@@ -67,6 +67,25 @@ if (-not (Select-String -Path $src -Pattern "OnTester" -Quiet)) {
 }
 $startTime = Get-Date
 
+# --- Doc gia tri mac dinh cua tat ca tham so tu file .mq5 ---
+$EnumMap = @{ PERIOD_M1 = 1; PERIOD_M5 = 5; PERIOD_M15 = 15; PERIOD_M30 = 30; PERIOD_H1 = 16385; PERIOD_H4 = 16388; PERIOD_D1 = 16408; PERIOD_W1 = 32769 }
+$Defaults = [ordered]@{}
+$StringInputs = New-Object System.Collections.Generic.HashSet[string]
+foreach ($line in Get-Content $src) {
+    if ($line -match '^\s*input\s+(?!group\b)(\w+)\s+(\w+)\s*=\s*(.+?);') {
+        $type = $Matches[1]; $name = $Matches[2]; $val = $Matches[3].Trim()
+        if ($type -eq "string") { [void]$StringInputs.Add($name); $val = $val.Trim('"') }
+        elseif ($EnumMap.ContainsKey($val)) { $val = $EnumMap[$val] }
+        $Defaults[$name] = [string]$val
+    }
+}
+foreach ($run in $Runs) {
+    foreach ($k in $run.Inputs.Keys) {
+        if (-not $Defaults.Contains($k)) { Write-Host "LOI: Tham so '$k' trong lan '$($run.Name)' khong co trong bot." -ForegroundColor Red; exit 1 }
+    }
+}
+Write-Host "Doc duoc $($Defaults.Count) tham so mac dinh tu bot." -ForegroundColor Green
+
 $resultFile = Join-Path $base "Common\Files\BTC_EMA_results.csv"
 if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
 
@@ -85,10 +104,14 @@ $i = 0
 foreach ($run in $Runs) {
     $i++
     Write-Host "[$i/$($Runs.Count)] $($run.Name) ..." -NoNewline
-    $inputs = @("InpTestLabel=$($run.Name)")
-    foreach ($k in $run.Inputs.Keys) {
-        $v = $run.Inputs[$k]
-        $inputs += "$k=$v||$v||1||$v||N"
+    # Ghi DAY DU moi tham so (MT5 nho gia tri cua lan chay truoc neu bo sot)
+    $vals = [ordered]@{}
+    foreach ($k in $Defaults.Keys) { $vals[$k] = $Defaults[$k] }
+    foreach ($k in $run.Inputs.Keys) { $vals[$k] = [string]$run.Inputs[$k] }
+    $vals["InpTestLabel"] = $run.Name
+    $inputs = foreach ($k in $vals.Keys) {
+        $v = $vals[$k]
+        if ($StringInputs.Contains($k)) { "$k=$v" } else { "$k=$v||$v||1||$v||N" }
     }
     $ini = Join-Path $dataDir "$BotName-run$i.ini"
     @"
