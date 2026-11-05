@@ -21,9 +21,7 @@ Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayTh
 
 > Bot chỉ để thử nghiệm. Không có gì đảm bảo có lãi. Luôn backtest rồi chạy demo trước khi dùng tiền thật.
 
-Có hai file:
-- `BTC_EMA_Pullback.mq5`: bản 1, đơn giản, dùng để so sánh.
-- `BTC_EMA_Pullback_v2.mq5`: bản 2, đầy đủ tính năng (khuyên dùng).
+File bot: `BTC_EMA_Pullback_v2.mq5`.
 
 ## Bản 2 làm gì
 

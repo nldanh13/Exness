@@ -185,15 +185,26 @@ void CloseAll()
 }
 
 //--- Bao ve tai khoan ----------------------------------------------
+// Equity dau ngay duoc luu vao Global Variable de khoi dong lai bot giua ngay
+// khong lam gioi han lo trong ngay tinh lai tu dau
 void UpdateDay()
 {
    MqlDateTime dt;
    TimeToStruct(TimeCurrent(), dt);
-   if(dt.day_of_year != currentDay)
+   int dayId = dt.year * 1000 + dt.day_of_year;
+   if(dayId != currentDay)
    {
-      currentDay     = dt.day_of_year;
-      dayStartEquity = AccountInfoDouble(ACCOUNT_EQUITY);
-      dailyNotified  = false;
+      currentDay    = dayId;
+      dailyNotified = false;
+      string kDay = GVName("dayId"), kEq = GVName("dayEq");
+      if(GlobalVariableCheck(kDay) && (int)GlobalVariableGet(kDay) == dayId && GlobalVariableCheck(kEq))
+         dayStartEquity = GlobalVariableGet(kEq);
+      else
+      {
+         dayStartEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+         GlobalVariableSet(kDay, dayId);
+         GlobalVariableSet(kEq, dayStartEquity);
+      }
    }
 }
 
@@ -589,10 +600,28 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
       Notify(StringFormat("[%s] THOAT %.2f lot @ %s | Lai/lo: %.2f %s | Equity: %.2f",
                           _Symbol, vol, DoubleToString(price, _Digits), pnl, cur,
                           AccountInfoDouble(ACCOUNT_EQUITY)));
-      if(pnl < 0) lastLossTime = TimeCurrent();
       ulong posId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
       if(!PositionSelectByTicket(posId))            // vi the da dong het
       {
+         // Tong lai/lo ca vi the (gom cac lan chot mot phan, swap, phi)
+         double total = 0, inVol = 0;
+         if(HistorySelectByPosition(posId))
+            for(int i = 0; i < HistoryDealsTotal(); i++)
+            {
+               ulong d = HistoryDealGetTicket(i);
+               if(d == 0) continue;
+               total += HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) +
+                        HistoryDealGetDouble(d, DEAL_COMMISSION);
+               if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) inVol += HistoryDealGetDouble(d, DEAL_VOLUME);
+            }
+         string rKey      = GVName("R_" + (string)posId);
+         double rDist     = GlobalVariableCheck(rKey) ? GlobalVariableGet(rKey) : 0;
+         double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+         double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+         double riskMoney = (rDist > 0 && tickSize > 0) ? rDist / tickSize * tickValue * inVol : 0;
+         // Chi tinh la lenh thua khi lo hon 10% cua 1R; lenh hoa von am vai cent khong kich hoat nghi
+         if(total < -MathMax(riskMoney * 0.1, 0.01)) lastLossTime = TimeCurrent();
+
          GlobalVariableDel(GVName("R_" + (string)posId));
          GlobalVariableDel(GVName("P_" + (string)posId));
       }
