@@ -331,6 +331,7 @@ void ResetBaseline()
    GlobalVariableSet(GVName("base"),  AccountInfoDouble(ACCOUNT_BALANCE));
    GlobalVariableDel(GVName("halt"));
    GlobalVariableDel(GVName("dayId"));
+   currentDay = -1;                                   // de UpdateDay chup lai moc dau ngay
    g_plDirty = true;
    RefreshClosedPL();
    GlobalVariableSet(GVName("peak"), BotEquityForLimits());
@@ -720,11 +721,16 @@ bool TryInitState()
       g_status = "Cho dang nhap tai khoan...";
       return false;
    }
-   if(InpResetHalt || !GlobalVariableCheck(GVName("base")))
+   // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
+   // bi hieu nham la sut giam 66% va bot dung han.
+   bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != InpCapital;
+   if(InpResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
    {
       ResetBaseline();
-      if(InpResetHalt) Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
+      if(InpResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
+      if(capitalChanged) Print("InpCapital da thay doi, tu dat lai moc von va dinh von.");
    }
+   GlobalVariableSet(GVName("capital"), InpCapital);
    lastLossTime = (datetime)GVGet("lastLoss", 0);
    g_plDirty = true;
    RefreshClosedPL();
