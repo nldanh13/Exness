@@ -1,5 +1,7 @@
-# Hướng dẫn bot BTC v2.5 (MT5)
+# Hướng dẫn bot BTC v2.6 (MT5)
 
+> **v2.6:** lỗ ngày tính theo phần thay đổi kể từ 00:00 (lệnh giữ qua đêm không bị tính lỗ cũ); chạm lỗ ngày là khóa đến hết ngày; trạng thái gắn với POSITION_IDENTIFIER; chỉ coi lệnh khớp khi server trả DONE; rủi ro mỗi lệnh tính trên vốn của bot (sau khi nạp/rút, đặt `InpResetHalt = true` một lần). Bot thiết kế cho tài khoản **Hedging** (Exness mặc định); tài khoản Netting sẽ có cảnh báo.
+>
 > **v2.5:** chờ đăng nhập xong mới khởi tạo trạng thái; thêm `InpCapital` (vốn dành cho bot); thông báo lỗi bị gộp, tối đa 1 lần / 5 phút mỗi loại.
 >
 > **v2.4:** giới hạn lỗ ngày và sụt giảm chỉ tính **lãi/lỗ đã đóng + phần lỗ đang chạy của chính bot** (lệnh đang lãi trả bớt lãi không bị tính là lỗ) (theo magic + symbol), nên không bị lệch khi nạp/rút tiền hoặc khi chạy EA khác. Chạm lỗ ngày thì có thể đóng luôn lệnh đang mở (`InpCloseOnDailyLoss`). Mức hòa vốn đã cộng phí + swap + buffer theo R (`InpBEBufferR`). Trạng thái được lưu theo tài khoản + symbol + magic và giữ lại khi khởi động lại.
