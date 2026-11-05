@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v2.2 (MT5)
+# Hướng dẫn bot BTC v2.3 (MT5)
+
+> **v2.3:** giới hạn lỗ ngày và sụt giảm chỉ tính **lãi/lỗ của chính bot** (theo magic + symbol), nên không bị lệch khi nạp/rút tiền hoặc khi chạy EA khác. Chạm lỗ ngày thì có thể đóng luôn lệnh đang mở (`InpCloseOnDailyLoss`). Mức hòa vốn đã cộng phí + swap (`InpBEBufferPoints`). Trạng thái được lưu theo tài khoản + symbol + magic và giữ lại khi khởi động lại.
 
 > v2.2 có 2 chiến lược, chọn bằng `InpStrategy`:
 > - **EMA pullback** (mặc định): vào lệnh khi giá hồi về EMA20 theo xu hướng.
@@ -75,7 +77,7 @@ Các khung giờ nghỉ tính theo **giờ server** (cột thời gian trong Mar
 - Các chỉ số cần xem: số lệnh (≥100), Profit Factor, Max Drawdown, chuỗi thua dài nhất.
 
 ## Lưu ý
-- Nạp hoặc rút tiền sẽ làm lệch "đỉnh vốn". Sau khi nạp/rút, nên reset bằng `InpResetHalt = true`.
+- Các mốc lỗ ngày/sụt giảm tính trên "vốn của bot" = balance lúc bắt đầu theo dõi + lãi/lỗ của bot. Muốn đặt lại mốc (ví dụ sau khi đổi số vốn), đặt `InpResetHalt = true` một lần.
 - BTC có thể trượt giá qua SL khi có tin. Swap crypto qua đêm có thể cao.
 - Nên xem lại kết quả mỗi tuần, dù đã có thông báo.
 
