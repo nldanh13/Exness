@@ -127,7 +127,9 @@ $($lines -join "`r`n")
 function Stop-MT5($mt5) {
     $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $mt5.Terminal }
     if (-not $running) { return $true }
-    $ans = Read-Host "MT5 dang mo, can dong de chay backtest tu dong. Dong ngay? (y/n)"
+    Write-Host "CANH BAO: MT5 dang mo. Dong MT5 se DUNG moi bot dang chay tren no (ke ca tai khoan that)." -ForegroundColor Yellow
+    Write-Host "Neu dang chay bot tren tai khoan that, nen backtest bang mot ban MT5 cai rieng." -ForegroundColor Yellow
+    $ans = Read-Host "Dong MT5 ngay de chay backtest? (y/n)"
     if ($ans -ne "y") { return $false }
     $running | ForEach-Object { $_.CloseMainWindow() | Out-Null }
     Start-Sleep -Seconds 5

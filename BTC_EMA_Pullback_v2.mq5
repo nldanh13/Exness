@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "2.7"
-#property version   "2.70"
+#define  BOT_VERSION "2.8"
+#property version   "2.80"
 #property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
 
 #include <Trade\Trade.mqh>
@@ -503,6 +503,83 @@ double CalcLots(const double slDistance)
 }
 
 //--- Quan ly lenh dang mo ------------------------------------------
+//--- Doi soat vi the da dong het -----------------------------------
+// Khong dua vao thu tu su kien OnTradeTransaction: moi vi the bot quan ly co marker O_<id>.
+// Dinh ky (va ngay sau moi deal) kiem tra: vi the khong con mo VA lich su da co du khoi luong
+// dong >= khoi luong vao thi moi chot (cooldown + don trang thai). Chua du thi thu lai lan sau.
+bool     g_reconcile     = true;
+datetime g_lastReconcile = 0;
+void MarkTracked(const ulong posId)
+{
+   string k = GVName("O_" + (string)posId);
+   if(!GlobalVariableCheck(k)) GlobalVariableSet(k, (double)TimeCurrent());
+}
+void FinalizeClosed(const ulong posId)
+{
+   double total = 0, inVol = 0, outVol = 0;
+   datetime lastOut = 0;
+   if(HistorySelectByPosition(posId))
+      for(int i = 0; i < HistoryDealsTotal(); i++)
+      {
+         ulong d = HistoryDealGetTicket(i);
+         if(d == 0) continue;
+         long e = HistoryDealGetInteger(d, DEAL_ENTRY);
+         total += DealNet(d);
+         if(e == DEAL_ENTRY_IN) inVol += HistoryDealGetDouble(d, DEAL_VOLUME);
+         else
+         {
+            outVol += HistoryDealGetDouble(d, DEAL_VOLUME);
+            lastOut = (datetime)MathMax((double)lastOut, (double)HistoryDealGetInteger(d, DEAL_TIME));
+         }
+      }
+   string oKey = GVName("O_" + (string)posId);
+   if(inVol <= 0 || outVol < inVol - 1e-8)
+   {
+      // Lich su chua ve kip: thu lai sau. Qua 1 ngay van khong co thi bo marker cho khoi ton.
+      datetime seen = (datetime)(GlobalVariableCheck(oKey) ? GlobalVariableGet(oKey) : TimeCurrent());
+      if(TimeCurrent() - seen < 86400) return;
+   }
+   else
+   {
+      string rKey      = GVName("R_" + (string)posId);
+      double rDist     = GlobalVariableCheck(rKey) ? GlobalVariableGet(rKey) : 0;
+      double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+      double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+      double riskMoney = (rDist > 0 && tickSize > 0) ? rDist / tickSize * tickValue * inVol : 0;
+      // Chi tinh la lenh thua khi lo hon 10% cua 1R; lenh hoa von am vai cent khong kich hoat nghi
+      if(total < -MathMax(riskMoney * 0.1, 0.01) && lastOut > lastLossTime)
+      {
+         lastLossTime = lastOut;
+         GlobalVariableSet(GVName("lastLoss"), (double)lastLossTime);   // giu qua khi khoi dong lai
+      }
+   }
+   GlobalVariableDel(oKey);
+   GlobalVariableDel(GVName("R_"  + (string)posId));
+   GlobalVariableDel(GVName("P_"  + (string)posId));
+   GlobalVariableDel(GVName("C_"  + (string)posId));
+   GlobalVariableDel(GVName("PT_" + (string)posId));
+}
+void ReconcileClosed()
+{
+   if(!g_reconcile && TimeCurrent() - g_lastReconcile < 5) return;
+   g_reconcile = false;
+   g_lastReconcile = TimeCurrent();
+   string pO = GVName("O_"), pR = GVName("R_");     // R_ de bat ca vi the tu ban cu chua co marker
+   ulong ids[];
+   for(int i = GlobalVariablesTotal() - 1; i >= 0; i--)
+   {
+      string n = GlobalVariableName(i), rest = "";
+      if(StringFind(n, pO) == 0)      rest = StringSubstr(n, StringLen(pO));
+      else if(StringFind(n, pR) == 0) rest = StringSubstr(n, StringLen(pR));
+      else continue;
+      ulong id = (ulong)StringToInteger(rest);
+      if(id == 0 || (string)id != rest) continue;  // bo qua ten kieu cu khong phai so
+      int sz = ArraySize(ids); ArrayResize(ids, sz + 1); ids[sz] = id;
+   }
+   for(int j = 0; j < ArraySize(ids); j++)
+      if(!PositionOpenById(ids[j])) FinalizeClosed(ids[j]);
+}
+
 void ManagePositions()
 {
    double atr = 0;
@@ -518,6 +595,7 @@ void ManagePositions()
       // Trang thai va lich su gan voi POSITION_IDENTIFIER (khong doi suot doi vi the),
       // con lenh gui len server dung ticket.
       ulong posId = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
+      MarkTracked(posId);
 
       double open = PositionGetDouble(POSITION_PRICE_OPEN);
       double sl   = PositionGetDouble(POSITION_SL);
@@ -604,12 +682,20 @@ void ManagePositions()
             if(TimeCurrent() - (datetime)(GlobalVariableCheck(tKey) ? GlobalVariableGet(tKey) : 0) >= 10)
             {
                GlobalVariableSet(tKey, (double)TimeCurrent());
-               bool sent = IsHedging() ? trade.PositionClosePartial(ticket, closeVol)
-                                       : trade.PositionClosePartial(_Symbol, closeVol);
+               bool sent;
+               if(IsHedging())
+                  sent = trade.PositionClosePartial(ticket, closeVol);
+               else   // Netting: gui lenh nguoc chieu cung magic de giam khoi luong vi the
+                  sent = isBuy ? trade.Sell(closeVol, _Symbol, 0, 0, 0, "partial")
+                               : trade.Buy (closeVol, _Symbol, 0, 0, 0, "partial");
                if(TradeDone(sent, "Chot mot phan", "#" + (string)ticket))
                {
                   GlobalVariableSet(pKey, 1);
                   GlobalVariableDel(tKey);
+                  // Netting: neu server xoa SL/TP cua vi the sau deal giam, dat lai nhu cu
+                  if(!IsHedging() && PositionSelect(_Symbol) &&
+                     ((sl > 0 && PositionGetDouble(POSITION_SL) <= 0) || (tp > 0 && PositionGetDouble(POSITION_TP) <= 0)))
+                     TradeDone(trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
                }
             }
          }
@@ -766,6 +852,7 @@ void OnTick()
    if(IsHalted() && InpCloseOnHalt && HasOwnPosition()) CloseAll();
    if(ready) CheckDailyLoss();
    ManagePositions();
+   ReconcileClosed();
    UpdatePanel();
 
    datetime barTime = iTime(_Symbol, InpTF, 0);
@@ -879,6 +966,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    if(entry == DEAL_ENTRY_IN)
    {
       bool isBuy = HistoryDealGetInteger(trans.deal, DEAL_TYPE) == DEAL_TYPE_BUY;
+      MarkTracked((ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID));
       Notify(StringFormat("[%s] VAO %s %.2f lot @ %s", _Symbol, isBuy ? "BUY" : "SELL",
                           vol, DoubleToString(price, _Digits)));
    }
@@ -888,36 +976,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
       Notify(StringFormat("[%s] THOAT %.2f lot @ %s | Lai/lo: %.2f %s | Equity: %.2f",
                           _Symbol, vol, DoubleToString(price, _Digits), pnl, cur,
                           AccountInfoDouble(ACCOUNT_EQUITY)));
-      ulong posId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
-      if(!PositionOpenById(posId))                  // vi the da dong het (DEAL_POSITION_ID = identifier)
-      {
-         // Tong lai/lo ca vi the (gom cac lan chot mot phan, swap, phi)
-         double total = 0, inVol = 0;
-         if(HistorySelectByPosition(posId))
-            for(int i = 0; i < HistoryDealsTotal(); i++)
-            {
-               ulong d = HistoryDealGetTicket(i);
-               if(d == 0) continue;
-               total += DealNet(d);
-               if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) inVol += HistoryDealGetDouble(d, DEAL_VOLUME);
-            }
-         string rKey      = GVName("R_" + (string)posId);
-         double rDist     = GlobalVariableCheck(rKey) ? GlobalVariableGet(rKey) : 0;
-         double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-         double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
-         double riskMoney = (rDist > 0 && tickSize > 0) ? rDist / tickSize * tickValue * inVol : 0;
-         // Chi tinh la lenh thua khi lo hon 10% cua 1R; lenh hoa von am vai cent khong kich hoat nghi
-         if(total < -MathMax(riskMoney * 0.1, 0.01))
-         {
-            lastLossTime = TimeCurrent();
-            GlobalVariableSet(GVName("lastLoss"), (double)lastLossTime);   // giu qua khi khoi dong lai
-         }
-
-         GlobalVariableDel(GVName("R_" + (string)posId));
-         GlobalVariableDel(GVName("P_" + (string)posId));
-         GlobalVariableDel(GVName("C_" + (string)posId));
-         GlobalVariableDel(GVName("PT_" + (string)posId));
-      }
+      // Khong chot o day: thu tu su kien khong dam bao. Doi soat o ReconcileClosed().
+      g_reconcile = true;
    }
 }
 //+------------------------------------------------------------------+

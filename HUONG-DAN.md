@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v2.7 (MT5)
+# Hướng dẫn bot BTC v2.8 (MT5)
+
+> **v2.8:** bot đối soát định kỳ để biết lệnh đã đóng hết (không phụ thuộc thứ tự sự kiện), nên cooldown và dọn trạng thái không bị sót; chốt một phần trên tài khoản Netting dùng lệnh ngược chiều; script backtest đóng MT5 rồi mới compile. **Lưu ý:** đóng MT5 để backtest sẽ dừng mọi bot đang chạy trên MT5 đó. Nếu chạy bot trên tài khoản thật, hãy backtest bằng một bản MT5 cài riêng. Lưu file `.mq5` khi đang bật "tự cập nhật" cũng làm bot trên chart nạp lại (trạng thái vẫn giữ nhờ Global Variables).
 
 > **v2.7:** đổi `InpCapital` thì bot tự đặt lại mốc vốn, đỉnh vốn và mốc đầu ngày (không còn bị hiểu nhầm là sụt giảm rồi dừng hẳn).
 

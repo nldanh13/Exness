@@ -17,6 +17,8 @@ try {
     Write-Host "      Du lieu: $($mt5.DataDir)"
 
     Write-Host "[2/4] Chep va compile bot..."
+    if (Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $mt5.Terminal }) {
+        Write-Host "      Luu y: MT5 dang mo, bot dang chay tren chart se tu nap lai ban moi." -ForegroundColor Yellow }
     $r = Invoke-BotCompile $mt5 $src
     if (-not $r.Ok) { $r.Errors | ForEach-Object { Write-Host "      $_" -ForegroundColor Red }; throw "Compile that bai. Log: $($r.Log)" }
     Write-Host "      $($r.Summary)" -ForegroundColor Green

@@ -48,14 +48,19 @@ try {
     $mt5 = Find-MT5
     $src = Join-Path $ProjectDir "$BotName.mq5"
     if (-not (Test-Path $src)) { throw "Khong thay $src" }
-    # Luon chep + compile ban moi nhat truoc khi chay
-    $r = Invoke-BotCompile $mt5 $src
-    if (-not $r.Ok) { $r.Errors | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }; throw "Compile that bai." }
-    Write-Host "Da compile ban moi nhat cua bot. $($r.Summary)" -ForegroundColor Green
     $Inputs = Get-BotInputs $src
     foreach ($run in $Runs) { foreach ($k in $run.Inputs.Keys) {
         if (-not $Inputs.Defaults.Contains($k)) { throw "Tham so '$k' trong lan '$($run.Name)' khong co trong bot." } } }
     Write-Host "Doc duoc $($Inputs.Defaults.Count) tham so mac dinh tu bot." -ForegroundColor Green
+} catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
+
+# --- Dong MT5 TRUOC khi compile: compile khi MT5 dang mo se nap lai bot dang chay tren chart ---
+if (-not (Stop-MT5 $mt5)) { exit 0 }
+try {
+    # Luon chep + compile ban moi nhat truoc khi chay
+    $r = Invoke-BotCompile $mt5 $src
+    if (-not $r.Ok) { $r.Errors | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }; throw "Compile that bai." }
+    Write-Host "Da compile ban moi nhat cua bot. $($r.Summary)" -ForegroundColor Green
 } catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log
@@ -64,8 +69,6 @@ $startTime  = Get-Date
 $resultFile = Join-Path $mt5.CommonFiles "BTC_EMA_results.csv"
 if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
 
-# --- Dong MT5 neu dang mo ---
-if (-not (Stop-MT5 $mt5)) { exit 0 }
 
 Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate, che do $ModeLabel. Dung tat MT5." -ForegroundColor Cyan
 $i = 0
