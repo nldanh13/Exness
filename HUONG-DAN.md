@@ -15,15 +15,13 @@
 > - **Donchian breakout**: vào lệnh khi giá phá đỉnh/đáy của N nến gần nhất (`InpDonchianPeriod`), SL rộng, không đặt TP, thoát bằng trailing ATR. Đặt `InpRR = 0` để bỏ TP.
 
 ## Dùng hằng ngày với VS Code (khuyên dùng)
-Mở thư mục bot bằng VS Code. Các lệnh nằm ở **Terminal → Run Task…**:
+Mở thư mục bot bằng VS Code. Không cần bấm Sync: mỗi nút dưới đây **tự lấy code mới nhất từ GitHub** rồi mới chạy, và khi mở VS Code bot cũng tự được cập nhật vào MT5. Các nút nằm ở **Terminal → Run Task…**:
 
-| Lệnh | Làm gì |
+| Nút | Khi nào dùng |
 |---|---|
-| **Bot: tu dong cap nhat khi luu** | Tự bật khi mở thư mục. Sửa `.mq5` rồi Ctrl+S là bot trên MT5 được cập nhật. |
-| **Bot: cap nhat ngay** (Ctrl+Shift+B) | Chép và compile ngay. |
-| **Bot: chay backtest** | Mở MT5 và chạy 1 lần backtest với cài đặt mặc định. |
-| **Bot: so sanh cac cau hinh (nhanh)** | Chạy 7 cấu hình trên 3 năm bằng giá OHLC 1 phút: nhanh, dùng để lọc cấu hình |
-| **Bot: so sanh cac cau hinh (chinh xac, tick that)** | Như trên nhưng dùng tick thật: chậm, dùng để kiểm tra lại cấu hình tốt nhất, rồi tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude** để phân tích. |
+| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 7 cấu hình trên 3 năm, xong tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude.** |
+| **2. Cap nhat bot vao MT5** (Ctrl+Shift+B) | Khi bot đang chạy trên chart và muốn nạp bản mới ngay. |
+| **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo, để kiểm tra lại cấu hình tốt nhất bằng tick thật. |
 
 Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayThuNghiem.ps1`.
 

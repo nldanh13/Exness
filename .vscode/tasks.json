@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Bot: tu dong cap nhat khi luu",
+      "label": "1. So sanh cau hinh (nhanh)",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -10,21 +10,14 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\DongBo.ps1",
-        "-Watch"
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "sosanh"
       ],
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      },
-      "runOptions": {
-        "runOn": "folderOpen"
-      }
+      "problemMatcher": []
     },
     {
-      "label": "Bot: cap nhat ngay",
+      "label": "2. Cap nhat bot vao MT5",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -32,7 +25,9 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\DongBo.ps1"
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "capnhat"
       ],
       "problemMatcher": [],
       "group": {
@@ -41,7 +36,7 @@
       }
     },
     {
-      "label": "Bot: chay backtest",
+      "label": "3. So sanh cau hinh (chinh xac, cham)",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -49,12 +44,14 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\CaiDatBot.ps1"
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "sosanh-chinhxac"
       ],
       "problemMatcher": []
     },
     {
-      "label": "Bot: so sanh cac cau hinh (nhanh)",
+      "label": "Bot: tu cap nhat khi mo VS Code",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -62,12 +59,23 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\ChayThuNghiem.ps1"
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "theodoi"
       ],
-      "problemMatcher": []
+      "problemMatcher": [],
+      "isBackground": true,
+      "hide": true,
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
     },
     {
-      "label": "Bot: so sanh cac cau hinh (chinh xac, tick that)",
+      "label": "Bot: backtest 1 lan",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -75,10 +83,12 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\ChayThuNghiem.ps1",
-        "-ChinhXac"
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "backtest"
       ],
-      "problemMatcher": []
+      "problemMatcher": [],
+      "hide": true
     }
   ]
 }
