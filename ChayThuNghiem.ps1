@@ -8,6 +8,7 @@ param([switch]$ChinhXac)
 
 $ErrorActionPreference = "Stop"
 $Model = if ($ChinhXac) { 4 } else { 1 }
+$ModeLabel = if ($ChinhXac) { "tick that (chinh xac)" } else { "OHLC 1 phut (nhanh)" }
 $Symbol   = "BTCUSDm"
 $Deposit  = 3000
 $Leverage = "1:100"
@@ -66,7 +67,7 @@ if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
 # --- Dong MT5 neu dang mo ---
 if (-not (Stop-MT5 $mt5)) { exit 0 }
 
-Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate, che do $(if ($ChinhXac) { tick that (chinh xac) } else { OHLC 1 phut (nhanh) }). Dung tat MT5." -ForegroundColor Cyan
+Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate, che do $ModeLabel. Dung tat MT5." -ForegroundColor Cyan
 $i = 0
 foreach ($run in $Runs) {
     $i++
