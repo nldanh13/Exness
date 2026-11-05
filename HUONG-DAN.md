@@ -1,4 +1,8 @@
-# Hướng dẫn bot BTC EMA Pullback v2.1 (MT5)
+# Hướng dẫn bot BTC v2.2 (MT5)
+
+> v2.2 có 2 chiến lược, chọn bằng `InpStrategy`:
+> - **EMA pullback** (mặc định): vào lệnh khi giá hồi về EMA20 theo xu hướng.
+> - **Donchian breakout**: vào lệnh khi giá phá đỉnh/đáy của N nến gần nhất (`InpDonchianPeriod`), SL rộng, không đặt TP, thoát bằng trailing ATR. Đặt `InpRR = 0` để bỏ TP.
 
 ## Dùng hằng ngày với VS Code (khuyên dùng)
 Mở thư mục bot bằng VS Code. Các lệnh nằm ở **Terminal → Run Task…**:

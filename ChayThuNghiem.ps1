@@ -11,16 +11,21 @@ $FromDate = (Get-Date).AddYears(-1).ToString("yyyy.MM.dd")
 $ToDate   = (Get-Date).AddDays(-1).ToString("yyyy.MM.dd")
 
 # Moi lan chay: Ten + cac thong so muon doi (cac thong so khac giu mac dinh trong code)
-$Base = @{ InpMaxDrawdownPct = 0; InpUsePartial = "false"; InpUseBreakeven = "false"; InpTrailStartR = 1.5; InpATRMult = 2.0 }
-function Cfg($extra) { $h = $Base.Clone(); foreach ($k in $extra.Keys) { $h[$k] = $extra[$k] }; $h }
+# Cau hinh co so cho chien luoc breakout: SL rong, khong TP, trailing ATR (chandelier) tu dau
+$Base = @{ InpMaxDrawdownPct = 0; InpUsePartial = "false"; InpUseBreakeven = "false" }
+$Brk  = @{ InpStrategy = 1; InpTF = 16388; InpHTF = 16408; InpATRMult = 2.5; InpRR = 0; InpUseTrailing = "true";
+           InpTrailStartR = 0; InpTrailATRMult = 3.0; InpUseADX = "false"; InpSkipWeekend = "false";
+           InpBlock1Start = -1; InpBlock2Start = -1; InpDonchianPeriod = 20 }
+function Cfg($a, $b) { $h = $Base.Clone(); foreach ($x in @($a, $b)) { if ($x) { foreach ($k in $x.Keys) { $h[$k] = $x[$k] } } }; $h }
 $Runs = @(
-    @{ Name = "1-GocKhongDung";  Inputs = @{ InpMaxDrawdownPct = 0 } },
-    @{ Name = "2-TatChotHoaVon"; Inputs = @{ InpMaxDrawdownPct = 0; InpUsePartial = "false"; InpUseBreakeven = "false" } },
-    @{ Name = "3-SLRongHon";     Inputs = (Cfg @{}) },
-    @{ Name = "4-TranhGioMy";    Inputs = (Cfg @{ InpBlock1Start = 13; InpBlock1End = 18 }) },
-    @{ Name = "5-GioiHanLenh";   Inputs = (Cfg @{ InpBlock1Start = 13; InpBlock1End = 18; InpMaxTradesPerDay = 2; InpCooldownBars = 3 }) },
-    @{ Name = "6-KhungH4";       Inputs = (Cfg @{ InpTF = 16388; InpHTF = 16408 }) }   # 16388 = H4, 16408 = D1
+    @{ Name = "A-EMA-H4-cu";        Inputs = (Cfg @{ InpTF = 16388; InpHTF = 16408; InpTrailStartR = 1.5; InpATRMult = 2.0 }) },
+    @{ Name = "B-Donchian20-H4";    Inputs = (Cfg $Brk) },
+    @{ Name = "C-Donchian20-H4-ADX"; Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
+    @{ Name = "D-Donchian55-H4";    Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
+    @{ Name = "E-Donchian20-D1";    Inputs = (Cfg $Brk @{ InpTF = 16408; InpHTF = 32769 }) },
+    @{ Name = "F-Donchian20-H1";    Inputs = (Cfg $Brk @{ InpTF = 16385; InpHTF = 16388 }) }
 )
+# Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
@@ -68,7 +73,7 @@ if (-not (Select-String -Path $src -Pattern "OnTester" -Quiet)) {
 $startTime = Get-Date
 
 # --- Doc gia tri mac dinh cua tat ca tham so tu file .mq5 ---
-$EnumMap = @{ PERIOD_M1 = 1; PERIOD_M5 = 5; PERIOD_M15 = 15; PERIOD_M30 = 30; PERIOD_H1 = 16385; PERIOD_H4 = 16388; PERIOD_D1 = 16408; PERIOD_W1 = 32769 }
+$EnumMap = @{ STRAT_EMA_PULLBACK = 0; STRAT_DONCHIAN = 1; PERIOD_M1 = 1; PERIOD_M5 = 5; PERIOD_M15 = 15; PERIOD_M30 = 30; PERIOD_H1 = 16385; PERIOD_H4 = 16388; PERIOD_D1 = 16408; PERIOD_W1 = 32769 }
 $Defaults = [ordered]@{}
 $StringInputs = New-Object System.Collections.Generic.HashSet[string]
 foreach ($line in Get-Content $src) {

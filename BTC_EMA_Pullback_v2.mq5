@@ -6,12 +6,20 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#property version   "2.10"
+#property version   "2.20"
 #property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
 
 #include <Trade\Trade.mqh>
 
+enum ENUM_STRATEGY
+{
+   STRAT_EMA_PULLBACK = 0,   // Hoi ve EMA20 theo xu huong
+   STRAT_DONCHIAN     = 1    // Pha vo kenh Donchian (breakout)
+};
+
 input group "=== Tin hieu ==="
+input ENUM_STRATEGY   InpStrategy        = STRAT_EMA_PULLBACK; // Chien luoc vao lenh
+input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchian (breakout)
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H1; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
@@ -28,7 +36,7 @@ input bool            InpUseCandle       = false;     // Bat buoc mau nen (pin b
 
 input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 1.5;       // SL = ATR x he so
-input double          InpRR              = 2.0;       // TP = SL x RR
+input double          InpRR              = 2.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 
 input group "=== Quan ly lenh ==="
@@ -389,14 +397,14 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
 
    Comment(StringFormat(
-      "BTC EMA Pullback v2.1  |  %s\n"
+      "BTC bot v2.2 (%s)  |  %s\n"
       "Trang thai: %s\n"
       "Equity: %.2f %s\n"
       "Lai/lo hom nay: %.2f %s (%.2f%%)\n"
       "Lenh hom nay: %d\n"
       "Sut giam tu dinh: %.2f%% / gioi han %.1f%%\n"
       "Spread: %d point",
-      _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
+      InpStrategy == STRAT_DONCHIAN ? "Donchian" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
       eq, cur, dayPL, cur, dayStartEquity > 0 ? dayPL / dayStartEquity * 100.0 : 0,
       TradesToday(), dd, InpMaxDrawdownPct,
       (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)));
@@ -496,10 +504,27 @@ void OnTick()
    double l1 = iLow(_Symbol,   InpTF, 1);
 
    bool adxOk = !InpUseADX || adx >= InpADXMin;
-   bool buySignal  = InpAllowBuy && c1 > trend && fast > trend && l1 <= fast && c1 > fast
+   bool buyBase, sellBase;
+   if(InpStrategy == STRAT_DONCHIAN)
+   {
+      // Pha vo: nen vua dong vuot dinh/day cao nhat/thap nhat cua N nen truoc do
+      int hiIdx = iHighest(_Symbol, InpTF, MODE_HIGH, InpDonchianPeriod, 2);
+      int loIdx = iLowest(_Symbol,  InpTF, MODE_LOW,  InpDonchianPeriod, 2);
+      if(hiIdx < 0 || loIdx < 0) return;
+      double chHigh = iHigh(_Symbol, InpTF, hiIdx);
+      double chLow  = iLow(_Symbol,  InpTF, loIdx);
+      buyBase  = c1 > chHigh && c1 > trend;
+      sellBase = c1 < chLow  && c1 < trend;
+   }
+   else
+   {
+      buyBase  = c1 > trend && fast > trend && l1 <= fast && c1 > fast;
+      sellBase = c1 < trend && fast < trend && h1 >= fast && c1 < fast;
+   }
+   bool buySignal  = InpAllowBuy && buyBase
                      && (!InpUseHTF || htfClose > htfEma) && adxOk
                      && (!InpUseCandle || BullCandle());
-   bool sellSignal = InpAllowSell && c1 < trend && fast < trend && h1 >= fast && c1 < fast
+   bool sellSignal = InpAllowSell && sellBase
                      && (!InpUseHTF || htfClose < htfEma) && adxOk
                      && (!InpUseCandle || BearCandle());
 
@@ -522,14 +547,14 @@ void OnTick()
       double price = tick.ask;
       ok = trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
-                     NormalizeDouble(price + slDist * InpRR, _Digits), "EMA pullback v2 BUY");
+                     InpRR > 0 ? NormalizeDouble(price + slDist * InpRR, _Digits) : 0.0, "BTC bot BUY");
    }
    else
    {
       double price = tick.bid;
       ok = trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
-                      NormalizeDouble(price - slDist * InpRR, _Digits), "EMA pullback v2 SELL");
+                      InpRR > 0 ? NormalizeDouble(price - slDist * InpRR, _Digits) : 0.0, "BTC bot SELL");
    }
    if(!ok)
       Notify(StringFormat("[%s] Loi vao lenh: %d %s", _Symbol, trade.ResultRetcode(), trade.ResultRetcodeDescription()));
