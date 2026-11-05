@@ -105,7 +105,7 @@ function New-TesterIni($mt5, $inputs, [hashtable]$overrides, [string]$iniPath, [
 Expert=$BotName.ex5
 Symbol=$($opt.Symbol)
 Period=H1
-Model=4
+Model=$(if ($null -ne $opt.Model) { $opt.Model } else { 4 })
 ExecutionMode=100
 Optimization=0
 FromDate=$($opt.From)

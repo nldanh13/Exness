@@ -18,7 +18,8 @@ Mở thư mục bot bằng VS Code. Các lệnh nằm ở **Terminal → Run Tas
 | **Bot: tu dong cap nhat khi luu** | Tự bật khi mở thư mục. Sửa `.mq5` rồi Ctrl+S là bot trên MT5 được cập nhật. |
 | **Bot: cap nhat ngay** (Ctrl+Shift+B) | Chép và compile ngay. |
 | **Bot: chay backtest** | Mở MT5 và chạy 1 lần backtest với cài đặt mặc định. |
-| **Bot: so sanh cac cau hinh** | Tự chạy lần lượt 7 cấu hình trên 3 năm dữ liệu (có thể mất 30–60 phút), rồi tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude** để phân tích. |
+| **Bot: so sanh cac cau hinh (nhanh)** | Chạy 7 cấu hình trên 3 năm bằng giá OHLC 1 phút: nhanh, dùng để lọc cấu hình |
+| **Bot: so sanh cac cau hinh (chinh xac, tick that)** | Như trên nhưng dùng tick thật: chậm, dùng để kiểm tra lại cấu hình tốt nhất, rồi tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude** để phân tích. |
 
 Muốn thử cấu hình khác, sửa danh sách `$Runs` ở đầu file `ChayThuNghiem.ps1`.
 

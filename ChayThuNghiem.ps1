@@ -2,7 +2,12 @@
 #   powershell -ExecutionPolicy Bypass -File .\ChayThuNghiem.ps1
 # Sua danh sach $Runs ben duoi de thu cau hinh khac.
 
+# Mac dinh chay che do NHANH (gia OHLC tung phut, Model=1): nhanh hon nhieu, du dung de loc cau hinh
+# cho chien luoc khung H1/H4/D1. Them -ChinhXac de chay tick that (Model=4) cho cau hinh cuoi cung.
+param([switch]$ChinhXac)
+
 $ErrorActionPreference = "Stop"
+$Model = if ($ChinhXac) { 4 } else { 1 }
 $Symbol   = "BTCUSDm"
 $Deposit  = 3000
 $Leverage = "1:100"
@@ -61,7 +66,7 @@ if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
 # --- Dong MT5 neu dang mo ---
 if (-not (Stop-MT5 $mt5)) { exit 0 }
 
-Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate. Moi lan vai phut, dung tat MT5." -ForegroundColor Cyan
+Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate, che do $(if ($ChinhXac) { tick that (chinh xac) } else { OHLC 1 phut (nhanh) }). Dung tat MT5." -ForegroundColor Cyan
 $i = 0
 foreach ($run in $Runs) {
     $i++
@@ -69,7 +74,7 @@ foreach ($run in $Runs) {
     $ini = Join-Path $dataDir "$BotName-run$i.ini"
     $ov = $run.Inputs.Clone(); $ov["InpTestLabel"] = $run.Name
     New-TesterIni $mt5 $Inputs $ov $ini @{ Symbol = $Symbol; From = $FromDate; To = $ToDate; Deposit = $Deposit;
-                                           Leverage = $Leverage; Report = "$BotName-$($run.Name)"; Shutdown = $true }
+                                           Leverage = $Leverage; Report = "$BotName-$($run.Name)"; Shutdown = $true; Model = $Model }
 
     $sw = [Diagnostics.Stopwatch]::StartNew()
     Start-Process -FilePath $mt5.Terminal -ArgumentList "/config:`"$ini`"" -Wait

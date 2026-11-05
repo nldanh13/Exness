@@ -54,7 +54,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Bot: so sanh cac cau hinh",
+      "label": "Bot: so sanh cac cau hinh (nhanh)",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -63,6 +63,20 @@
         "Bypass",
         "-File",
         "${workspaceFolder}\\ChayThuNghiem.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Bot: so sanh cac cau hinh (chinh xac, tick that)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\ChayThuNghiem.ps1",
+        "-ChinhXac"
       ],
       "problemMatcher": []
     }
