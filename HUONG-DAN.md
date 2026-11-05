@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v2.8 (MT5)
+# Hướng dẫn bot BTC v2.9 (MT5)
+
+> **v2.9:** cài đặt mặc định chuyển sang cấu hình tốt nhất của lần so sánh 3 năm (11/2026): **Donchian 20, khung H4, lọc ADX + EMA200 D1**, SL 2,5 ATR, không TP, trailing 3 ATR, không chốt một phần / hòa vốn, không nghỉ cuối tuần hay giờ tin. Kết quả backtest nhanh: +962 USD trên vốn 3.000 (+32%), PF 2,09, sụt giảm tối đa 4,6%, 86 lệnh. Đây là kết quả quá khứ, không bảo đảm tương lai.
 
 > **v2.8:** bot đối soát định kỳ để biết lệnh đã đóng hết (không phụ thuộc thứ tự sự kiện), nên cooldown và dọn trạng thái không bị sót; chốt một phần trên tài khoản Netting dùng lệnh ngược chiều; script backtest đóng MT5 rồi mới compile. **Lưu ý:** đóng MT5 để backtest sẽ dừng mọi bot đang chạy trên MT5 đó. Nếu chạy bot trên tài khoản thật, hãy backtest bằng một bản MT5 cài riêng. Lưu file `.mq5` khi đang bật "tự cập nhật" cũng làm bot trên chart nạp lại (trạng thái vẫn giữ nhờ Global Variables).
 

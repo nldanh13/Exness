@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "2.8"
-#property version   "2.80"
+#define  BOT_VERSION "2.9"
+#property version   "2.90"
 #property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
 
 #include <Trade\Trade.mqh>
@@ -19,16 +19,16 @@ enum ENUM_STRATEGY
 };
 
 input group "=== Tin hieu ==="
-input ENUM_STRATEGY   InpStrategy        = STRAT_EMA_PULLBACK; // Chien luoc vao lenh
+input ENUM_STRATEGY   InpStrategy        = STRAT_DONCHIAN;     // Chien luoc vao lenh
 input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchian (breakout)
-input ENUM_TIMEFRAMES InpTF              = PERIOD_H1; // Khung tin hieu
+input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
 input int             InpATRPeriod       = 14;        // Chu ky ATR
 
 input group "=== Bo loc thi truong ==="
 input bool            InpUseHTF          = true;      // Xac nhan xu huong khung lon
-input ENUM_TIMEFRAMES InpHTF             = PERIOD_H4; // Khung lon
+input ENUM_TIMEFRAMES InpHTF             = PERIOD_D1; // Khung lon
 input int             InpHTFEMA          = 200;       // EMA khung lon
 input bool            InpUseADX          = true;      // Loc thi truong di ngang bang ADX
 input int             InpADXPeriod       = 14;        // Chu ky ADX
@@ -36,26 +36,26 @@ input double          InpADXMin          = 20.0;      // ADX toi thieu de vao le
 input bool            InpUseCandle       = false;     // Bat buoc mau nen (pin bar / engulfing)
 
 input group "=== SL / TP / Khoi luong ==="
-input double          InpATRMult         = 1.5;       // SL = ATR x he so
-input double          InpRR              = 2.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
+input double          InpATRMult         = 2.5;       // SL = ATR x he so
+input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 
 input group "=== Quan ly lenh ==="
-input bool            InpUsePartial      = true;      // Chot loi mot phan
+input bool            InpUsePartial      = false;     // Chot loi mot phan
 input double          InpPartialR        = 1.0;       // Chot khi lai dat (R)
 input double          InpPartialPct      = 50.0;      // % khoi luong chot
-input bool            InpUseBreakeven    = true;      // Doi SL ve hoa von
+input bool            InpUseBreakeven    = false;     // Doi SL ve hoa von
 input double          InpBreakevenR      = 1.0;       // Khi lai dat (R)
 input double          InpBEBufferR       = 0.05;      // Cong them vao muc hoa von (tinh theo R), ngoai phi + swap
 input bool            InpUseTrailing     = true;      // Trailing stop theo ATR
-input double          InpTrailStartR     = 1.0;       // Bat dau trailing khi lai dat (R)
-input double          InpTrailATRMult    = 2.0;       // Khoang trailing = ATR x he so
+input double          InpTrailStartR     = 0.0;       // Bat dau trailing khi lai dat (R)
+input double          InpTrailATRMult    = 3.0;       // Khoang trailing = ATR x he so
 
 input group "=== Bo loc thoi gian (gio server) ==="
-input bool            InpSkipWeekend     = true;      // Khong vao lenh moi Thu 7, Chu nhat
-input int             InpBlock1Start     = 12;        // Khung nghi 1: tu gio (-1 = tat)
+input bool            InpSkipWeekend     = false;     // Khong vao lenh moi Thu 7, Chu nhat
+input int             InpBlock1Start     = -1;        // Khung nghi 1: tu gio (-1 = tat)
 input int             InpBlock1End       = 14;        // Khung nghi 1: den gio
-input int             InpBlock2Start     = 18;        // Khung nghi 2: tu gio (-1 = tat)
+input int             InpBlock2Start     = -1;        // Khung nghi 2: tu gio (-1 = tat)
 input int             InpBlock2End       = 20;        // Khung nghi 2: den gio
 input int             InpMaxSpreadPoints = 0;         // Spread toi da (point, 0 = tat)
 

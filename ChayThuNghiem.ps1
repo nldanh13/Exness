@@ -34,11 +34,13 @@ $Runs = @(
     @{ Name = "B-Donchian20-H4";       Inputs = (Cfg $Brk) },
     @{ Name = "C-Donchian20-H4-ADX";   Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
     @{ Name = "D-Donchian55-H4";       Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
-    @{ Name = "E-Donchian20-D1";       Inputs = (Cfg $Brk @{ InpTF = 16408; InpUseHTF = "false" }) },  # D1: khong dung EMA200 W1 (can ~4 nam du lieu)
+    @{ Name = "E-Donchian20-D1";       Inputs = (Cfg $Brk @{ InpTF = 16408; InpUseHTF = "false" }) },  # D1: khong dung EMA200 W1. Von 3000 / rui ro 1% qua nho cho SL D1 nen gan nhu khong vao lenh
     @{ Name = "F-Donchian20-H1";       Inputs = (Cfg $Brk @{ InpTF = 16385; InpHTF = 16388 }) }
 )
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
+# Che do chinh xac chi chay lai 2 cau hinh tot nhat cua lan loc nhanh (11/2026), moi cai ~20 phut.
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "D-Donchian55-H4") }) }
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
