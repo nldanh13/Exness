@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v3.1 (MT5)
+# Hướng dẫn bot BTC v3.2 (MT5)
+
+> **v3.2:** chốt một phần nhớ khối lượng còn lại mục tiêu; nếu server chỉ khớp một phần, bot đóng nốt phần thiếu ở lần sau. Nút "So sanh cau hinh (chinh xac, cham)" giờ chạy tick thật cho B và C trên 3 năm gần đây, trên ETHUSDm và giai đoạn trước đó (6 lần, khoảng 2 giờ).
 
 > **v3.1:** `LaiTheoNam` tính cả phí lúc vào lệnh nên tổng các năm khớp với `LoiNhuan`; thêm cột `LenhDau` (ngày của lệnh đầu tiên). Với lần chạy "trước 3 năm", nếu `LenhDau` muộn hơn nhiều so với ngày bắt đầu hoặc `SoLenh` quá ít, nghĩa là MT5 thiếu dữ liệu cũ và kết quả ngoài mẫu chưa đủ để tin. Mã lỗi được xóa trước mỗi lần gửi lệnh nên thông báo lỗi đúng với lần gửi đó.
 

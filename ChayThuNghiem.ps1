@@ -47,8 +47,8 @@ $Runs = @(
 )
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
-# Che do chinh xac chi chay lai B va C (11/2026), moi cai ~20 phut.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX") }) }
+# Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam") }) }
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path

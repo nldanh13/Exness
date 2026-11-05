@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.1"
-#property version   "3.10"
+#define  BOT_VERSION "3.2"
+#property version   "3.20"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -566,6 +566,7 @@ void FinalizeClosed(const ulong posId)
    GlobalVariableDel(GVName("P_"  + (string)posId));
    GlobalVariableDel(GVName("C_"  + (string)posId));
    GlobalVariableDel(GVName("PT_" + (string)posId));
+   GlobalVariableDel(GVName("PV_" + (string)posId));
 }
 void ReconcileClosed()
 {
@@ -680,35 +681,56 @@ void ManagePositions()
       double rNow  = (isBuy ? price - open : open - price) / risk;
 
       // 1) Chot loi mot phan
-      if(InpUsePartial && !GlobalVariableCheck(pKey) && rNow >= InpPartialR)
+      // Luu khoi luong CON LAI muc tieu (PV_) o lan dau. Moi lan chi dong phan con thieu so voi muc tieu,
+      // nen neu server chi khop mot phan (DONE_PARTIAL) thi lan sau bot dong not, khong dong lo qua tay.
+      string vKey = GVName("PV_" + (string)posId);
+      if(InpUsePartial && !GlobalVariableCheck(pKey) && (rNow >= InpPartialR || GlobalVariableCheck(vKey)))
       {
-         double closeVol = NormalizeVolume(vol * InpPartialPct / 100.0);
-         if(closeVol >= minL && vol - closeVol >= minL - 1e-9)
+         if(!GlobalVariableCheck(vKey))
          {
-            // Thu lai toi da 1 lan / 10 giay moi lenh neu server tu choi
-            string tKey = GVName("PT_" + (string)posId);
-            if(TimeCurrent() - (datetime)(GlobalVariableCheck(tKey) ? GlobalVariableGet(tKey) : 0) >= 10)
+            double firstClose = NormalizeVolume(vol * InpPartialPct / 100.0);
+            if(firstClose < minL || vol - firstClose < minL - 1e-9)
             {
-               GlobalVariableSet(tKey, (double)TimeCurrent());
-               bool sent;
-               if(IsHedging())
-                  sent = PrepSend() && trade.PositionClosePartial(ticket, closeVol);
-               else   // Netting: gui lenh nguoc chieu cung magic de giam khoi luong vi the
-                  sent = PrepSend() && (isBuy ? trade.Sell(closeVol, _Symbol, 0, 0, 0, "partial")
-                                              : trade.Buy (closeVol, _Symbol, 0, 0, 0, "partial"));
-               if(TradeDone(sent, "Chot mot phan", "#" + (string)ticket))
+               GlobalVariableSet(pKey, 1);              // lot qua nho de chia, bo qua
+               continue;
+            }
+            GlobalVariableSet(vKey, vol - firstClose);
+         }
+         double target   = GlobalVariableGet(vKey);
+         double closeVol = NormalizeVolume(vol - target);
+         if(vol <= target + 1e-9 || closeVol < minL - 1e-9)
+         {
+            GlobalVariableSet(pKey, 1);                 // da dat muc tieu (hoac phan thieu nho hon lot toi thieu)
+            GlobalVariableDel(vKey);
+            GlobalVariableDel(GVName("PT_" + (string)posId));
+            continue;
+         }
+         // Thu lai toi da 1 lan / 10 giay moi lenh (tu choi, hoac cho vi the cap nhat sau khop mot phan)
+         string tKey = GVName("PT_" + (string)posId);
+         if(TimeCurrent() - (datetime)(GlobalVariableCheck(tKey) ? GlobalVariableGet(tKey) : 0) >= 10)
+         {
+            GlobalVariableSet(tKey, (double)TimeCurrent());
+            bool sent;
+            if(IsHedging())
+               sent = PrepSend() && trade.PositionClosePartial(ticket, closeVol);
+            else   // Netting: gui lenh nguoc chieu cung magic de giam khoi luong vi the
+               sent = PrepSend() && (isBuy ? trade.Sell(closeVol, _Symbol, 0, 0, 0, "partial")
+                                           : trade.Buy (closeVol, _Symbol, 0, 0, 0, "partial"));
+            if(TradeDone(sent, "Chot mot phan", "#" + (string)ticket))
+            {
+               // Chi khi khop DU moi danh dau xong; DONE_PARTIAL thi giu PV_ de lan sau dong not phan thieu
+               if(trade.ResultRetcode() == TRADE_RETCODE_DONE && trade.ResultVolume() >= closeVol - 1e-9)
                {
                   GlobalVariableSet(pKey, 1);
+                  GlobalVariableDel(vKey);
                   GlobalVariableDel(tKey);
-                  // Netting: neu server xoa SL/TP cua vi the sau deal giam, dat lai nhu cu
-                  if(!IsHedging() && PositionSelect(_Symbol) &&
-                     ((sl > 0 && PositionGetDouble(POSITION_SL) <= 0) || (tp > 0 && PositionGetDouble(POSITION_TP) <= 0)))
-                     TradeDone(PrepSend() && trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
                }
+               // Netting: neu server xoa SL/TP cua vi the sau deal giam, dat lai nhu cu
+               if(!IsHedging() && PositionSelect(_Symbol) &&
+                  ((sl > 0 && PositionGetDouble(POSITION_SL) <= 0) || (tp > 0 && PositionGetDouble(POSITION_TP) <= 0)))
+                  TradeDone(PrepSend() && trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
             }
          }
-         else
-            GlobalVariableSet(pKey, 1);                // lot qua nho de chia, bo qua
          continue;                                      // xu ly SL o tick sau
       }
 
