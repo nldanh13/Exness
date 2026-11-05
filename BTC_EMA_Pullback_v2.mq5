@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "2.6"
-#property version   "2.60"
+#define  BOT_VERSION "2.7"
+#property version   "2.70"
 #property description "EMA200 trend + EMA20 pullback, ATR stop, partial close, trailing, filters, alerts"
 
 #include <Trade\Trade.mqh>
@@ -331,6 +331,7 @@ void ResetBaseline()
    GlobalVariableSet(GVName("base"),  AccountInfoDouble(ACCOUNT_BALANCE));
    GlobalVariableDel(GVName("halt"));
    GlobalVariableDel(GVName("dayId"));
+   GlobalVariableDel(GVName("dayLock"));
    currentDay = -1;                                   // de UpdateDay chup lai moc dau ngay
    g_plDirty = true;
    RefreshClosedPL();

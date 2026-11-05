@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v2.6 (MT5)
+# Hướng dẫn bot BTC v2.7 (MT5)
+
+> **v2.7:** đổi `InpCapital` thì bot tự đặt lại mốc vốn, đỉnh vốn và mốc đầu ngày (không còn bị hiểu nhầm là sụt giảm rồi dừng hẳn).
 
 > **v2.6:** lỗ ngày tính theo phần thay đổi kể từ 00:00 (lệnh giữ qua đêm không bị tính lỗ cũ); chạm lỗ ngày là khóa đến hết ngày; trạng thái gắn với POSITION_IDENTIFIER; chỉ coi lệnh khớp khi server trả DONE; rủi ro mỗi lệnh tính trên vốn của bot (sau khi nạp/rút, đặt `InpResetHalt = true` một lần). Bot thiết kế cho tài khoản **Hedging** (Exness mặc định); tài khoản Netting sẽ có cảnh báo.
 >
