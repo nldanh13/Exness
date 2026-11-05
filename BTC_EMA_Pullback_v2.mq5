@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.0"
-#property version   "3.00"
+#define  BOT_VERSION "3.1"
+#property version   "3.10"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -128,6 +128,10 @@ bool ShouldNotify(const string key, const int seconds)
 
 // Xac nhan server da thuc hien lenh (khong chi dua vao gia tri tra ve cua CTrade).
 // `kind` la loai thao tac (khong kem so ticket) de gom thong bao trung.
+// Xoa ma loi cu ngay truoc khi gui lenh, de GetLastError() trong TradeDone dung la loi cua lan nay.
+// Dung: PrepSend() && trade.Xxx(...)  (&& dung ngay sau PrepSend nen khong anh huong ket qua)
+bool PrepSend() { ResetLastError(); return true; }
+
 bool TradeDone(const bool sent, const string kind, const string detail = "")
 {
    uint rc = trade.ResultRetcode();
@@ -254,7 +258,7 @@ void CloseAll()
    {
       ulong ticket = PositionGetTicket(i);
       if(ticket == 0 || !IsOwnSelected()) continue;
-      TradeDone(trade.PositionClose(ticket), "Dong lenh", "#" + (string)ticket);
+      TradeDone(PrepSend() && trade.PositionClose(ticket), "Dong lenh", "#" + (string)ticket);
    }
 }
 
@@ -688,10 +692,10 @@ void ManagePositions()
                GlobalVariableSet(tKey, (double)TimeCurrent());
                bool sent;
                if(IsHedging())
-                  sent = trade.PositionClosePartial(ticket, closeVol);
+                  sent = PrepSend() && trade.PositionClosePartial(ticket, closeVol);
                else   // Netting: gui lenh nguoc chieu cung magic de giam khoi luong vi the
-                  sent = isBuy ? trade.Sell(closeVol, _Symbol, 0, 0, 0, "partial")
-                               : trade.Buy (closeVol, _Symbol, 0, 0, 0, "partial");
+                  sent = PrepSend() && (isBuy ? trade.Sell(closeVol, _Symbol, 0, 0, 0, "partial")
+                                              : trade.Buy (closeVol, _Symbol, 0, 0, 0, "partial"));
                if(TradeDone(sent, "Chot mot phan", "#" + (string)ticket))
                {
                   GlobalVariableSet(pKey, 1);
@@ -699,7 +703,7 @@ void ManagePositions()
                   // Netting: neu server xoa SL/TP cua vi the sau deal giam, dat lai nhu cu
                   if(!IsHedging() && PositionSelect(_Symbol) &&
                      ((sl > 0 && PositionGetDouble(POSITION_SL) <= 0) || (tp > 0 && PositionGetDouble(POSITION_TP) <= 0)))
-                     TradeDone(trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
+                     TradeDone(PrepSend() && trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
                }
             }
          }
@@ -727,7 +731,7 @@ void ManagePositions()
       bool better    = isBuy ? (newSL > sl + minStep) : (sl <= 0 || newSL < sl - minStep);
       bool validDist = isBuy ? (price - newSL > minDist) : (newSL - price > minDist);
       if(newSL > 0 && better && validDist)
-         TradeDone(trade.PositionModify(ticket, newSL, tp), "Sua SL", "#" + (string)ticket);
+         TradeDone(PrepSend() && trade.PositionModify(ticket, newSL, tp), "Sua SL", "#" + (string)ticket);
    }
 }
 
@@ -937,14 +941,14 @@ void OnTick()
    if(buySignal)
    {
       double price = tick.ask;
-      ok = trade.Buy(lots, _Symbol, price,
+      ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
                      InpRR > 0 ? NormalizeDouble(price + slDist * InpRR, _Digits) : 0.0, "BTC bot BUY");
    }
    else
    {
       double price = tick.bid;
-      ok = trade.Sell(lots, _Symbol, price,
+      ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
                       InpRR > 0 ? NormalizeDouble(price - slDist * InpRR, _Digits) : 0.0, "BTC bot SELL");
    }
@@ -996,15 +1000,18 @@ double OnTester()
    double gLoss    = TesterStatistics(STAT_GROSS_LOSS);
    double pf       = TesterStatistics(STAT_PROFIT_FACTOR);
 
-   // Lai/lo theo tung nam (theo thoi diem dong lenh) de xem co lai deu hay chi nho 1 dot
+   // Lai/lo theo tung nam (theo thoi diem cua tung deal, gom ca phi vao lenh) de xem co lai deu hay chi nho 1 dot
    double yearPL[]; int years[];
+   datetime firstDeal = 0;   // lenh dau tien: neu muon hon ngay bat dau nhieu thi MT5 thieu du lieu
    if(HistorySelect(0, TimeCurrent()))
       for(int i = 0; i < HistoryDealsTotal(); i++)
       {
          ulong d = HistoryDealGetTicket(i);
          if(d == 0) continue;
-         long e = HistoryDealGetInteger(d, DEAL_ENTRY);
-         if(e != DEAL_ENTRY_OUT && e != DEAL_ENTRY_OUT_BY && e != DEAL_ENTRY_INOUT) continue;
+         // Moi deal mua/ban (ca deal vao lenh, de tinh phi vao lenh), bo qua nap tien / credit
+         long dt = HistoryDealGetInteger(d, DEAL_TYPE);
+         if(dt != DEAL_TYPE_BUY && dt != DEAL_TYPE_SELL) continue;
+         if(firstDeal == 0) firstDeal = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
          MqlDateTime t; TimeToStruct((datetime)HistoryDealGetInteger(d, DEAL_TIME), t);
          int k = -1;
          for(int j = 0; j < ArraySize(years); j++) if(years[j] == t.year) { k = j; break; }
@@ -1021,7 +1028,7 @@ double OnTester()
    {
       if(FileSize(h) == 0)
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
-                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LaiTheoNam");
+                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1037,6 +1044,7 @@ double OnTester()
                 (int)TesterStatistics(STAT_LONG_TRADES),
                 (int)TesterStatistics(STAT_SHORT_TRADES),
                 g_minLotSkips,
+                firstDeal > 0 ? TimeToString(firstDeal, TIME_DATE) : "-",
                 byYear);
       FileClose(h);
    }

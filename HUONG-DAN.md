@@ -1,4 +1,6 @@
-# Hướng dẫn bot BTC v3.0 (MT5)
+# Hướng dẫn bot BTC v3.1 (MT5)
+
+> **v3.1:** `LaiTheoNam` tính cả phí lúc vào lệnh nên tổng các năm khớp với `LoiNhuan`; thêm cột `LenhDau` (ngày của lệnh đầu tiên). Với lần chạy "trước 3 năm", nếu `LenhDau` muộn hơn nhiều so với ngày bắt đầu hoặc `SoLenh` quá ít, nghĩa là MT5 thiếu dữ liệu cũ và kết quả ngoài mẫu chưa đủ để tin. Mã lỗi được xóa trước mỗi lần gửi lệnh nên thông báo lỗi đúng với lần gửi đó.
 
 > **v3.0:** bảng kết quả có thêm cột `BoQuaLot` (số tín hiệu bị bỏ vì lot tính ra nhỏ hơn 0,01) và `LaiTheoNam` (lãi/lỗ từng năm). Lượt so sánh mới kiểm tra độ bền của Donchian H4: vốn 30.000, cặp ETHUSDm, và giai đoạn 3 năm trước đó (dữ liệu chưa dùng để chọn). Khi mở VS Code, bot chỉ compile code đang có trên máy, **không tự kéo code từ GitHub** nữa.
 >
