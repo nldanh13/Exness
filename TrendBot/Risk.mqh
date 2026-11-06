@@ -12,21 +12,23 @@ bool InGroup()
    return StringFind(list, "," + _Symbol + ",") >= 0;
 }
 bool g_grpLocked = false;
-void GroupLock()
+// Tra false neu bot nay thuoc nhom ma khong lay duoc khoa: KHONG duoc vao lenh (thu lai o tick sau).
+bool GroupLock()
 {
    g_grpLocked = false;
-   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
+   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return true;     // backtest 1 ma / khong thuoc nhom: khong can khoa
    string k = GrpKey("LOCK");
-   if(!GlobalVariableCheck(k)) GlobalVariableSet(k, 0);
+   if(!GlobalVariableCheck(k) && GlobalVariableSet(k, 0) == 0 && !GlobalVariableCheck(k)) return false;
    for(int i = 0; i < 100 && !IsStopped(); i++)                // toi da ~5 giay
    {
       double now = (double)TimeLocal();
-      if(GlobalVariableSetOnCondition(k, now, 0)) { g_grpLocked = true; return; }
+      if(GlobalVariableSetOnCondition(k, now, 0)) { g_grpLocked = true; return true; }
       double v = GlobalVariableGet(k);
-      if(v > 0 && now - v > 15 && GlobalVariableSetOnCondition(k, now, v)) { g_grpLocked = true; return; }  // khoa bi bo quen
+      // Khoa bi bo quen (bot kia bi tat giua chung): giu qua 60 giay thi coi nhu het han
+      if(v > 0 && now - v > 60 && GlobalVariableSetOnCondition(k, now, v)) { g_grpLocked = true; return true; }
       Sleep(50);
    }
-   Print("Khong lay duoc khoa chung cua nhom sau 5 giay, van tiep tuc.");
+   return false;
 }
 void GroupUnlock() { if(g_grpLocked) GlobalVariableSet(GrpKey("LOCK"), 0); g_grpLocked = false; }
 void GroupReserve(const double risk)
