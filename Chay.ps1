@@ -24,13 +24,14 @@ elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Pa
 }
 
 # 2) Chay viec duoc chon trong mot tien trinh moi, de dung dung ban script vua tai ve
-$job = switch ($Viec) {
+# @( ) bat buoc: switch tra ve mang 1 phan tu se bi "mo" thanh chuoi, va $job[0] chi con 1 ky tu
+$job = @(switch ($Viec) {
     'sosanh'          { @('ChayThuNghiem.ps1') }
     'sosanh-chinhxac' { @('ChayThuNghiem.ps1', '-ChinhXac') }
     'capnhat'         { @('DongBo.ps1') }
     'theodoi'         { @('DongBo.ps1', '-Watch') }
     'backtest'        { @('CaiDatBot.ps1') }
-}
+})
 $script = Join-Path $ProjectDir $job[0]
 $rest   = @($job | Select-Object -Skip 1)
 & powershell -NoProfile -ExecutionPolicy Bypass -File $script @rest
