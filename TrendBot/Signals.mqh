@@ -71,6 +71,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       datetime day = t1 - (d.hour * 3600 + d.min * 60 + d.sec);
       datetime rs = day + (P_OrbNewYork ? NYOpenUTCMin(day) : P_OrbStartMin) * 60, re = rs + P_OrbMinutes * 60;
       if(t1 < re || t1 >= re + 4 * 3600) return true;
+      if(d.day_of_week == 0 || d.day_of_week == 6) return true;   // thu Bay / Chu nhat: chung khoan My nghi
       int sIdx = iBarShift(_Symbol, P_TF, rs, false), eIdx = iBarShift(_Symbol, P_TF, re - 1, false);
       if(sIdx < 0 || eIdx < 1 || sIdx < eIdx || iTime(_Symbol, P_TF, sIdx) < rs - PeriodSeconds(P_TF)) return true;
       int cnt = sIdx - eIdx + 1;

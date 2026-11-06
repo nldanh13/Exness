@@ -111,8 +111,9 @@ foreach ($tf in @(@{ N = "M30"; V = 30 }, @{ N = "M15"; V = 15 }, @{ N = "M10"; 
 # Luot song khong vao lenh khi spread > 1500 point (15 USD, khoang gap doi binh thuong cua BTCUSDm). Dat truoc, khong do tim.
 $Scalp = @{ InpUseADX = "false"; InpUseHTF = "false"; InpUseTrailing = "false"; InpTrailStartR = 0; InpMaxSpreadPoints = 1500 }
 $ScalpRuns = @(
-    @{ N = "RSI-M5";  I = @{ InpStrategy = 2; InpTF = 5;  InpATRMult = 1.5; InpRR = 1 } },
-    @{ N = "RSI-M15"; I = @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1 } },
+    # RSI giu bo loc xu huong D1 (gia D1 dung phia EMA200 D1): EMA200 cua M5 chi ~17 gio du lieu
+    @{ N = "RSI-M5";  I = @{ InpStrategy = 2; InpTF = 5;  InpATRMult = 1.5; InpRR = 1; InpUseHTF = "true" } },
+    @{ N = "RSI-M15"; I = @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1; InpUseHTF = "true" } },
     @{ N = "ORB-M5";  I = @{ InpStrategy = 3; InpTF = 5;  InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 } }
 )
 foreach ($sr in $ScalpRuns) {
