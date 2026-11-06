@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v3.5
+# Hướng dẫn bot BTC (MT5) v3.6
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -9,7 +9,7 @@ Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task�
 
 | Nút | Khi nào dùng |
 |---|---|
-| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 25 lần backtest (khoảng 30–40 phút). Xong thì bảng kết quả **tự được đẩy lên GitHub** (thư mục `ket-qua/`), bạn chỉ cần nhắn Claude "xong rồi". Nếu đẩy lên thất bại, gửi file `ket-qua-backtest-....zip` thay thế. |
+| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 28 lần backtest (khoảng 35–45 phút). Xong thì bảng kết quả **tự được đẩy lên GitHub** (thư mục `ket-qua/`), bạn chỉ cần nhắn Claude "xong rồi". Nếu đẩy lên thất bại, gửi file `ket-qua-backtest-....zip` thay thế. |
 | **2. Cap nhat bot vao MT5** (Ctrl+Shift+B) | Khi bot đang chạy trên chart và muốn nạp bản mới ngay. |
 | **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo. Chạy lại bằng tick thật, khoảng 2 giờ. |
 
@@ -97,6 +97,15 @@ Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (khôn
 - `InpBreakConfirm`: chờ thêm 1 nến, giá vẫn đóng ngoài kênh mới vào lệnh.
 - `InpBreakMaxATR`: bỏ qua nến phá vỡ dài hơn X × ATR. Nến quá dài thường là thanh lý dây chuyền (lệnh đòn bẩy bị ép đóng trên sổ lệnh mỏng), vào theo lúc đó là đuổi giá.
 - `InpSkipWeekend` cũng được thử lại cho Donchian, vì cuối tuần khối lượng BTC chỉ khoảng một nửa ngày thường và sổ lệnh mỏng.
+
+**Bộ lọc funding rate** (`InpUseFunding`, mặc định tắt): lấy funding rate của hợp đồng BTCUSDT/ETHUSDT trên Binance Futures. Funding dương cao nghĩa là phe Long đang đông và trả phí cao, dễ bị thanh lý dây chuyền, nên bot bỏ lệnh Buy khi funding > `InpFundingMax` (mặc định 0,03% mỗi 8 giờ). Ngược lại bỏ lệnh Sell khi funding < −0,03%.
+- Khi backtest: script tự tải lịch sử funding miễn phí từ Binance vào thư mục *Common\Files* của MT5.
+- Khi chạy thật: bot hỏi Binance mỗi giờ. Cần vào *Tools → Options → Expert Advisors → Allow WebRequest* và thêm `https://fapi.binance.com`.
+- Funding là của Binance, không phải của Exness, và không đại diện cho toàn thị trường.
+
+**Chưa làm được và lý do:**
+- *Open interest:* Binance chỉ cho tải miễn phí 30 ngày gần nhất, không đủ để backtest.
+- *Liquidation heatmap (CoinGlass)* và *on-chain (Glassnode):* cần gói trả phí. On-chain lại thay đổi theo ngày, chậm so với bot khung H4.
 
 Một bộ lọc chỉ được bật làm mặc định nếu nó tốt hơn C ở **cả** 3 nơi: 3 năm gần đây, 3 năm trước đó, và ETH.
 

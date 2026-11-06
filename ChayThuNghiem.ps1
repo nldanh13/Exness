@@ -64,6 +64,10 @@ $Runs = @(
     @{ Name = "C+boNenDai3ATR";         Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }) },
     @{ Name = "C+boNenDai3ATR-truoc";   Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }); From = $OOSFrom; To = $FromDate },
     @{ Name = "C+boNenDai3ATR-ETH";     Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }); Symbol = "ETHUSDm" },
+    # Funding rate Binance: bo Buy khi funding > 0.03%/8h (phe Long qua dong), bo Sell khi < -0.03%.
+    @{ Name = "C+funding";              Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }) },
+    @{ Name = "C+funding-truoc";        Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+funding-ETH";          Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
@@ -93,6 +97,8 @@ try {
     $r = Invoke-BotCompile $mt5 $src
     if (-not $r.Ok) { $r.Errors | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }; throw "Compile that bai." }
     Write-Host "Da compile ban moi nhat cua bot. $($r.Summary)" -ForegroundColor Green
+    Write-Host "Cap nhat du lieu funding rate tu Binance..." -ForegroundColor Cyan
+    Update-FundingData $mt5 @("BTCUSDT", "ETHUSDT")
 } catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log

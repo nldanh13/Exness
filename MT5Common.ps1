@@ -132,6 +132,39 @@ $($lines -join "`r`n")
 "@ | Set-Content -Path $iniPath -Encoding Unicode
 }
 
+# Tai lich su funding rate Binance USDT-M Futures (mien phi, khong can tai khoan) vao Common\Files,
+# de bot doc khi backtest. Chi tai phan con thieu. Loi mang thi giu file cu va bao canh bao.
+function Update-FundingData($mt5, [string[]]$pairs, [int]$years = 7) {
+    foreach ($pair in $pairs) {
+        $file = Join-Path $mt5.CommonFiles "funding_$pair.csv"
+        $rows = New-Object System.Collections.Generic.List[string]
+        $start = [DateTimeOffset]::UtcNow.AddYears(-$years).ToUnixTimeMilliseconds()
+        if (Test-Path $file) {
+            Get-Content $file | Where-Object { $_ -match '^\d+,' } | ForEach-Object { $rows.Add($_) }
+            if ($rows.Count -gt 0) { $start = [long]($rows[$rows.Count - 1].Split(',')[0]) + 1 }
+        }
+        $added = 0
+        try {
+            while ($true) {
+                $url  = "https://fapi.binance.com/fapi/v1/fundingRate?symbol=$pair&startTime=$start&limit=1000"
+                $data = @(Invoke-RestMethod -Uri $url -TimeoutSec 30)
+                if ($data.Count -eq 0) { break }
+                foreach ($d in $data) {
+                    $rows.Add(("{0},{1}" -f $d.fundingTime, $d.fundingRate)); $added++
+                }
+                $start = [long]$data[$data.Count - 1].fundingTime + 1
+                if ($data.Count -lt 1000) { break }
+            }
+        } catch {
+            Write-Host "  Khong tai duoc funding $pair ($($_.Exception.Message)). Dung du lieu cu neu co." -ForegroundColor Yellow
+        }
+        if ($rows.Count -gt 0) {
+            (@("time_ms,rate") + $rows) | Set-Content -Path $file -Encoding ASCII
+            Write-Host "  Funding $pair : $($rows.Count) moc (moi tai $added)." -ForegroundColor Green
+        }
+    }
+}
+
 # Dong MT5 (hoi truoc). Tra ve $false neu nguoi dung khong dong y.
 function Stop-MT5($mt5) {
     $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $mt5.Terminal }

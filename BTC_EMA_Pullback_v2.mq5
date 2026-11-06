@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.5"
-#property version   "3.50"
+#define  BOT_VERSION "3.6"
+#property version   "3.60"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -31,6 +31,8 @@ input int             InpTrendEMA        = 200;       // EMA xu huong
 input int             InpATRPeriod       = 14;        // Chu ky ATR
 
 input group "=== Bo loc thi truong ==="
+input bool            InpUseFunding      = false;     // Loc funding rate Binance Futures (dam dong dung don bay qua lech)
+input double          InpFundingMax      = 0.03;      // Bo Buy khi funding > X% / 8 gio, bo Sell khi funding < -X%
 input bool            InpUseHTF          = true;      // Xac nhan xu huong khung lon
 input ENUM_TIMEFRAMES InpHTF             = PERIOD_D1; // Khung lon
 input int             InpHTFEMA          = 200;       // EMA khung lon
@@ -490,6 +492,77 @@ bool BearCandle()
 }
 
 //--- Khoi luong ----------------------------------------------------
+//--- Funding rate (Binance USDT-M Futures) ----------------------------
+// Backtest: doc file funding_<CAP>.csv trong thu muc Common\Files (script ChayThuNghiem tai ve).
+// Chay that: hoi Binance moi gio qua WebRequest (them https://fapi.binance.com vao danh sach cho phep),
+// loi thi dung gia tri moi nhat trong file.
+datetime g_fT[];
+double   g_fR[];
+double   g_liveFunding = EMPTY_VALUE;
+datetime g_liveFundingAt = 0;
+int      g_fundBlocked = 0;     // so tin hieu bi bo vi funding (ghi vao ket qua backtest)
+string FundingPair()
+{
+   if(StringFind(_Symbol, "BTC") >= 0) return "BTCUSDT";
+   if(StringFind(_Symbol, "ETH") >= 0) return "ETHUSDT";
+   return "";
+}
+void LoadFunding()
+{
+   ArrayResize(g_fT, 0); ArrayResize(g_fR, 0);
+   string pair = FundingPair();
+   if(pair == "") return;
+   int h = FileOpen("funding_" + pair + ".csv", FILE_READ | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   if(h == INVALID_HANDLE) { Print("Chua co file funding_", pair, ".csv: bo loc funding se khong chan lenh nao."); return; }
+   while(!FileIsEnding(h))
+   {
+      string ms = FileReadString(h);
+      string rt = FileReadString(h);
+      long   t  = StringToInteger(ms);
+      if(t <= 0) continue;                              // dong tieu de / dong trong
+      int n = ArraySize(g_fT);
+      ArrayResize(g_fT, n + 1); ArrayResize(g_fR, n + 1);
+      g_fT[n] = (datetime)(t / 1000);
+      g_fR[n] = StringToDouble(rt) * 100.0;             // doi sang %
+   }
+   FileClose(h);
+   PrintFormat("Da nap %d moc funding %s.", ArraySize(g_fT), pair);
+}
+// Funding (%) da biet tai thoi diem t: moc gan nhat <= t. EMPTY_VALUE neu khong co du lieu.
+double FundingAt(const datetime t)
+{
+   int n = ArraySize(g_fT);
+   if(n == 0 || t < g_fT[0]) return EMPTY_VALUE;
+   if(t - g_fT[n - 1] > 2 * 86400) return EMPTY_VALUE;  // du lieu cu qua 2 ngay: coi nhu khong co
+   int lo = 0, hi = n - 1;
+   while(lo < hi) { int mid = (lo + hi + 1) / 2; if(g_fT[mid] <= t) lo = mid; else hi = mid - 1; }
+   return g_fR[lo];
+}
+double FundingNow()
+{
+   if(!MQLInfoInteger(MQL_TESTER) && FundingPair() != "" && TimeCurrent() - g_liveFundingAt >= 3600)
+   {
+      g_liveFundingAt = TimeCurrent();
+      char req[], res[]; string hdr;
+      int code = WebRequest("GET", "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=" + FundingPair(),
+                            "", 5000, req, res, hdr);
+      if(code == 200)
+      {
+         string js = CharArrayToString(res);
+         int k = StringFind(js, "\"lastFundingRate\":\"");
+         if(k >= 0)
+         {
+            k += StringLen("\"lastFundingRate\":\"");
+            g_liveFunding = StringToDouble(StringSubstr(js, k, StringFind(js, "\"", k) - k)) * 100.0;
+         }
+      }
+      else if(ShouldNotify("funding", 86400))
+         PrintFormat("Khong lay duoc funding (%d). Them https://fapi.binance.com vao Tools > Options > Expert Advisors > Allow WebRequest.", code);
+   }
+   if(!MQLInfoInteger(MQL_TESTER) && g_liveFunding != EMPTY_VALUE) return g_liveFunding;
+   return FundingAt(TimeCurrent());
+}
+
 int g_minLotSkips = 0;   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
 double CalcLots(const double slDistance)
 {
@@ -821,6 +894,7 @@ void UpdatePanel()
 //+------------------------------------------------------------------+
 int OnInit()
 {
+   if(InpUseFunding) LoadFunding();
    hFast  = iMA(_Symbol, InpTF,  InpFastEMA,  0, MODE_EMA, PRICE_CLOSE);
    hTrend = iMA(_Symbol, InpTF,  InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
    hHTF   = iMA(_Symbol, InpHTF, InpHTFEMA,   0, MODE_EMA, PRICE_CLOSE);
@@ -972,6 +1046,18 @@ void OnTick()
    bool sellSignal = InpAllowSell && sellBase
                      && (!InpUseHTF || htfClose < htfEma) && adxOk
                      && (!InpUseCandle || BearCandle());
+   if(InpUseFunding && (buySignal || sellSignal))
+   {
+      // Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.
+      // Funding qua am: nguoc lai voi Sell.
+      double f = FundingNow();
+      if(f != EMPTY_VALUE && ((buySignal && f > InpFundingMax) || (sellSignal && f < -InpFundingMax)))
+      {
+         g_fundBlocked++;
+         g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);
+         return;
+      }
+   }
 
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
@@ -1131,7 +1217,7 @@ double OnTester()
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
-                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%");
+                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%", "ChanFunding");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1151,7 +1237,7 @@ double OnTester()
                 byYear,
                 DoubleToString(stressPL[0], 2), DoubleToString(stressGL[0] > 0 ? stressGP[0] / stressGL[0] : 0, 2),
                 DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2),
-                DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1));
+                DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked);
       FileClose(h);
    }
    else
