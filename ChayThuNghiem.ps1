@@ -92,15 +92,15 @@ $Runs = @(
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
-# Lan doi chieu: kiem tra lenh o MOI tick (nhu ban cu) de do sai khac cua viec chi kiem tra moi giay
-$Runs += @{ Name = "C-moiTick"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 0 }) }
+# Lan doi chieu: chi kiem tra lenh moi giay (nhanh hon) de do sai khac so voi moi tick (mac dinh)
+$Runs += @{ Name = "C-moiGiay"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 1 }) }
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
 # Che do chinh xac: tick that rat nang (moi agent nap ca trieu tick vao RAM). Tren may it RAM (vd. 8 GB)
 # chay song song 12 agent se treo may, nen chi chay 5 cau hinh can thiet va chay LAN LUOT (1 agent).
 if ($ChinhXac) {
-    $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "C-moiTick", "C-truoc-3nam", "C-ETH", "C-von30000") })
+    $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "C-moiGiay", "C-truoc-3nam", "C-ETH", "C-von30000") })
     $TuanTu = $true
 }
 Write-Host "Se chay $($Runs.Count) cau hinh." -ForegroundColor Cyan
@@ -133,6 +133,10 @@ try {
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log
 $startTime  = Get-Date
+# Don bao cao cu cua MT5 (htm/png/ini/xml cua cac lan truoc), de zip chi chua lan nay
+Get-ChildItem $dataDir -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like "$BotName-*" -and $_.Extension -in ".htm", ".html", ".png", ".ini", ".xml" } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
 
 $resultFile = Join-Path $mt5.CommonFiles "BTC_EMA_results.csv"
 if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
@@ -245,6 +249,9 @@ foreach ($ld in $logDirs) {
 }
 $zip = Join-Path $outDir ("ket-qua-backtest-" + (Get-Date -Format "yyyyMMdd-HHmm") + ".zip")
 Compress-Archive -Path (Join-Path $pack "*") -DestinationPath $zip -Force
+# Chi giu 3 file zip moi nhat trong thu muc bot (ket qua da nam tren GitHub, thu muc ket-qua/)
+Get-ChildItem $outDir -Filter "ket-qua-backtest-*.zip" -File | Sort-Object LastWriteTime -Descending |
+    Select-Object -Skip 3 | Remove-Item -Force -ErrorAction SilentlyContinue
 Write-Host ""
 Write-Host "==> GUI FILE NAY CHO CLAUDE: $zip" -ForegroundColor Yellow
 # Luu bang ket qua vao thu muc ket-qua/ va day len GitHub, de Claude doc thang (khong can gui zip).

@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v4.7
+# Hướng dẫn bot BTC (MT5) v4.8
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -32,7 +32,9 @@ Khi mở VS Code, code đang có trên máy được compile vào MT5. Bước n
 
 **Chạy song song:** script gom các lần chạy cùng mã, cùng khoảng ngày và cùng vốn thành một đợt *Optimization* của MT5. MT5 tự chia các lần trong đợt cho mọi nhân CPU, nên máy 8 nhân nhanh hơn khoảng 6–8 lần. Mỗi cấu hình có một số thứ tự (`InpPreset`); bot đọc cấu hình đó từ file `TrendBot_presets.csv` mà script ghi vào *Common\Files*. Muốn chạy lần lượt như cũ (để dò lỗi) thì chạy `ChayThuNghiem.ps1 -TuanTu`. Nếu MT5 tắt bớt agent trong *Tester → Agents*, đợt chạy sẽ chậm lại tương ứng.
 
-Bot cũng chỉ kiểm tra lệnh đang mở và giới hạn lỗ mỗi giây một lần (`InpManageEverySec = 1`) thay vì mọi tick. Khi có nến mới hoặc vừa có giao dịch thì vẫn kiểm tra ngay. Lần chạy `C-moiTick` giữ cách cũ để đối chiếu.
+Bot kiểm tra lệnh đang mở và giới hạn lỗ ở mọi tick (`InpManageEverySec = 0`). Tick thật ngày 06/11 cho thấy chỉ kiểm tra mỗi giây làm một lệnh (11/2025) đóng sớm, lãi giảm 50 USD (5%), nên mặc định giữ mọi tick. Lần chạy `C-moiGiay` để đối chiếu.
+
+**Dọn file:** mỗi lần chạy script xóa báo cáo cũ của MT5 và chỉ giữ 3 file zip mới nhất trong thư mục bot. Kết quả vẫn lưu đủ trong `ket-qua/` trên GitHub.
 
 **Khi đang backtest:**
 - Script sẽ hỏi đóng MT5. Đóng MT5 là **dừng mọi bot đang chạy trên MT5 đó**.

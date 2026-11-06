@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.7"
-#property version   "4.70"
+#define  BOT_VERSION "4.8"
+#property version   "4.80"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -102,7 +102,7 @@ input group "=== Khac ==="
 input bool            InpShowPanel       = true;      // Hien bang thong tin
 input ulong           InpMagic           = 20261105;  // Magic number
 input string          InpTestLabel       = "";        // Ten lan chay backtest (ghi vao file ket qua)
-input int             InpManageEverySec  = 1;         // Kiem tra lenh dang mo / gioi han lo toi da moi X giay (0 = moi tick). Nhanh hon khi backtest
+input int             InpManageEverySec  = 0;         // Kiem tra lenh dang mo / gioi han lo moi X giay (0 = moi tick, mac dinh: tick that cho thay 1 giay lam lech 1 lenh)
 input int             InpPreset          = 0;         // Backtest: so thu tu cau hinh trong file TrendBot_presets.csv (0 = dung tham so tren)
 
 
