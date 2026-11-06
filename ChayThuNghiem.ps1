@@ -94,13 +94,6 @@ $Runs = @(
 )
 # Lan doi chieu: chi kiem tra lenh moi giay (nhanh hon) de do sai khac so voi moi tick (mac dinh)
 $Runs += @{ Name = "C-moiGiay"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 1 }) }
-# Tai khoan Cent (1 trieu VND ~ 3.800 USC): Cent khong co BTC, nen thu cung cau hinh C tren vang va forex.
-# Lot Cent = 1/100 lot thuong, nen backtest ma "m" voi von 3800 USD cho cung ket qua (tinh bang %) nhu Cent 3800 USC.
-# Tieu chi dat truoc: PF >= 1,3 o CA 3 nam gan day lan 3 nam truoc, it nhat 30 lenh moi giai doan, BoQuaLot thap.
-foreach ($cs in @("XAUUSDm", "EURUSDm", "GBPUSDm", "USDJPYm")) {
-    $Runs += @{ Name = "Cent-$cs";       Inputs = (Cfg $Brk $Q); Symbol = $cs; Deposit = 3800 }
-    $Runs += @{ Name = "Cent-$cs-truoc"; Inputs = (Cfg $Brk $Q); Symbol = $cs; Deposit = 3800; From = $OOSFrom; To = $FromDate }
-}
 # Luot song ngan (khung M15, M5): cung cau truc C, von 30000 de lot toi thieu khong bo lenh, chi do xem co loi the sau phi khong.
 # Lan 2 da loai H1 (kem H4). Tieu chi dat truoc: PF_Truot0.05% >= 1,3 o CA 3 nam gan day lan 3 nam truoc.
 # Che do nhanh (M1 OHLC) khong chinh xac cho khung ngan: ma nao dat phai chay lai bang tick that.
