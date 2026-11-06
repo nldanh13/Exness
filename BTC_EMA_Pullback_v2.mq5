@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.2"
-#property version   "4.20"
+#define  BOT_VERSION "4.3"
+#property version   "4.30"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -327,10 +327,22 @@ bool SetParam(const string k, const string v)
    if(k == "InpPreset") { P_Preset = (int)StringToInteger(v); return true; }
    return false;
 }
+// Mo file chung de DOC. Khi chay song song nhieu agent cung doc 1 file: phai cho phep doc chung
+// (FILE_SHARE_READ), va thu lai vai lan neu file dang bi giu.
+int OpenCommonRead(const string name, const int flags, const ushort delim = '\t')
+{
+   for(int i = 0; i < 20; i++)
+   {
+      int h = FileOpen(name, flags | FILE_READ | FILE_SHARE_READ | FILE_COMMON, delim);
+      if(h != INVALID_HANDLE) return h;
+      Sleep(100);
+   }
+   return INVALID_HANDLE;
+}
 // Dong cau hinh: id;ten;Inp1=gia_tri;Inp2=gia_tri...
 bool ApplyPreset(const int id)
 {
-   int h = FileOpen("TrendBot_presets.csv", FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON);
+   int h = OpenCommonRead("TrendBot_presets.csv", FILE_TXT | FILE_ANSI);
    if(h == INVALID_HANDLE) { Print("Khong mo duoc TrendBot_presets.csv"); return false; }
    bool found = false;
    while(!FileIsEnding(h) && !found)

@@ -70,7 +70,7 @@ void LoadFunding()
    ArrayResize(g_fT, 0); ArrayResize(g_fR, 0);
    string pair = FundingPair();
    if(pair == "") return;
-   int h = FileOpen("funding_" + pair + ".csv", FILE_READ | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   int h = OpenCommonRead("funding_" + pair + ".csv", FILE_CSV | FILE_ANSI, ',');
    if(h == INVALID_HANDLE) { Print("Chua co file funding_", pair, ".csv: bo loc funding se khong chan lenh nao."); return; }
    while(!FileIsEnding(h))
    {
@@ -163,7 +163,7 @@ void MergeDaily(datetime &t[], double &v[], const datetime day, const double val
 void LoadDaily(const string file, datetime &t[], double &v[])
 {
    ArrayResize(t, 0); ArrayResize(v, 0);
-   int h = FileOpen(file, FILE_READ | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   int h = OpenCommonRead(file, FILE_CSV | FILE_ANSI, ',');
    if(h == INVALID_HANDLE) { Print("Chua co file ", file, ": bo loc dung file nay se khong chan lenh nao."); return; }
    while(!FileIsEnding(h))
    {
