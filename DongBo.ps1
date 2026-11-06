@@ -30,8 +30,9 @@ foreach ($f in $files) { Deploy $f.FullName $mt5 }
 if (-not $Watch) { exit 0 }
 
 Write-Host ""
-Write-Host "Dang theo doi $ProjectDir ... Sua va luu file .mq5 la bot tu cap nhat. Ctrl+C de dung." -ForegroundColor Cyan
-$watcher = New-Object IO.FileSystemWatcher $ProjectDir, "*.mq5"
+Write-Host "Dang theo doi $ProjectDir ... Sua va luu file .mq5 / .mqh la bot tu cap nhat. Ctrl+C de dung." -ForegroundColor Cyan
+$watcher = New-Object IO.FileSystemWatcher $ProjectDir, "*.mq*"
+$watcher.IncludeSubdirectories = $true      # module trong TrendBot/
 $watcher.NotifyFilter = [IO.NotifyFilters]'LastWrite, FileName'
 $lastRun = @{}
 while ($true) {
@@ -39,6 +40,12 @@ while ($true) {
     if ($change.TimedOut) { continue }
     $path = Join-Path $ProjectDir $change.Name
     if (-not (Test-Path $path)) { continue }
+    if ($path -like "*.mqh") {                      # sua module: compile lai moi bot .mq5 dung no
+        $files = @(Get-ChildItem $ProjectDir -Filter *.mq5)
+        if ($files.Count -eq 0) { continue }
+        $path = $files[0].FullName
+    }
+    if ($path -notlike "*.mq5") { continue }
     $now = Get-Date
     if ($lastRun[$path] -and ($now - $lastRun[$path]).TotalSeconds -lt 2) { continue }  # bo qua su kien trung
     Start-Sleep -Milliseconds 400                                                      # cho editor ghi xong

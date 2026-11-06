@@ -1,8 +1,21 @@
-# Hướng dẫn bot BTC (MT5) v4.0
+# Hướng dẫn bot BTC (MT5) v4.1
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
-File bot: `BTC_EMA_Pullback_v2.mq5`. Phiên bản hiện ra ở bảng thông tin trên chart. Lịch sử thay đổi xem trong GitHub (Commits).
+File bot: `BTC_EMA_Pullback_v2.mq5`, chỉ chứa tham số và thứ tự chạy. Phần logic nằm trong thư mục `TrendBot/`, mỗi file một việc:
+
+| File | Việc |
+|---|---|
+| `Core.mqh` | Biến chung, tiện ích gửi lệnh, vị thế của bot |
+| `Signals.mqh` | Tín hiệu gốc: Donchian breakout hoặc EMA pullback |
+| `Filters.mqh` | Bộ lọc giờ, mẫu nến, funding, Fear & Greed, Wikipedia, Nasdaq, tin Mỹ |
+| `Risk.mqh` | Tính lot, trần rủi ro nhóm BTC/ETH, khóa chung giữa các bot |
+| `Manage.mqh` | Trailing, hòa vốn, chốt một phần, đối soát lệnh đã đóng |
+| `Protection.mqh` | Mốc vốn, lỗ ngày, dừng hẳn khi sụt giảm |
+| `Notify.mqh`, `Panel.mqh` | Thông báo và bảng thông tin |
+| `Report.mqh` | Ghi kết quả backtest |
+
+Các nút trong VS Code tự chép cả thư mục này vào MT5 khi compile. Bot chạy được cho mã khác ngoài BTC/ETH: đặt `InpFundingSymbol` và `InpWikiArticle` nếu dùng hai bộ lọc đó. Phiên bản hiện ra ở bảng thông tin trên chart. Lịch sử thay đổi xem trong GitHub (Commits).
 
 ## Dùng hằng ngày với VS Code
 Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task…**. Bạn không cần bấm Sync hay compile: mỗi nút tự lấy code mới nhất từ GitHub và compile trước khi chạy.

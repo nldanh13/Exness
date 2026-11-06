@@ -53,6 +53,13 @@ function Invoke-BotCompile($mt5, [string]$src) {
     $log    = Join-Path $env:TEMP "$name-compile.log"
     $bak    = "$ex5.bak"
     Copy-Item $src $target -Force
+    # Cac module .mqh (thu muc TrendBot/ canh file .mq5) phai nam canh file .mq5 trong MQL5\Experts
+    $modSrc = Join-Path (Split-Path $src -Parent) "TrendBot"
+    if (Test-Path $modSrc) {
+        $modDst = Join-Path $mt5.Experts "TrendBot"
+        if (-not (Test-Path $modDst)) { New-Item -ItemType Directory -Path $modDst | Out-Null }
+        Copy-Item (Join-Path $modSrc "*.mqh") $modDst -Force
+    }
     if (Test-Path $log) { Remove-Item $log -Force }
     # Giu ban .ex5 cu: compile loi thi tra lai, bot tren chart khong bi mat file chay
     if (Test-Path $ex5) { Move-Item $ex5 $bak -Force }
