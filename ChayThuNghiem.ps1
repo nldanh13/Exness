@@ -134,6 +134,9 @@ if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
 $resDirMT5 = Join-Path $mt5.CommonFiles "TrendBotRes"
 if (Test-Path $resDirMT5) { Remove-Item (Join-Path $resDirMT5 "*") -Force -ErrorAction SilentlyContinue }
 else { New-Item -ItemType Directory -Path $resDirMT5 | Out-Null }
+$tradeDirMT5 = Join-Path $mt5.CommonFiles "TrendBotTrades"      # dac diem tung lenh (vao dau / giua / muon xu huong)
+if (Test-Path $tradeDirMT5) { Remove-Item (Join-Path $tradeDirMT5 "*") -Force -ErrorAction SilentlyContinue }
+else { New-Item -ItemType Directory -Path $tradeDirMT5 | Out-Null }
 
 # Gom cac lan chay theo (ma, tu ngay, den ngay, von): moi nhom 1 dot chay song song.
 # So thu tu cau hinh (InpPreset) lien tiep trong moi nhom; bot doc cau hinh tu TrendBot_presets.csv.
@@ -194,6 +197,11 @@ if ($incomplete) {
     Write-Host "Dot chay nay CHUA HOAN THANH: khong day len GitHub. Hay chay lai, hoac gui file zip cho Claude de tim nguyen nhan." -ForegroundColor Red
 }
 if ($rows.Count -gt 0) { $rows | Export-Csv -Path $resultFile -NoTypeInformation -Encoding ASCII }
+$tradeRows = New-Object System.Collections.ArrayList
+foreach ($run in $Runs) {
+    $f = Join-Path $tradeDirMT5 ("{0:D3}.csv" -f $run.Id)
+    if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$tradeRows.Add($r) } }
+}
 
 Write-Host ""
 $summary = Join-Path $ProjectDir "ket-qua-so-sanh.csv"
@@ -243,18 +251,22 @@ if ($summary) {
     if ($incomplete) { $tag += "-CHUADU" }
     $resName = (Get-Date -Format "yyyyMMdd-HHmm") + "-$tag.csv"
     Copy-Item $summary (Join-Path $resDir $resName) -Force
+    $tradeName = $resName -replace '\.csv$', '-lenh.csv'
+    if ($tradeRows.Count -gt 0) { $tradeRows | Export-Csv -Path (Join-Path $resDir $tradeName) -NoTypeInformation -Encoding ASCII }
     if ($incomplete) {
         Write-Host "Da luu ban CHUA DU o ket-qua\$resName (chi tren may, khong day len GitHub)." -ForegroundColor Yellow
     } elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
         $rel = "ket-qua/$resName"
+        $relT = "ket-qua/$tradeName"
+        $paths = @($rel); if (Test-Path (Join-Path $ProjectDir $relT)) { $paths += $relT }
         # Neu may ban dang co commit chua day len, KHONG day ho (git push day ca nhanh).
         & git -C $ProjectDir fetch -q 2>&1 | Out-Null
         $ahead = [int](& git -C $ProjectDir rev-list --count "@{u}..HEAD" 2>$null)
         if ($ahead -gt 0) {
             $gitOut = @("May ban co $ahead commit chua day len GitHub. De tranh day nham, script khong tu day ket qua.")
             $LASTEXITCODE = 1
-        } else { $gitOut = & git -C $ProjectDir add -- $rel 2>&1 }
-        if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $rel 2>&1 }
+        } else { $gitOut = & git -C $ProjectDir add -- $paths 2>&1 }
+        if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $paths 2>&1 }
         # Trong 35-45 phut chay co the da co commit moi tren GitHub: keo ve truoc roi moi day
         if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir pull -q --rebase --autostash 2>&1 }
         if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir push -q 2>&1 }

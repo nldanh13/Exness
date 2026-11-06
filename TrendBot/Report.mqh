@@ -1,6 +1,90 @@
 //+------------------------------------------------------------------+
 //| TrendBot/Report.mqh: OnTester: ghi ket qua backtest, phep thu chi phi, Monte Carlo
 //+------------------------------------------------------------------+
+//--- Dac diem tung lenh: vao "dau", "giua" hay "muon" cua xu huong? ------------------
+// Tinh lai tu lich su gia tai thoi diem vao lenh (chi dung du lieu da co luc do).
+double DonHi(const int from) { int i = iHighest(_Symbol, P_TF, MODE_HIGH, P_DonchianPeriod, from); return i < 0 ? 0 : iHigh(_Symbol, P_TF, i); }
+double DonLo(const int from) { int i = iLowest(_Symbol,  P_TF, MODE_LOW,  P_DonchianPeriod, from); return i < 0 ? 0 : iLow(_Symbol,  P_TF, i); }
+// Phan vi (0-100) cua funding hien tai so voi 365 ngay truoc do
+double FundingPct(const datetime t, const double f)
+{
+   int n = ArraySize(g_fT);
+   if(n == 0 || f == EMPTY_VALUE) return -1;
+   int below = 0, cnt = 0;
+   for(int i = n - 1; i >= 0; i--)
+   {
+      if(g_fT[i] > t) continue;
+      if(g_fT[i] < t - 365 * 86400) break;
+      cnt++; if(g_fR[i] < f) below++;
+   }
+   return cnt >= 300 ? 100.0 * below / cnt : -1;
+}
+void WriteTradeFeatures(const ulong &ids[], const double &net[])
+{
+   if(ArraySize(g_fT) == 0) LoadFunding();
+   string file = InpPreset > 0 ? StringFormat("TrendBotTrades\\%03d.csv", InpPreset)
+                               : "TrendBotTrades\\" + (P_TestLabel == "" ? "khong-ten" : P_TestLabel) + ".csv";
+   int h = FileOpen(file, FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   if(h == INVALID_HANDLE) return;
+   FileWrite(h, "Lan", "ViThe", "Chieu", "ThoiGianVao", "KhoangCach_ATR", "DoRongKenh_ATR", "TuoiXuHuong_nen",
+             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu");
+   double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   for(int j = 0; j < ArraySize(ids); j++)
+   {
+      if(!HistorySelectByPosition(ids[j])) continue;
+      datetime tin = 0, tout = 0; double pin = 0, vol = 0; bool buy = true;
+      for(int i = 0; i < HistoryDealsTotal(); i++)
+      {
+         ulong d = HistoryDealGetTicket(i);
+         long en = HistoryDealGetInteger(d, DEAL_ENTRY);
+         if(en == DEAL_ENTRY_IN && tin == 0)
+         {
+            tin = (datetime)HistoryDealGetInteger(d, DEAL_TIME); pin = HistoryDealGetDouble(d, DEAL_PRICE);
+            vol = HistoryDealGetDouble(d, DEAL_VOLUME); buy = HistoryDealGetInteger(d, DEAL_TYPE) == DEAL_TYPE_BUY;
+         }
+         if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY) tout = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
+      }
+      if(tin == 0) continue;
+      int s = iBarShift(_Symbol, P_TF, tin, false) + 1;          // nen tin hieu (nen vua dong luc vao lenh)
+      double ab[];
+      if(CopyBuffer(hATR, 0, s, 1, ab) != 1 || ab[0] <= 0) continue;
+      double atr = ab[0];
+      double chH = DonHi(s + 1), chL = DonLo(s + 1);
+      double dist  = (buy ? pin - chH : chL - pin) / atr;        // da chay qua mep kenh bao xa (mua/ban duoi)
+      double width = (chH - chL) / atr;                          // kenh hep = vua thoat tich luy
+      // Dot xu huong hien tai: lui ve truoc cho toi khi gia dong o nua kia cua giua kenh
+      int k = s, first = -1, breaks = 0;
+      for(; k < s + 300; k++)
+      {
+         double hi = DonHi(k + 1), lo = DonLo(k + 1), c = iClose(_Symbol, P_TF, k);
+         if(hi <= 0 || lo <= 0) break;
+         if(buy ? c <= (hi + lo) / 2 : c >= (hi + lo) / 2) break;
+         if(buy ? c > hi : c < lo) { first = k; breaks++; }
+      }
+      double f  = FundingAt(tin);
+      double fp = FundingPct(tin, f);
+      // Du dia di tiep (MFE) va muc bat loi lon nhat (MAE), tinh theo R = khoang SL ban dau
+      double rDist = atr * P_ATRMult, mfe = 0, mae = 0;
+      int e = tout > 0 ? iBarShift(_Symbol, P_TF, tout, false) : 0;
+      int sh = s - 1;
+      if(sh >= e && rDist > 0)
+      {
+         double hh = iHigh(_Symbol, P_TF, iHighest(_Symbol, P_TF, MODE_HIGH, sh - e + 1, e));
+         double ll = iLow(_Symbol,  P_TF, iLowest(_Symbol,  P_TF, MODE_LOW,  sh - e + 1, e));
+         mfe = (buy ? hh - pin : pin - ll) / rDist;
+         mae = (buy ? pin - ll : hh - pin) / rDist;
+      }
+      double riskMoney = (tsz > 0 ? rDist / tsz * tv * vol : 0);
+      FileWrite(h, P_TestLabel, (long)ids[j], buy ? "Buy" : "Sell", TimeToString(tin, TIME_DATE | TIME_MINUTES),
+                DoubleToString(dist, 2), DoubleToString(width, 2), k - s, first >= 0 ? first - s : -1, breaks,
+                f == EMPTY_VALUE ? "" : DoubleToString(f, 4), fp < 0 ? "" : DoubleToString(fp, 0),
+                DoubleToString(net[j], 2), DoubleToString(riskMoney > 0 ? net[j] / riskMoney : 0, 2),
+                DoubleToString(mfe, 2), DoubleToString(mae, 2),
+                DoubleToString(tout > tin ? (double)(tout - tin) / 3600.0 : 0, 1));
+   }
+   FileClose(h);
+}
+
 //--- Ghi ket qua backtest ra file chung de so sanh nhieu cau hinh -----
 double OnTester()
 {
@@ -147,6 +231,7 @@ double OnTester()
    }
    else
       PrintFormat("Khong ghi duoc file ket qua: %d", GetLastError());
+   WriteTradeFeatures(posIds, posNet);
    return pf;
 }
 //+------------------------------------------------------------------+

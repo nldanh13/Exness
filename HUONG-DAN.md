@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v4.5
+# Hướng dẫn bot BTC (MT5) v4.6
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -151,6 +151,27 @@ Không đạt thì giữ C. Mỗi bộ lọc thêm vào là một tham số có 
 **Vốn khi backtest:** vốn nhỏ thì nhiều tín hiệu có lot dưới 0,01, đúng vào lúc ATR cao. Bot bỏ các tín hiệu đó, không làm tròn lên. Bản v3.8 từng thử làm tròn lên 0,01 lot khi rủi ro không quá 1,5%: có thêm 10 lệnh nhưng PF giảm từ 2,09 xuống 1,92, lãi gần như không đổi. Vì vậy từ v3.9 làm tròn mặc định tắt (`InpMaxRiskRoundUp = 0`). Các lần chạy `C-lamTronLot1.5` vẫn được giữ để đối chiếu. Hãy backtest với đúng số vốn sẽ chạy thật (sửa `$Deposit` ở đầu `ChayThuNghiem.ps1`, đang là 3000).
 
 Muốn thử cấu hình khác, sửa danh sách `$Runs` trong `ChayThuNghiem.ps1`.
+
+## Vào lệnh "đầu", "giữa" hay "muộn" của xu hướng
+Câu hỏi: sau khi bot vào lệnh, thị trường còn bao nhiêu dư địa để đi tiếp so với rủi ro phải chịu? Không đoán "cá voi đã mua chưa", mà đo. Mỗi lần backtest, bot ghi đặc điểm từng lệnh vào `ket-qua/<ngay>-<che-do>-lenh.csv`:
+
+| Cột | Ý nghĩa |
+|---|---|
+| `KhoangCach_ATR` | Giá vào đã vượt mép kênh Donchian bao xa, tính bằng ATR (mua đuổi) |
+| `DoRongKenh_ATR` | Độ rộng kênh trước khi phá vỡ. Hẹp = vừa thoát tích lũy |
+| `TuoiXuHuong_nen` | Số nến H4 kể từ lần cuối giá đóng cửa ở nửa kia của giữa kênh |
+| `NenTuPhaVoDau`, `SoLanPhaVo` | Số nến kể từ lần phá vỡ đầu tiên của đợt này, và đợt này đã phá vỡ mấy lần |
+| `Funding%`, `FundingPhanVi` | Funding lúc vào và phân vị của nó so với 365 ngày trước (0–100) |
+| `R`, `MFE_R`, `MAE_R` | Lãi ròng, mức đi thuận lớn nhất và mức đi ngược lớn nhất, đều tính theo R (khoảng SL ban đầu) |
+
+Open interest chưa có: Binance chỉ cho tải miễn phí 30 ngày gần nhất.
+
+**Ngưỡng đặt trước (ghi ngày 06/11/2026, trước khi xem số):**
+- Khoảng cách: đầu < 0,3 ATR, giữa 0,3–1,0, muộn > 1,0.
+- Nến từ lần phá vỡ đầu: đầu 0–2 nến, giữa 3–15, muộn > 15 (hơn 2,5 ngày).
+- Funding: thấp < phân vị 50, trung bình 50–80, cao > 80.
+
+So sánh lãi ròng, R trung bình, tỷ lệ thắng và MFE giữa ba nhóm. Chỉ khi nhóm "muộn" kém rõ ràng ở **cả** 3 năm gần đây, 3 năm trước đó và ETH thì mới thêm bộ lọc tương ứng. Bộ lọc đó vẫn phải qua tiêu chí chung (PF +0,2 ở cả 3 nơi, số lệnh không giảm quá 25%). Không chỉnh lại ngưỡng sau khi đã xem số.
 
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code kéo code mới và compile thẳng vào MT5, nên bot trên chart có thể nạp code bạn chưa kịp xem. Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
