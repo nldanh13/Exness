@@ -1,0 +1,5 @@
+# Nut 1 chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
+# Dot nay: lướt sóng với vốn 1 triệu VND, có và không có làm tròn lot tới 5% rủi ro.
+*-von1tr
+*-von1tr-rr5
+C-Donchian20-H4-ADX

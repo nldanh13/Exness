@@ -122,10 +122,24 @@ foreach ($sr in $ScalpRuns) {
 }
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
+# Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
 $Von1tr = 38
-foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5")) {
+foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
-    if ($src) { $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr } }
+    if ($src) {
+        $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }
+        $i5 = $src.Inputs.Clone(); $i5["InpMaxRiskRoundUp"] = 5
+        $Runs += @{ Name = "$n-von1tr-rr5"; Inputs = $i5; Deposit = $Von1tr }
+    }
+}
+# Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
+$onlyFile = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "chi-chay.txt"
+if (-not $ChinhXac -and (Test-Path $onlyFile)) {
+    $pats = @(Get-Content $onlyFile | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith("#") })
+    if ($pats.Count -gt 0) {
+        $Runs = @($Runs | Where-Object { $n = $_.Name; @($pats | Where-Object { $n -like $_ }).Count -gt 0 })
+        Write-Host "Chi chay cac cau hinh khop chi-chay.txt." -ForegroundColor Yellow
+    }
 }
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
