@@ -2,6 +2,22 @@
 //| TrendBot/Signals.mqh: tin hieu goc (Donchian breakout / EMA pullback)
 //| Chua xet bo loc. Tra false khi nen nay phai bo qua han (thieu du lieu, nen qua dai).
 //+------------------------------------------------------------------+
+//--- Gio mo cua New York (9:30) tinh bang phut UTC: 13:30 khi My dang gio mua he (DST), 14:30 khi khong.
+// DST My: tu Chu nhat thu 2 thang 3 toi Chu nhat dau tien thang 11. Gia dinh gio server = UTC (Exness GMT+0).
+int NthSunday(const int y, const int mon, const int n)
+{
+   MqlDateTime d; d.year = y; d.mon = mon; d.day = 1; d.hour = 0; d.min = 0; d.sec = 0;
+   datetime t = StructToTime(d); TimeToStruct(t, d);
+   return 1 + (7 - d.day_of_week) % 7 + 7 * (n - 1);
+}
+int NYOpenUTCMin(const datetime day)
+{
+   MqlDateTime d; TimeToStruct(day, d);
+   bool dst = (d.mon > 3 && d.mon < 11) || (d.mon == 3 && d.day >= NthSunday(d.year, 3, 2)) ||
+              (d.mon == 11 && d.day < NthSunday(d.year, 11, 1));
+   return dst ? 810 : 870;
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
@@ -53,7 +69,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       datetime t1 = iTime(_Symbol, P_TF, 1);
       MqlDateTime d; TimeToStruct(t1, d);
       datetime day = t1 - (d.hour * 3600 + d.min * 60 + d.sec);
-      datetime rs = day + P_OrbStartMin * 60, re = rs + P_OrbMinutes * 60;
+      datetime rs = day + (P_OrbNewYork ? NYOpenUTCMin(day) : P_OrbStartMin) * 60, re = rs + P_OrbMinutes * 60;
       if(t1 < re || t1 >= re + 4 * 3600) return true;
       int sIdx = iBarShift(_Symbol, P_TF, rs, false), eIdx = iBarShift(_Symbol, P_TF, re - 1, false);
       if(sIdx < 0 || eIdx < 1 || sIdx < eIdx || iTime(_Symbol, P_TF, sIdx) < rs - PeriodSeconds(P_TF)) return true;

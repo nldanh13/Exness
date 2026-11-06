@@ -1,0 +1,7 @@
+# Cac cau hinh chay tick that khi bam nut 3 (moi dong 1 ten trong $Runs cua ChayThuNghiem.ps1).
+# Claude cap nhat file nay sau moi dot chay nhanh. Dong bat dau bang # bi bo qua.
+C-Donchian20-H4-ADX
+C-moiGiay
+C-truoc-3nam
+C-ETH
+C-von30000

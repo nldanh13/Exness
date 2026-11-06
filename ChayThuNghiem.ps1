@@ -98,17 +98,18 @@ $Runs += @{ Name = "C-moiGiay"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 1 }
 # Lan 2 da loai H1 (kem H4). Tieu chi dat truoc: PF_Truot0.05% >= 1,3 o CA 3 nam gan day lan 3 nam truoc.
 # Che do nhanh (M1 OHLC) khong chinh xac cho khung ngan: ma nao dat phai chay lai bang tick that.
 foreach ($tf in @(@{ N = "M30"; V = 30 }, @{ N = "M15"; V = 15 }, @{ N = "M10"; V = 10 }, @{ N = "M5"; V = 5 }, @{ N = "M3"; V = 3 }, @{ N = "M1"; V = 1 })) {
-    $Runs += @{ Name = "Ngan-$($tf.N)";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V }); Deposit = 30000 }
-    $Runs += @{ Name = "Ngan-$($tf.N)-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+    $Runs += @{ Name = "Ngan-$($tf.N)";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpMaxSpreadPoints = 1500 }); Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($tf.N)-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpMaxSpreadPoints = 1500 }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
     # Them dieu kien khoi luong: nen pha vo co so tick >= 1,5 lan trung binh 20 nen truoc
-    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000 }
-    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5; InpMaxSpreadPoints = 1500 }); Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5; InpMaxSpreadPoints = 1500 }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
 # Chien thuat luot song khac (tham so co dinh, khong do tim): co TP, khong trailing, vang 30000.
 #  - RSI: gia tren EMA200 cua khung nhung RSI(2) < 10 thi mua hoi (nguoc lai voi Sell), SL 1,5 ATR, TP 1R. Thu M5, M15.
-#  - ORB: vung gia 13:30-14:00 (gio server ~ UTC, mo cua chung khoan My mua he), pha vo thi vao, SL 1 ATR, TP 2R, 1 lenh/ngay. Thu M5.
+#  - ORB: 30 phut dau tu luc New York mo cua 9:30 (13:30 UTC mua he, 14:30 mua dong; server = UTC), pha vo thi vao, SL 1 ATR, TP 2R, 1 lenh/ngay. Thu M5.
 # Tieu chi giong phan khung ngan: PF_Truot0.05% >= 1,3 o CA 2 giai doan.
-$Scalp = @{ InpUseADX = "false"; InpUseHTF = "false"; InpUseTrailing = "false"; InpTrailStartR = 0 }
+# Luot song khong vao lenh khi spread > 1500 point (15 USD, khoang gap doi binh thuong cua BTCUSDm). Dat truoc, khong do tim.
+$Scalp = @{ InpUseADX = "false"; InpUseHTF = "false"; InpUseTrailing = "false"; InpTrailStartR = 0; InpMaxSpreadPoints = 1500 }
 $ScalpRuns = @(
     @{ N = "RSI-M5";  I = @{ InpStrategy = 2; InpTF = 5;  InpATRMult = 1.5; InpRR = 1 } },
     @{ N = "RSI-M15"; I = @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1 } },
@@ -124,7 +125,17 @@ foreach ($sr in $ScalpRuns) {
 # Che do chinh xac: tick that rat nang (moi agent nap ca trieu tick vao RAM). Tren may it RAM (vd. 8 GB)
 # chay song song 12 agent se treo may, nen chi chay 5 cau hinh can thiet va chay LAN LUOT (1 agent).
 if ($ChinhXac) {
-    $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "C-moiGiay", "C-truoc-3nam", "C-ETH", "C-von30000") })
+    # Danh sach chay tick that: file chinh-xac.txt (moi dong 1 ten cau hinh, Claude cap nhat sau moi dot nhanh,
+    # vd. cac cau hinh luot song vua dat tieu chi). Khong co file thi dung 5 cau hinh H4 chinh.
+    $pick = @("C-Donchian20-H4-ADX", "C-moiGiay", "C-truoc-3nam", "C-ETH", "C-von30000")
+    $pickFile = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "chinh-xac.txt"
+    if (Test-Path $pickFile) {
+        $fromFile = @(Get-Content $pickFile | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith("#") })
+        if ($fromFile.Count -gt 0) { $pick = $fromFile }
+    }
+    $unknown = @($pick | Where-Object { $_ -notin @($Runs | ForEach-Object { $_.Name }) })
+    if ($unknown.Count -gt 0) { Write-Host "Khong co cau hinh: $($unknown -join ', ')" -ForegroundColor Yellow }
+    $Runs = @($Runs | Where-Object { $_.Name -in $pick })
     $TuanTu = $true
 }
 Write-Host "Se chay $($Runs.Count) cau hinh." -ForegroundColor Cyan

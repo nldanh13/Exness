@@ -191,9 +191,18 @@ Nút 1 chạy thêm cùng cấu trúc C trên khung M30, M15, M10, M5, M3 và M1
 
 **Hai chiến thuật lướt sóng khác** (tham số cố định từ đầu, không dò tìm, có TP, không trailing):
 - **RSI hồi** (`InpStrategy = 2`, `Ngan-RSI-M5`, `Ngan-RSI-M15`): giá trên EMA200 của khung nhưng RSI(2) dưới 10 (vừa giảm mạnh ngắn hạn) thì Buy, ngược lại thì Sell. SL 1,5 ATR, TP 1R. Ý tưởng: trong xu hướng, các cú giảm ngắn thường hồi lại.
-- **ORB phiên Mỹ** (`InpStrategy = 3`, `Ngan-ORB-M5`): lấy vùng giá 13:30–14:00 giờ server (giờ mở cửa chứng khoán Mỹ mùa hè; mùa đông là 14:30, nên mùa đông vùng này lệch 1 giờ). Trong 4 giờ sau, nến đầu tiên đóng ngoài vùng thì vào theo hướng đó. SL 1 ATR, TP 2R, tối đa 1 lệnh/ngày. Ý tưởng: lúc thị trường Mỹ mở, khối lượng BTC tăng mạnh và giá hay chạy một chiều.
+- **ORB phiên Mỹ** (`InpStrategy = 3`, `Ngan-ORB-M5`): lấy 30 phút đầu từ lúc New York mở cửa 9:30. Bot tự tính theo giờ mùa hè/đông của Mỹ (13:30 UTC từ Chủ nhật thứ 2 tháng 3 tới Chủ nhật đầu tháng 11, còn lại 14:30 UTC), giả định giờ server là UTC như Exness. Tắt `InpOrbNewYork` để tự đặt giờ bằng `InpOrbStartMin`. Trong 4 giờ sau, nến đầu tiên đóng ngoài vùng thì vào theo hướng đó. SL 1 ATR, TP 2R, tối đa 1 lệnh/ngày. Ý tưởng: lúc thị trường Mỹ mở, khối lượng BTC tăng mạnh và giá hay chạy một chiều.
 
-Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạy lại bằng tick thật.
+Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạy lại bằng tick thật. Mọi lần chạy lướt sóng không vào lệnh khi spread trên 1.500 point (15 USD, khoảng gấp đôi bình thường). Xét bằng lãi ròng sau spread, swap, phí và kịch bản trượt giá, không xét tỷ lệ thắng.
+
+**Chạy tick thật cho lướt sóng:** chế độ nhanh chỉ có 4 giá mỗi phút, nên với M1–M5 việc chạm SL/TP có thể sai nhiều. Nút 3 chạy các cấu hình ghi trong file `chinh-xac.txt`. Sau mỗi đợt nhanh, Claude ghi vào file đó các cấu hình lướt sóng qua được tiêu chí; bạn chỉ cần bấm nút 3.
+
+**Khối lượng tick:** chỉ là số lần báo giá thay đổi trên Exness, không phải số BTC thật được mua bán trên toàn thị trường. Nó cho biết thị trường đang sôi động, không cho biết cá voi có tham gia hay không.
+
+## Chạy nhiều bot trên cùng BTC
+Mỗi chiến lược / khung tự có Magic Number riêng: `InpMagic` + 10.000 × chiến lược + số phút của khung (ví dụ RSI M5 = 20261105 + 20.000 + 5). Riêng Donchian H4 giữ nguyên `InpMagic` để không mất liên kết với lệnh cũ. Nhờ vậy Donchian H4 và RSI M5 trên cùng `BTCUSDm` không quản lý nhầm lệnh, trailing hay giới hạn lỗ của nhau. Nếu gắn hai bot cùng chiến lược, cùng khung trên cùng mã, bot thứ hai sẽ báo lỗi và không chạy; muốn chạy thật thì đặt `InpMagic` khác cho bot đó. Kiểm tra này chỉ có tác dụng trong cùng một MT5.
+
+Lưu ý: giới hạn lỗ ngày và sụt giảm tính riêng cho từng bot, không cộng gộp.
 
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.

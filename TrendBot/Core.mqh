@@ -89,6 +89,33 @@ bool PositionOpenById(const ulong id)
    return false;
 }
 
+//--- Moi Magic + ma chi duoc 1 bot dung. Moi bot ghi 1 bien Temp mang so chart cua minh trong TEN bien
+// (gia tri double khong chua du so chart). Bien Temp tu mat khi tat MT5, nen khong bi ket sau khi may sap.
+string MagicPrefix() { return "BTCEA_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_OWN_" + _Symbol + "_" + (string)P_Magic + "_"; }
+bool ClaimMagic()
+{
+   string pre = MagicPrefix();
+   for(int i = GlobalVariablesTotal() - 1; i >= 0; i--)
+   {
+      string n = GlobalVariableName(i);
+      if(StringFind(n, pre) != 0) continue;
+      long other = StringToInteger(StringSubstr(n, StringLen(pre)));
+      if(other == ChartID()) continue;
+      if(other != 0 && ChartSymbol(other) != "")          // chart kia van mo va van con bot
+      {
+         string msg = StringFormat("[%s] Da co bot khac dung Magic %I64u tren %s. Doi InpMagic hoac go bot kia.",
+                                   _Symbol, P_Magic, _Symbol);
+         Print(msg); Alert(msg);
+         return false;
+      }
+      GlobalVariableDel(n);                                 // chart da dong: bien cu bo lai
+   }
+   GlobalVariableTemp(pre + IntegerToString(ChartID()));
+   GlobalVariableSet(pre + IntegerToString(ChartID()), 1);
+   return true;
+}
+void ReleaseMagic() { GlobalVariableDel(MagicPrefix() + IntegerToString(ChartID())); }
+
 bool IsOwnSelected()
 {
    return PositionGetString(POSITION_SYMBOL) == _Symbol &&

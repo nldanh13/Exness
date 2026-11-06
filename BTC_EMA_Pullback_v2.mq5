@@ -30,7 +30,8 @@ input double          InpBreakMaxATR     = 0.0;       // Donchian: bo qua nen ph
 input int             InpRsiPeriod       = 2;         // RSI: so nen
 input double          InpRsiLow          = 10.0;      // RSI: Buy khi RSI < muc nay (va gia tren EMA xu huong)
 input double          InpRsiHigh         = 90.0;      // RSI: Sell khi RSI > muc nay (va gia duoi EMA xu huong)
-input int             InpOrbStartMin     = 810;       // ORB: phut bat dau vung gia, tinh tu 00:00 gio server (810 = 13:30)
+input bool            InpOrbNewYork      = true;      // ORB: tu tinh gio mo cua New York 9:30 theo mua he/dong (server = UTC)
+input int             InpOrbStartMin     = 810;       // ORB: khi tat dong tren: phut bat dau vung gia tu 00:00 gio server (810 = 13:30)
 input int             InpOrbMinutes      = 30;        // ORB: do dai vung gia (phut)
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
@@ -129,6 +130,7 @@ int             P_RsiPeriod;
 double          P_RsiLow;
 double          P_RsiHigh;
 int             P_OrbStartMin;
+bool            P_OrbNewYork;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -207,6 +209,7 @@ void LoadParams()
    P_RsiLow = InpRsiLow;
    P_RsiHigh = InpRsiHigh;
    P_OrbStartMin = InpOrbStartMin;
+   P_OrbNewYork = InpOrbNewYork;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -285,6 +288,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRsiPeriod") { P_RsiPeriod = (int)StringToInteger(v); return true; }
    if(k == "InpRsiLow") { P_RsiLow = StringToDouble(v); return true; }
    if(k == "InpRsiHigh") { P_RsiHigh = StringToDouble(v); return true; }
+   if(k == "InpOrbNewYork") { P_OrbNewYork = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbStartMin") { P_OrbStartMin = (int)StringToInteger(v); return true; }
    if(k == "InpOrbMinutes") { P_OrbMinutes = (int)StringToInteger(v); return true; }
    if(k == "InpTF") { P_TF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
@@ -405,6 +409,11 @@ int OnInit()
 {
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
+   // Moi chien luoc / khung co Magic rieng, de nhieu bot tren CUNG ma khong quan ly nham lenh cua nhau.
+   // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
+   if(!(P_Strategy == STRAT_DONCHIAN && P_TF == PERIOD_H4))
+      P_Magic += (ulong)P_Strategy * 10000 + (ulong)(PeriodSeconds(P_TF) / 60 % 10000);
+   if(!MQLInfoInteger(MQL_TESTER) && !ClaimMagic()) return INIT_FAILED;
    if(P_UseFunding) LoadFunding();
    if(P_AvoidUSNews && MQLInfoInteger(MQL_TESTER)) LoadNews();
    if(P_UseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
@@ -481,6 +490,7 @@ bool TryInitState()
 
 void OnDeinit(const int reason)
 {
+   if(!MQLInfoInteger(MQL_TESTER)) ReleaseMagic();
    IndicatorRelease(hFast);
    IndicatorRelease(hTrend);
    IndicatorRelease(hHTF);
