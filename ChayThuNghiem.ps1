@@ -40,7 +40,9 @@ $Runs = @(
     @{ Name = "C-Donchian20-H4-ADX";    Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
     @{ Name = "D-Donchian55-H4";        Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
     @{ Name = "B-von30000";             Inputs = (Cfg $Brk);                          Deposit = 30000 },
-    @{ Name = "C-khongLamTronLot";      Inputs = (Cfg $Brk @{ InpUseADX = "true"; InpMaxRiskRoundUp = 0 }) },   # nhu v3.7: bo lenh khi lot < 0.01
+    @{ Name = "C-lamTronLot1.5";        Inputs = (Cfg $Brk @{ InpUseADX = "true"; InpMaxRiskRoundUp = 1.5 }) },   # vao 0.01 lot neu rui ro that <= 1.5%
+    @{ Name = "C-lamTronLot1.5-truoc";  Inputs = (Cfg $Brk @{ InpUseADX = "true"; InpMaxRiskRoundUp = 1.5 }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C-lamTronLot1.5-ETH";    Inputs = (Cfg $Brk @{ InpUseADX = "true"; InpMaxRiskRoundUp = 1.5 }); Symbol = "ETHUSDm" },
     @{ Name = "C-von30000";             Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Deposit = 30000 },
     @{ Name = "B-ETH";                  Inputs = (Cfg $Brk);                          Symbol = "ETHUSDm" },
     @{ Name = "C-ETH";                  Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Symbol = "ETHUSDm" },
@@ -87,7 +89,7 @@ $Runs = @(
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "MacDinh-nhu-chay-that") }) }
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "C-lamTronLot1.5", "C-lamTronLot1.5-truoc", "C-lamTronLot1.5-ETH", "MacDinh-nhu-chay-that") }) }
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path

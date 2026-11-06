@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.8"
-#property version   "3.80"
+#define  BOT_VERSION "3.9"
+#property version   "3.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -53,9 +53,10 @@ input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
-input double          InpMaxRiskRoundUp  = 1.5;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = bo qua lenh)
+input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
 input double          InpCorrRiskScale   = 0.5;       // He so rui ro khi ma cung nhom dang co lenh (1 = tat)
+input double          InpMaxGroupRiskPct = 1.5;       // Tong rui ro toi da % cua ca nhom (lenh dang mo + lenh moi), 0 = tat
 
 input group "=== Quan ly lenh ==="
 input bool            InpUsePartial      = false;     // Chot loi mot phan
@@ -728,6 +729,30 @@ bool USNewsNear(string &name)
    return false;
 }
 
+// Tien co the mat (tinh tu gia vao toi SL) cua cac lenh dang mo tren ma khac trong nhom.
+// Lenh khong co SL: tinh bang rui ro chuan cua 1 lenh. SL da qua gia vao (khoa lai): 0.
+double GroupOpenRisk(const double stdRisk)
+{
+   string list = "," + InpCorrSymbols + ",";
+   StringReplace(list, " ", "");
+   if(StringFind(list, "," + _Symbol + ",") < 0) return 0;
+   double sum = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      string sym = PositionGetSymbol(i);
+      if(sym == "" || sym == _Symbol || StringFind(list, "," + sym + ",") < 0) continue;
+      double sl = PositionGetDouble(POSITION_SL), op = PositionGetDouble(POSITION_PRICE_OPEN);
+      double vol = PositionGetDouble(POSITION_VOLUME);
+      bool   buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE);
+      double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS);
+      if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
+      if(sl <= 0 || ts <= 0 || tv <= 0) { sum += stdRisk; continue; }
+      double dist = buy ? op - sl : sl - op;
+      if(dist > 0) sum += dist / ts * tv * vol;
+   }
+   return sum;
+}
 // Ma khac trong InpCorrSymbols dang co lenh (cua bat ky bot nao) -> tra ten ma, khong co -> ""
 string CorrOpen()
 {
@@ -742,7 +767,8 @@ string CorrOpen()
    return "";
 }
 int g_minLotSkips = 0;
-int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
+int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)
+int g_groupSkips  = 0;   // So tin hieu bi bo vi nhom BTC/ETH da dung het tran rui ro
 double CalcLots(const double slDistance)
 {
    double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
@@ -761,11 +787,29 @@ double CalcLots(const double slDistance)
       riskMoney *= InpCorrRiskScale;
       PrintFormat("%s dang co lenh, giam rui ro lenh nay x%.2f.", corr, InpCorrRiskScale);
    }
+   // Tran chung cho ca nhom: lenh moi + lenh dang mo tren ma cung nhom khong vuot InpMaxGroupRiskPct
+   double allowed = DBL_MAX;
+   if(InpMaxGroupRiskPct > 0 && corr != "")
+   {
+      double used = GroupOpenRisk(riskBase * InpRiskPercent / 100.0);
+      allowed = riskBase * InpMaxGroupRiskPct / 100.0 - used;
+      if(allowed <= 0)
+      {
+         g_groupSkips++;
+         g_status = "Nhom BTC/ETH da dung het tran rui ro, bo qua lenh";
+         PrintFormat("Lenh dang mo trong nhom da rui ro %.2f (tran %.2f%%). Bo qua tin hieu.", used, InpMaxGroupRiskPct);
+         return 0;
+      }
+      if(riskMoney > allowed) riskMoney = allowed;
+   }
    double lossPerLot = slDistance / tickSize * tickValue;
    double lots       = NormalizeVolume(riskMoney / lossPerLot);
    double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   if(lots < minL && InpMaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= riskBase * InpMaxRiskRoundUp / 100.0)
+   // Lam tron len cung bi gioi han boi he so nhom va tran nhom, khong duoc vuot qua cac gioi han do
+   double roundCap = riskBase * InpMaxRiskRoundUp / 100.0 * (corr != "" ? MathMin(1.0, MathMax(InpCorrRiskScale, 0.0)) : 1.0);
+   if(roundCap > allowed) roundCap = allowed;
+   if(lots < minL && InpMaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= roundCap)
    {
       g_roundUps++;
       PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, InpMaxRiskRoundUp);
@@ -1427,7 +1471,7 @@ double OnTester()
          posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * contract * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0;  // = 1% gia
       }
    // Thoi gian giu lenh TB (gio) va tong swap
-   double holdSum = 0, swapSum = 0; int holdN = 0;
+   double holdSum = 0, swapSum = 0, commSum = 0; int holdN = 0;
    if(HistorySelect(0, TimeCurrent()))
       for(int j = 0; j < ArraySize(posIds); j++)
       {
@@ -1441,6 +1485,7 @@ double OnTester()
             if(en == DEAL_ENTRY_IN && tin == 0) tin = tt;
             if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY) tout = tt;
             swapSum += HistoryDealGetDouble(d, DEAL_SWAP);
+            commSum += HistoryDealGetDouble(d, DEAL_COMMISSION) + HistoryDealGetDouble(d, DEAL_FEE);
          }
          if(tin > 0 && tout > tin) { holdSum += (double)(tout - tin) / 3600.0; holdN++; }
       }
@@ -1494,7 +1539,7 @@ double OnTester()
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
-                   "LamTronLot", "GiuLenhTB_gio", "TongSwap");
+                   "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1516,7 +1561,8 @@ double OnTester()
                 DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2),
                 DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked,
                 g_fngBlocked, g_attBlocked, g_mktBlocked,
-                g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2));
+                g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2),
+                DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2));
       FileClose(h);
    }
    else
