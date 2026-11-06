@@ -5,7 +5,8 @@
 #   -Viec capnhat          : compile ban moi vao MT5
 #   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code, khong git pull)
 #   -Viec backtest         : backtest 1 lan voi cai dat mac dinh
-param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest')][string]$Viec = 'sosanh')
+param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest')][string]$Viec = 'sosanh',
+      [string]$Nhom = 'file')
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # 1) Lay code moi - CHI khi ban dong y. Moi nut deu compile lai bot vao MT5 (MT5 nap lai bot dang chay
@@ -42,7 +43,7 @@ elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Pa
 # 2) Chay viec duoc chon trong mot tien trinh moi, de dung dung ban script vua tai ve
 # @( ) bat buoc: switch tra ve mang 1 phan tu se bi "mo" thanh chuoi, va $job[0] chi con 1 ky tu
 $job = @(switch ($Viec) {
-    'sosanh'          { @('ChayThuNghiem.ps1') }
+    'sosanh'          { @('ChayThuNghiem.ps1', '-Nhom', ($Nhom -split ' ')[0]) }
     'sosanh-chinhxac' { @('ChayThuNghiem.ps1', '-ChinhXac') }
     'capnhat'         { @('DongBo.ps1') }
     'theodoi'         { @('DongBo.ps1', '-Watch') }

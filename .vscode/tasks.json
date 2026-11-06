@@ -12,7 +12,9 @@
         "-File",
         "${workspaceFolder}\\Chay.ps1",
         "-Viec",
-        "sosanh"
+        "sosanh",
+        "-Nhom",
+        "${input:nhom}"
       ],
       "problemMatcher": []
     },
@@ -89,6 +91,36 @@
       ],
       "problemMatcher": [],
       "hide": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "nhom",
+      "type": "pickString",
+      "description": "Chay nhom cau hinh nao?",
+      "options": [
+        {
+          "label": "Theo chi-chay.txt (Claude chon)",
+          "value": "file"
+        },
+        {
+          "label": "H4 va cac bo loc",
+          "value": "h4"
+        },
+        {
+          "label": "Luot song (von 30.000)",
+          "value": "luotsong"
+        },
+        {
+          "label": "Luot song voi von 1 trieu VND",
+          "value": "von1tr"
+        },
+        {
+          "label": "Chay het (lau)",
+          "value": "tatca"
+        }
+      ],
+      "default": "file"
     }
   ]
 }

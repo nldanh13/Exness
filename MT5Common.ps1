@@ -60,6 +60,13 @@ function Invoke-BotCompile($mt5, [string]$src) {
         if (-not (Test-Path $modDst)) { New-Item -ItemType Directory -Path $modDst | Out-Null }
         Copy-Item (Join-Path $modSrc "*.mqh") $modDst -Force
     }
+    # Cai dat san cho tung chien thuat (cai-dat/*.set) -> MQL5\Presets: trong MT5, tab Inputs bam Load de chon
+    $setSrc = Join-Path (Split-Path $src -Parent) "cai-dat"
+    if (Test-Path $setSrc) {
+        $setDst = Join-Path $mt5.DataDir "MQL5\Presets"
+        if (-not (Test-Path $setDst)) { New-Item -ItemType Directory -Path $setDst | Out-Null }
+        Copy-Item (Join-Path $setSrc "*.set") $setDst -Force
+    }
     if (Test-Path $log) { Remove-Item $log -Force }
     # Giu ban .ex5 cu: compile loi thi tra lai, bot tren chart khong bi mat file chay
     if (Test-Path $ex5) { Move-Item $ex5 $bak -Force }

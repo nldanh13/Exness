@@ -201,6 +201,13 @@ Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạ
 
 Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài khoản (`InpMaxRiskRoundUp = 5`), để thấy kết quả thật khi lướt sóng với 1 triệu.
 
+**Chọn nhóm khi bấm nút 1:** VS Code hiện menu: *Theo chi-chay.txt (Claude chọn)* (mặc định), *H4 và các bộ lọc*, *Lướt sóng (vốn 30.000)*, *Lướt sóng với vốn 1 triệu VNĐ*, *Chạy hết*.
+
+**Chọn chiến thuật khi gắn bot lên chart:** mỗi lần compile, các file cài đặt sẵn trong `cai-dat/` được chép vào MT5. Khi gắn bot, mở tab *Inputs*, bấm **Load** và chọn một file:
+- `1-Donchian-H4-khuyen-dung.set`: chiến lược chính (đã qua kiểm thử).
+- `2-Donchian-M30-khoiLuong.set`, `3-RSI-M15.set`, `4-ORB-M5-phien-My.set`: lướt sóng, **chưa đạt** kiểm thử, chỉ chạy demo.
+Vốn 1 triệu VNĐ: sau khi Load, đặt thêm `InpMaxRiskRoundUp = 5`. Mỗi chiến thuật tự có Magic riêng, nên gắn nhiều chiến thuật trên cùng `BTCUSDm` (mỗi cái một chart) không lẫn lệnh.
+
 **Chỉ chạy một phần:** nếu có file `chi-chay.txt` với các mẫu tên (ví dụ `*-von1tr*`), nút 1 chỉ chạy các cấu hình khớp. Xóa hết các dòng trong file để chạy toàn bộ.
 
 **Chạy tick thật cho lướt sóng:** chế độ nhanh chỉ có 4 giá mỗi phút, nên với M1–M5 việc chạm SL/TP có thể sai nhiều. Nút 3 chạy các cấu hình ghi trong file `chinh-xac.txt`. Sau mỗi đợt nhanh, Claude ghi vào file đó các cấu hình lướt sóng qua được tiêu chí; bạn chỉ cần bấm nút 3.

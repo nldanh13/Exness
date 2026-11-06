@@ -6,7 +6,7 @@
 # cho chien luoc khung H1/H4/D1. Them -ChinhXac de chay tick that (Model=4) cho cau hinh cuoi cung.
 # Cac lan chay cung ma / cung khoang ngay / cung von duoc gom thanh 1 dot "Optimization" cua MT5,
 # MT5 tu chia cho moi nhan CPU (nhanh gap nhieu lan). Them -TuanTu de chay lan luot tung lan nhu cu.
-param([switch]$ChinhXac, [switch]$TuanTu)
+param([switch]$ChinhXac, [switch]$TuanTu, [string]$Nhom = "file")
 
 $ErrorActionPreference = "Stop"
 $Model = if ($ChinhXac) { 4 } else { 1 }
@@ -133,8 +133,20 @@ foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-OR
     }
 }
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
+# Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / file (theo chi-chay.txt, mac dinh)
+$nhomPats = switch ($Nhom) {
+    'h4'       { @($Runs | Where-Object { -not $_.Name.StartsWith("Ngan-") } | ForEach-Object { $_.Name }) }
+    'luotsong' { @("Ngan-*", "C-Donchian20-H4-ADX") | Where-Object { $_ } }
+    'von1tr'   { @("*-von1tr", "*-von1tr-rr5", "C-Donchian20-H4-ADX") }
+    default    { @() }
+}
+if (-not $ChinhXac -and $Nhom -eq 'luotsong') {
+    $Runs = @($Runs | Where-Object { ($_.Name.StartsWith("Ngan-") -and $_.Name -notlike "*-von1tr*") -or $_.Name -eq "C-Donchian20-H4-ADX" })
+} elseif (-not $ChinhXac -and $nhomPats.Count -gt 0) {
+    $Runs = @($Runs | Where-Object { $n = $_.Name; @($nhomPats | Where-Object { $n -like $_ }).Count -gt 0 })
+}
 $onlyFile = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "chi-chay.txt"
-if (-not $ChinhXac -and (Test-Path $onlyFile)) {
+if (-not $ChinhXac -and $Nhom -eq 'file' -and (Test-Path $onlyFile)) {
     $pats = @(Get-Content $onlyFile | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith("#") })
     if ($pats.Count -gt 0) {
         $Runs = @($Runs | Where-Object { $n = $_.Name; @($pats | Where-Object { $n -like $_ }).Count -gt 0 })
