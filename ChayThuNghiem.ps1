@@ -120,6 +120,13 @@ foreach ($sr in $ScalpRuns) {
     $Runs += @{ Name = "Ngan-$($sr.N)";       Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($sr.N)-truoc"; Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
+# 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
+$Von1tr = 38
+foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5")) {
+    $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
+    if ($src) { $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr } }
+}
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
