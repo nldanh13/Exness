@@ -93,7 +93,12 @@ $Runs += @{ Name = "C-moiTick"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 0 }
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "C-lamTronLot1.5", "C-lamTronLot1.5-truoc", "C-lamTronLot1.5-ETH", "C+fearGreed", "C+fearGreed-truoc", "C+fearGreed-ETH", "C+nasdaq", "C+nasdaq-truoc", "C+nasdaq-ETH", "C+funding", "C+funding-truoc", "C+funding-ETH", "C-von30000", "C-moiTick", "MacDinh-nhu-chay-that") }) }
+# Che do chinh xac: tick that rat nang (moi agent nap ca trieu tick vao RAM). Tren may it RAM (vd. 8 GB)
+# chay song song 12 agent se treo may, nen chi chay 5 cau hinh can thiet va chay LAN LUOT (1 agent).
+if ($ChinhXac) {
+    $Runs = @($Runs | Where-Object { $_.Name -in @("C-Donchian20-H4-ADX", "C-moiTick", "C-truoc-3nam", "C-ETH", "C-von30000") })
+    $TuanTu = $true
+}
 Write-Host "Se chay $($Runs.Count) cau hinh." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path

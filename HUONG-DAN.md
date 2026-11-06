@@ -24,7 +24,7 @@ Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task�
 |---|---|
 | **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy khoảng 40 lần backtest, song song trên mọi nhân CPU. Xong thì bảng kết quả **tự được đẩy lên GitHub** (thư mục `ket-qua/`), bạn chỉ cần nhắn Claude "xong rồi". Nếu đẩy lên thất bại, gửi file `ket-qua-backtest-....zip` thay thế. |
 | **2. Cap nhat bot vao MT5** (Ctrl+Shift+B) | Khi bot đang chạy trên chart và muốn nạp bản mới ngay. |
-| **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo. Chạy lại bằng tick thật cho khoảng 20 cấu hình cuối, chậm hơn nhiều. |
+| **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo. Chạy lại bằng tick thật cho 5 cấu hình chính, **lần lượt từng cái** (tick thật tốn nhiều RAM, chạy song song sẽ treo máy 8 GB). Khoảng 1,5 giờ; nên tắt bớt ứng dụng khác. |
 
 Khi mở VS Code, code đang có trên máy được compile vào MT5. Bước này không tự kéo code mới từ GitHub.
 
