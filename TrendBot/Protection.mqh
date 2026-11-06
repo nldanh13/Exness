@@ -76,8 +76,9 @@ void ResetBaseline(const bool unlock)
    GlobalVariableSet(GVName("base"),  AccountInfoDouble(ACCOUNT_BALANCE));
    if(unlock)
    {
+      // Chi mo dung han (sut giam). Khoa lo ngay KHONG mo duoc trong ngay, ke ca bang InpResetHalt:
+      // lop bao ve chong lai viec nguoi van hanh muon "go lai" ngay sau khi thua. Tu het khi sang ngay moi.
       GlobalVariableDel(GVName("halt"));
-      GlobalVariableDel(GVName("dayLock"));
    }
    GlobalVariableDel(GVName("dayId"));
    currentDay = -1;                                   // de UpdateDay chup lai moc dau ngay
