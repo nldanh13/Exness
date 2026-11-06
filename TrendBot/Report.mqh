@@ -22,12 +22,13 @@ double FundingPct(const datetime t, const double f)
 void WriteTradeFeatures(const ulong &ids[], const double &net[])
 {
    if(ArraySize(g_fT) == 0) LoadFunding();
+   if(ArraySize(g_newsT) == 0) LoadNews();
    string file = InpPreset > 0 ? StringFormat("TrendBotTrades\\%03d.csv", InpPreset)
                                : "TrendBotTrades\\" + (P_TestLabel == "" ? "khong-ten" : P_TestLabel) + ".csv";
    int h = FileOpen(file, FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
    if(h == INVALID_HANDLE) return;
    FileWrite(h, "Lan", "ViThe", "Chieu", "ThoiGianVao", "KhoangCach_ATR", "DoRongKenh_ATR", "TuoiXuHuong_nen",
-             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu");
+             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu", "GioToiTin", "Tin");
    double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    for(int j = 0; j < ArraySize(ids); j++)
    {
@@ -63,6 +64,7 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
       }
       double f  = FundingAt(tin);
       double fp = FundingPct(tin, f);
+      string nn; double hn = HoursToNews(tin, nn);           // tin FOMC / CPI gan nhat (am = da ra truoc khi vao)
       // Du dia di tiep (MFE) va muc bat loi lon nhat (MAE), tinh theo R = khoang SL ban dau
       double rDist = atr * P_ATRMult, mfe = 0, mae = 0;
       int e = tout > 0 ? iBarShift(_Symbol, P_TF, tout, false) : 0;
@@ -80,7 +82,8 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
                 f == EMPTY_VALUE ? "" : DoubleToString(f, 4), fp < 0 ? "" : DoubleToString(fp, 0),
                 DoubleToString(net[j], 2), DoubleToString(riskMoney > 0 ? net[j] / riskMoney : 0, 2),
                 DoubleToString(mfe, 2), DoubleToString(mae, 2),
-                DoubleToString(tout > tin ? (double)(tout - tin) / 3600.0 : 0, 1));
+                DoubleToString(tout > tin ? (double)(tout - tin) / 3600.0 : 0, 1),
+                DoubleToString(hn, 1), nn);
    }
    FileClose(h);
 }
@@ -204,7 +207,7 @@ double OnTester()
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
-                   "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi");
+                   "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -226,7 +229,7 @@ double OnTester()
                 DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked,
                 g_fngBlocked, g_attBlocked, g_mktBlocked,
                 g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2),
-                DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2));
+                DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2), g_newsBlocked);
       FileClose(h);
    }
    else

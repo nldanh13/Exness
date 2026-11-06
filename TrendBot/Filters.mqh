@@ -260,9 +260,41 @@ void RefreshDailyLive()
    }
 }
 // Tin vi mo My quan trong trong khoang +-InpNewsHours (chi chay that; lich kinh te khong co trong backtest)
+// Backtest: lich FOMC + CPI (gio UTC) tu file tin_my.csv (script chep tu du-lieu/ vao Common\Files).
+datetime g_newsT[]; string g_newsN[];
+void LoadNews()
+{
+   ArrayResize(g_newsT, 0); ArrayResize(g_newsN, 0);
+   int h = OpenCommonRead("tin_my.csv", FILE_TXT | FILE_ANSI);
+   if(h == INVALID_HANDLE) { Print("Chua co file tin_my.csv: bo loc tin se khong chan lenh nao trong backtest."); return; }
+   while(!FileIsEnding(h))
+   {
+      string p[];
+      if(StringSplit(FileReadString(h), ',', p) < 2) continue;
+      long ts = StringToInteger(p[0]);
+      if(ts <= 0) continue;                                   // dong ghi chu / tieu de
+      int n = ArraySize(g_newsT);
+      ArrayResize(g_newsT, n + 1); ArrayResize(g_newsN, n + 1);
+      g_newsT[n] = (datetime)ts; g_newsN[n] = p[1];
+   }
+   FileClose(h);
+}
+// So gio tu thoi diem t toi tin gan nhat trong file (am = tin da qua). 9999 neu khong co.
+double HoursToNews(const datetime t, string &name)
+{
+   double best = 9999; name = "";
+   for(int i = 0; i < ArraySize(g_newsT); i++)
+   {
+      double hrs = (double)(g_newsT[i] - t) / 3600.0;
+      if(MathAbs(hrs) < MathAbs(best)) { best = hrs; name = g_newsN[i]; }
+      if(hrs > 48) break;
+   }
+   return best;
+}
 bool USNewsNear(string &name)
 {
-   if(MQLInfoInteger(MQL_TESTER)) return false;
+   if(MQLInfoInteger(MQL_TESTER))
+      return MathAbs(HoursToNews(TimeCurrent(), name)) <= P_NewsHours;   // server Exness = GMT+0
    MqlCalendarValue vals[];
    datetime now = TimeTradeServer();
    if(CalendarValueHistory(vals, now - P_NewsHours * 3600, now + P_NewsHours * 3600, "US") <= 0) return false;

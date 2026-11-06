@@ -85,6 +85,10 @@ $Runs = @(
     @{ Name = "C+nasdaq";               Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }) },
     @{ Name = "C+nasdaq-truoc";         Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }); From = $OOSFrom; To = $FromDate },
     @{ Name = "C+nasdaq-ETH";           Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }); Symbol = "ETHUSDm" },
+    # Tranh tin My co lich (FOMC, CPI): khong vao lenh trong 2 gio truoc/sau. Lich o du-lieu/tin_my.csv.
+    @{ Name = "C+tranhTin";             Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }) },
+    @{ Name = "C+tranhTin-truoc";       Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+tranhTin-ETH";         Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
@@ -124,6 +128,7 @@ try {
     Write-Host "Cap nhat du lieu funding rate tu Binance..." -ForegroundColor Cyan
     Update-FundingData $mt5 @("BTCUSDT", "ETHUSDT")
     Update-SentimentData $mt5
+    Copy-Item (Join-Path $ProjectDir "du-lieu\tin_my.csv") (Join-Path $mt5.CommonFiles "tin_my.csv") -Force   # lich FOMC + CPI
 } catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log

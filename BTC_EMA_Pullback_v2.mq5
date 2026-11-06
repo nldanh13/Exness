@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.6"
-#property version   "4.60"
+#define  BOT_VERSION "4.7"
+#property version   "4.70"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -380,6 +380,7 @@ int OnInit()
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
    if(P_UseFunding) LoadFunding();
+   if(P_AvoidUSNews && MQLInfoInteger(MQL_TESTER)) LoadNews();
    if(P_UseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
    if(P_UseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
    if(P_UseMarketFilter)
