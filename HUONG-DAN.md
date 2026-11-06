@@ -224,6 +224,13 @@ Mỗi chiến lược / khung tự có Magic Number riêng: `InpMagic` + 10.000 
 
 Lưu ý: giới hạn lỗ ngày và sụt giảm tính riêng cho từng bot, không cộng gộp.
 
+## Quy tắc cho người vận hành
+- Chỉ xem kết quả và đổi thông số vào **một ngày cố định mỗi tuần** (ví dụ Chủ nhật). Mọi thay đổi phải backtest lại trước khi gắn lên chart.
+- Không tắt bot vì vừa thua. Không bật lại bot đã tự khóa trong cùng ngày (bot cũng không cho mở khóa lỗ ngày).
+- Không vào lệnh tay song song trên cùng tài khoản với bot. Bot sẽ nhắc qua thông báo nếu thấy lệnh tay, vì giới hạn lỗ của bot không tính các lệnh đó.
+- Không nạp thêm tiền để "gỡ" khi bot đang sụt giảm.
+- Ghi lại mỗi lần muốn can thiệp và lý do (file `nhat-ky-can-thiep.md`), xem lại cuối tuần để nhận ra lúc nào cảm xúc kích hoạt.
+
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
 - Muốn tắt hẳn việc tự compile khi mở VS Code, xóa khối `"runOptions"` trong `.vscode/tasks.json`. Nếu compile lỗi, script trả lại file bot cũ nên bot trên chart vẫn chạy bản trước.

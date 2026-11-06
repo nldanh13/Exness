@@ -20,8 +20,26 @@ int TradesToday()
    return n;
 }
 
+//--- Nhac khi co lenh vao tay (Magic 0) tren cung tai khoan: gioi han lo ngay / sut giam cua bot khong tinh lenh do
+void CheckManualTrades()
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   static datetime last = 0;
+   if(TimeCurrent() - last < 60) return;
+   last = TimeCurrent();
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) == 0 || PositionGetInteger(POSITION_MAGIC) != 0) continue;
+      if(ShouldNotify("manual", 6 * 3600))
+         Notify(StringFormat("[%s] Co lenh vao tay (%s) tren tai khoan dang chay bot. Quy tac: khong giao dich tay song song voi bot; "
+                             "gioi han lo cua bot khong tinh lenh nay.", _Symbol, PositionGetString(POSITION_SYMBOL)));
+      break;
+   }
+}
+
 void UpdatePanel()
 {
+   CheckManualTrades();
    if(!P_ShowPanel) return;
    if(MQLInfoInteger(MQL_TESTER) && !MQLInfoInteger(MQL_VISUAL_MODE)) return;
    if(TimeCurrent() - lastPanel < 2) return;
