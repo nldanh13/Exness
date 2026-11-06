@@ -33,28 +33,48 @@ bool GroupLock()
    return false;
 }
 void GroupUnlock() { if(g_grpLocked) GlobalVariableSet(GrpKey("LOCK"), 0); g_grpLocked = false; }
+// Giu cho theo tung bot (ma + Magic): nhieu chien luoc tren CUNG ma cung duoc tinh vao tran chung
+string ResKey(const string p, const string sym, const long magic) { return GrpKey(p + sym + "_" + IntegerToString(magic)); }
 void GroupReserve(const double risk)
 {
    if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
-   GlobalVariableSet(GrpKey("R_" + _Symbol), risk);
-   GlobalVariableSet(GrpKey("T_" + _Symbol), (double)TimeLocal());
+   GlobalVariableSet(ResKey("R_", _Symbol, (long)P_Magic), risk);
+   GlobalVariableSet(ResKey("T_", _Symbol, (long)P_Magic), (double)TimeLocal());
 }
-void GroupClear() { GlobalVariableDel(GrpKey("R_" + _Symbol)); GlobalVariableDel(GrpKey("T_" + _Symbol)); }
-bool SymbolHasPosition(const string sym)
+void GroupClear() { GlobalVariableDel(ResKey("R_", _Symbol, (long)P_Magic)); GlobalVariableDel(ResKey("T_", _Symbol, (long)P_Magic)); }
+bool HasPosition(const string sym, const long magic)
 {
-   for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetSymbol(i) == sym) return true;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+      if(PositionGetSymbol(i) == sym && PositionGetInteger(POSITION_MAGIC) == magic) return true;
    return false;
 }
-// Rui ro ma bot khac da giu cho trong 2 phut qua nhung lenh chua hien ra
-double GroupReserved(const string sym)
+bool IsMine(const string sym, const long magic) { return sym == _Symbol && magic == (long)P_Magic; }
+// Rui ro ma cac bot khac (khac ma, hoac cung ma khac Magic) da giu cho trong 2 phut qua nhung lenh chua hien ra.
+// onlySym = "" : moi ma; khac "": chi ma do.
+double GroupReserved(const string onlySym = "")
 {
-   if(!GlobalVariableCheck(GrpKey("T_" + sym))) return 0;
-   if((double)TimeLocal() - GlobalVariableGet(GrpKey("T_" + sym)) > 120 || SymbolHasPosition(sym)) return 0;
-   return GlobalVariableGet(GrpKey("R_" + sym));
+   string pre = GrpKey("R_");
+   double sum = 0;
+   for(int i = GlobalVariablesTotal() - 1; i >= 0; i--)
+   {
+      string n = GlobalVariableName(i);
+      if(StringFind(n, pre) != 0) continue;
+      string rest = StringSubstr(n, StringLen(pre));          // "<ma>_<magic>"
+      int last = -1; for(int q = StringFind(rest, "_"); q >= 0; q = StringFind(rest, "_", q + 1)) last = q;
+      if(last <= 0) continue;
+      string sym = StringSubstr(rest, 0, last);
+      long   mg  = StringToInteger(StringSubstr(rest, last + 1));
+      if(IsMine(sym, mg) || (onlySym != "" && sym != onlySym)) continue;
+      string tk = ResKey("T_", sym, mg);
+      if(!GlobalVariableCheck(tk) || (double)TimeLocal() - GlobalVariableGet(tk) > 120 || HasPosition(sym, mg)) continue;
+      sum += GlobalVariableGet(n);
+   }
+   return sum;
 }
 double g_lastRisk = 0;   // rui ro (tien) cua lenh CalcLots vua tinh
 
-// Tien co the mat (tinh tu gia vao toi SL) cua cac lenh dang mo tren ma khac trong nhom.
+// Tien co the mat (tinh tu gia vao toi SL) cua cac lenh dang mo trong nhom, tru lenh cua chinh bot nay:
+// gom ma khac trong nhom VA cac bot khac (Magic khac, ke ca lenh tay) tren cung ma.
 // Lenh khong co SL: tinh bang rui ro chuan cua 1 lenh. SL da qua gia vao (khoa lai): 0.
 double GroupOpenRisk(const double stdRisk)
 {
@@ -65,7 +85,7 @@ double GroupOpenRisk(const double stdRisk)
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       string sym = PositionGetSymbol(i);
-      if(sym == "" || sym == _Symbol || StringFind(list, "," + sym + ",") < 0) continue;
+      if(sym == "" || StringFind(list, "," + sym + ",") < 0 || IsMine(sym, PositionGetInteger(POSITION_MAGIC))) continue;
       double sl = PositionGetDouble(POSITION_SL), op = PositionGetDouble(POSITION_PRICE_OPEN);
       double vol = PositionGetDouble(POSITION_VOLUME);
       bool   buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
@@ -76,16 +96,9 @@ double GroupOpenRisk(const double stdRisk)
       double dist = buy ? op - sl : sl - op;
       if(dist > 0) sum += dist / ts * tv * vol;
    }
-   string syms[];
-   int n = StringSplit(P_CorrSymbols, ',', syms);
-   for(int i = 0; i < n; i++)
-   {
-      StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
-      if(syms[i] != "" && syms[i] != _Symbol) sum += GroupReserved(syms[i]);
-   }
-   return sum;
+   return sum + GroupReserved();
 }
-// Ma khac trong InpCorrSymbols dang co lenh (cua bat ky bot nao) -> tra ten ma, khong co -> ""
+// Ma khac trong InpCorrSymbols, hoac bot khac tren cung ma, dang co lenh -> tra mo ta, khong co -> ""
 string CorrOpen()
 {
    string list = "," + P_CorrSymbols + ",";
@@ -94,19 +107,15 @@ string CorrOpen()
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       string sym = PositionGetSymbol(i);
-      if(sym != "" && sym != _Symbol && StringFind(list, "," + sym + ",") >= 0) return sym;
+      if(sym == "" || StringFind(list, "," + sym + ",") < 0 || IsMine(sym, PositionGetInteger(POSITION_MAGIC))) continue;
+      return sym == _Symbol ? sym + " (bot khac)" : sym;
    }
-   string syms[];
-   int n = StringSplit(P_CorrSymbols, ',', syms);
-   for(int i = 0; i < n; i++)
-   {
-      StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
-      if(syms[i] != "" && syms[i] != _Symbol && GroupReserved(syms[i]) > 0) return syms[i] + " (dang vao lenh)";
-   }
+   if(GroupReserved() > 0) return "Bot khac (dang vao lenh)";
    return "";
 }
 int g_minLotSkips = 0;
 int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)
+int g_ddScaled   = 0;   // So lenh bi giam co vi dang sut giam
 int g_groupSkips  = 0;   // So tin hieu bi bo vi nhom BTC/ETH da dung het tran rui ro
 double CalcLots(const double slDistance)
 {
@@ -119,6 +128,15 @@ double CalcLots(const double slDistance)
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
    double riskBase   = BotEquity();
    double riskMoney  = riskBase * P_RiskPercent / 100.0;
+   // Giam co theo sut giam tu dinh von cua bot: < 5% giu nguyen, 5-10% con 50%, > 10% con 25%.
+   // Chi tro lai muc chuan khi von lap dinh moi. Khong bao gio tang co de "go".
+   if(P_DDScale)
+   {
+      double pk = GVGet("peak", 0), eqL = BotEquityForLimits();
+      double dd = pk > 0 ? (pk - eqL) / pk * 100.0 : 0;
+      double f  = dd >= 10 ? 0.25 : dd >= 5 ? 0.5 : 1.0;
+      if(f < 1) { riskMoney *= f; g_ddScaled++; }
+   }
    // BTC va ETH di cung nhau (tuong quan cao): ma cung nhom dang co lenh thi giam rui ro lenh moi
    string corr = CorrOpen();
    if(corr != "" && P_CorrRiskScale > 0 && P_CorrRiskScale < 1)

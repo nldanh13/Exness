@@ -115,6 +115,10 @@ File `ket-qua-so-sanh.csv` trong zip có một dòng cho mỗi lần chạy:
 | `LoiNhuan_Truot0.05%`, `PF_Truot0.05%` (và `0.1%`) | Kết quả nếu mỗi lần vào/ra lệnh tốn thêm 0,05% (hoặc 0,1%) giá vì trượt giá và spread. Ví dụ BTC 100.000 USD: thêm 50 (hoặc 100) USD mỗi chiều cho 1 BTC. PF vẫn trên 1,2 ở mức 0,1% thì chiến lược chịu được chi phí xấu |
 | `ChanFunding`, `ChanFearGreed`, `ChanChuY`, `ChanNasdaq` | Số tín hiệu bị bộ lọc tương ứng chặn. Bằng 0 khi bộ lọc bật thì có thể thiếu dữ liệu |
 | `LoiNhuan_BoTop5`, `PF_BoTop5`, `TyTrongTop5%` | Kết quả nếu bỏ 5 lệnh lãi lớn nhất, và phần lãi ròng mà 5 lệnh đó đóng góp. Tỷ trọng gần hoặc trên 100% nghĩa là phần còn lại chỉ hòa hoặc lỗ: lỡ 1–2 lệnh lớn (VPS tắt, lot bị bỏ, tự tắt bot giữa chuỗi thua) là mất phần lớn lợi nhuận |
+| `E_R`, `tStat` | Lãi trung bình mỗi lệnh tính theo R (1R = số tiền rủi ro ở SL ban đầu), và độ tin cậy thống kê t = E[R] / (độ lệch chuẩn / √số lệnh). t > 2 là tối thiểu; vì đã thử rất nhiều cấu hình, đòi **t > 3** |
+| `TyLeThang_CanDuoi95%` | Cận dưới Wilson 95% của tỷ lệ thắng: tỷ lệ thắng "thật" gần như chắc chắn không thấp hơn số này |
+| `MC_ChuoiThua95` | Chuỗi thua liên tiếp dài nhất ở trường hợp xấu (95%) trong Monte Carlo. Chuẩn bị tinh thần cho chuỗi dài cỡ này |
+| `GiamCoDD` | Số lệnh bị giảm cỡ vì đang sụt giảm (chỉ khi bật `InpDDScale`) |
 | `MC_SutGiamTB%`, `MC_SutGiam95%`, `MC_XacSuatDungHan%` | Monte Carlo: rút lại các lệnh 1.000 lần theo khối 5 lệnh liền nhau (giữ các chuỗi thua theo cụm). Cho biết sụt giảm thường gặp, sụt giảm ở trường hợp xấu (chỉ 5% số lần tệ hơn), và xác suất bot chạm mức dừng hẳn `InpMaxDrawdownPct` (15%). Dưới 200 lệnh thì chỉ nên xem là tham khảo |
 
 Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (không lọc ADX), C (có ADX), D (Donchian 55), cùng các lần chạy với vốn 30.000, trên `ETHUSDm`, và trên 3 năm **trước** giai đoạn đã dùng để chọn cấu hình. Các lần này tắt giới hạn sụt giảm để so sánh chiến lược. Lần cuối `MacDinh-nhu-chay-that` dùng nguyên cài đặt mặc định của bot, gồm cả dừng hẳn khi sụt 15% và khóa lỗ ngày 3%, đúng như khi chạy thật. **Bộ lọc chất lượng breakout** (mặc định tắt, đang thử trên cấu hình C):
@@ -166,6 +170,7 @@ Câu hỏi: sau khi bot vào lệnh, thị trường còn bao nhiêu dư địa 
 | `NenTuPhaVoDau`, `SoLanPhaVo` | Số nến kể từ lần phá vỡ đầu tiên của đợt này, và đợt này đã phá vỡ mấy lần |
 | `Funding%`, `FundingPhanVi` | Funding lúc vào và phân vị của nó so với 365 ngày trước (0–100) |
 | `R`, `MFE_R`, `MAE_R` | Lãi ròng, mức đi thuận lớn nhất và mức đi ngược lớn nhất, đều tính theo R (khoảng SL ban đầu). Từ v4.9 tính bằng nến M1 nằm trọn từ lúc vào tới lúc thoát, cộng giá vào/thoát thật (sai số tối đa 1 phút mỗi đầu). Bản trước dùng nến H4 gồm cả nến thoát nên tính cả giá sau khi đã đóng lệnh: đừng dùng số MFE/MAE của file trước v4.9 |
+| `ADX`, `ER20`, `ATR_PhanVi90ngay`, `GioUTC`, `Thu` | Chế độ thị trường lúc vào lệnh: ADX, Efficiency Ratio 20 nến (gần 1 = đi thẳng, gần 0 = nhiễu), ATR hiện tại so với 90 ngày (0–100), giờ và thứ (0 = Chủ nhật). Sau 200+ lệnh mới xem E[R] theo từng nhóm |
 | `Spread_diem` | Spread (point) của phút vào lệnh, theo dữ liệu MT5. Dùng để chọn ngưỡng `InpMaxSpreadPoints` (đang tắt) từ số đo thay vì đoán |
 
 Open interest chưa có: Binance chỉ cho tải miễn phí 30 ngày gần nhất.
@@ -223,6 +228,20 @@ Vốn 1 triệu VNĐ: sau khi Load, đặt thêm `InpMaxRiskRoundUp = 5`. Mỗi 
 Mỗi chiến lược / khung tự có Magic Number riêng: `InpMagic` + 10.000 × chiến lược + số phút của khung (ví dụ RSI M5 = 20261105 + 20.000 + 5). Riêng Donchian H4 giữ nguyên `InpMagic` để không mất liên kết với lệnh cũ. Nhờ vậy Donchian H4 và RSI M5 trên cùng `BTCUSDm` không quản lý nhầm lệnh, trailing hay giới hạn lỗ của nhau. Nếu gắn hai bot cùng chiến lược, cùng khung trên cùng mã, bot thứ hai sẽ báo lỗi và không chạy; muốn chạy thật thì đặt `InpMagic` khác cho bot đó. Kiểm tra này chỉ có tác dụng trong cùng một MT5.
 
 Lưu ý: giới hạn lỗ ngày và sụt giảm tính riêng cho từng bot, không cộng gộp.
+
+## Áp dụng tài liệu "Kiến thức nâng cao" (06/11/2026)
+Đã làm:
+- **Đo bằng R:** bảng kết quả có `E_R`, `tStat`, cận dưới Wilson của tỷ lệ thắng, chuỗi thua Monte Carlo 95%. R tính từ SL thật gửi kèm lệnh.
+- **Giảm cỡ theo sụt giảm** (`InpDDScale`, mặc định tắt, đang thử bằng `C+giamTheoDD` ở cả 3 nơi): sụt 5–10% từ đỉnh thì rủi ro còn 50%, trên 10% còn 25%, chỉ về 100% khi lập đỉnh mới.
+- **Nhãn chế độ thị trường** cho từng lệnh trong file lệnh (ADX, Efficiency Ratio, phân vị ATR, giờ, thứ). Chưa dùng làm bộ lọc vì chưa đủ 200 lệnh mỗi chiến lược.
+- **Trần rủi ro chung cho nhiều chiến lược trên cùng BTC:** tổng rủi ro của mọi lệnh đang mở trên `InpCorrSymbols` (kể cả bot khác và lệnh tay trên cùng mã) không vượt `InpMaxGroupRiskPct` (1,5%). Lệnh thứ hai trên BTC từ chiến lược khác rủi ro giảm còn `InpCorrRiskScale` (50%).
+- **Đo trượt giá thật:** khi chạy demo/thật, mỗi lệnh vào được ghi giá yêu cầu, giá khớp và spread vào `Common\Files\TrendBot_truotgia.csv`. Gửi file này cùng lịch sử demo để so với backtest.
+
+Chưa làm và lý do:
+- *Deflated Sharpe, PBO, purged CV:* cần nhiều lệnh hơn và tính ngoài MT5. Thay vào đó dùng t > 3 và tiêu chí đặt trước ở 3 nơi.
+- *Kelly:* cần ước lượng tỷ lệ thắng và lãi/lỗ trung bình ổn định (vài trăm lệnh). Với 60–90 lệnh, Kelly bị thổi phồng; giữ 1% cố định.
+- *Meta-labeling / ML / HMM:* vài trăm lệnh gần như chắc chắn quá khớp. Chỉ đáng làm khi có chiến lược gốc đã qua kiểm thử và hàng nghìn lệnh.
+- *Lọc theo giờ, quán tính trong ngày:* mỗi bộ lọc là thêm một lần thử. Dữ liệu giờ/thứ đã có trong file lệnh để kiểm tra sau.
 
 ## Quy tắc cho người vận hành
 - Chỉ xem kết quả và đổi thông số vào **một ngày cố định mỗi tuần** (ví dụ Chủ nhật). Mọi thay đổi phải backtest lại trước khi gắn lên chart.

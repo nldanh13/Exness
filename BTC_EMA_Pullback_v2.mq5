@@ -71,6 +71,7 @@ input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
+input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
 input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
 input double          InpCorrRiskScale   = 0.5;       // He so rui ro khi ma cung nhom dang co lenh (1 = tat)
@@ -139,6 +140,7 @@ double          P_RsiLow;
 double          P_RsiHigh;
 int             P_OrbStartMin;
 bool            P_OrbNewYork;
+bool            P_DDScale;
 double          P_ExhaustATR;
 double          P_FvgBigATR;
 int             P_FvgLookback;
@@ -223,6 +225,7 @@ void LoadParams()
    P_RsiHigh = InpRsiHigh;
    P_OrbStartMin = InpOrbStartMin;
    P_OrbNewYork = InpOrbNewYork;
+   P_DDScale = InpDDScale;
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback;
@@ -311,6 +314,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
+   if(k == "InpDDScale") { P_DDScale = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbNewYork") { P_OrbNewYork = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbStartMin") { P_OrbStartMin = (int)StringToInteger(v); return true; }
    if(k == "InpOrbMinutes") { P_OrbMinutes = (int)StringToInteger(v); return true; }
@@ -640,6 +644,7 @@ void OnTick()
    if(buySignal)
    {
       double price = tick.ask;
+      g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price + slDist * P_RR : 0.0);
       if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
@@ -649,6 +654,7 @@ void OnTick()
    else
    {
       double price = tick.bid;
+      g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price - slDist * P_RR : 0.0);
       if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
@@ -684,6 +690,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    {
       bool isBuy = HistoryDealGetInteger(trans.deal, DEAL_TYPE) == DEAL_TYPE_BUY;
       MarkTracked((ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID));
+      LogSlippage(isBuy, price);
       Notify(StringFormat("[%s] VAO %s %.2f lot @ %s", _Symbol, isBuy ? "BUY" : "SELL",
                           vol, DoubleToString(price, _Digits)));
    }

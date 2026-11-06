@@ -89,6 +89,10 @@ $Runs = @(
     @{ Name = "C+tranhTin";             Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }) },
     @{ Name = "C+tranhTin-truoc";       Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }); From = $OOSFrom; To = $FromDate },
     @{ Name = "C+tranhTin-ETH";         Inputs = (Cfg $Brk $Q @{ InpAvoidUSNews = "true" }); Symbol = "ETHUSDm" },
+    # Giam co theo sut giam (tai lieu "Kien thuc nang cao"): khong phai bo loc, chi doi co lenh khi dang sut giam
+    @{ Name = "C+giamTheoDD";           Inputs = (Cfg $Brk $Q @{ InpDDScale = "true" }) },
+    @{ Name = "C+giamTheoDD-truoc";     Inputs = (Cfg $Brk $Q @{ InpDDScale = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+giamTheoDD-ETH";       Inputs = (Cfg $Brk $Q @{ InpDDScale = "true" }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )

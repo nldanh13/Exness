@@ -6,3 +6,6 @@ Ngan-Spring*
 *-von1tr
 *-von1tr-rr5
 C-Donchian20-H4-ADX
+C-truoc-3nam
+C-ETH
+C+giamTheoDD*

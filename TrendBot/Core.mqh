@@ -8,7 +8,9 @@ int      hMkt  = INVALID_HANDLE;
 int      hRSI  = INVALID_HANDLE;
 int      hATRD1 = INVALID_HANDLE, hBB = INVALID_HANDLE;
 double   g_sigSL = 0, g_sigTP = 0;       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
-datetime g_fvgUsed = 0;                  // FVG da vao lenh (moi khoang trong chi vao 1 lan)
+datetime g_fvgUsed = 0;
+double   g_reqPrice = 0;                 // gia luc gui lenh vao (de do truot gia that)
+long     g_reqSpread = 0;                  // FVG da vao lenh (moi khoang trong chi vao 1 lan)
 double   g_rsi = 50;
 string   g_mktSym = "";
 datetime lastBarTime    = 0;
@@ -118,6 +120,24 @@ bool ClaimMagic()
    return true;
 }
 void ReleaseMagic() { GlobalVariableDel(MagicPrefix() + IntegerToString(ChartID())); }
+
+//--- Ghi gia yeu cau va gia khop that cua moi lenh vao (chi khi chay that / demo) de do truot gia,
+// roi dua nguoc vao backtest. File Common\Files\TrendBot_truotgia.csv.
+void LogSlippage(const bool isBuy, const double fill)
+{
+   if(MQLInfoInteger(MQL_TESTER) || g_reqPrice <= 0) return;
+   string f = "TrendBot_truotgia.csv";
+   bool isNew = !FileIsExist(f, FILE_COMMON);
+   int h = FileOpen(f, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ, ',');
+   if(h == INVALID_HANDLE) return;
+   if(isNew) FileWrite(h, "ThoiGian", "Ma", "Magic", "Chieu", "GiaYeuCau", "GiaKhop", "Truot_diem_batLoi", "Spread_diem_luocGui");
+   FileSeek(h, 0, SEEK_END);
+   double slip = (isBuy ? fill - g_reqPrice : g_reqPrice - fill) / _Point;   // duong = khop xau hon
+   FileWrite(h, TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS), _Symbol, (long)P_Magic, isBuy ? "Buy" : "Sell",
+             DoubleToString(g_reqPrice, _Digits), DoubleToString(fill, _Digits), DoubleToString(slip, 0), g_reqSpread);
+   FileClose(h);
+   g_reqPrice = 0;
+}
 
 bool IsOwnSelected()
 {

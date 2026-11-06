@@ -19,6 +19,27 @@ double FundingPct(const datetime t, const double f)
    }
    return cnt >= 300 ? 100.0 * below / cnt : -1;
 }
+// Rui ro ban dau cua vi the (tien), tu SL gui kem lenh vao. slDist tra ve khoang cach gia vao -> SL.
+double PosRiskMoney(const ulong pid, double &slDist)
+{
+   slDist = 0;
+   if(!HistorySelectByPosition(pid)) return 0;
+   for(int i = 0; i < HistoryDealsTotal(); i++)
+   {
+      ulong d = HistoryDealGetTicket(i);
+      if(HistoryDealGetInteger(d, DEAL_ENTRY) != DEAL_ENTRY_IN) continue;
+      ulong ord = (ulong)HistoryDealGetInteger(d, DEAL_ORDER);
+      double price = HistoryDealGetDouble(d, DEAL_PRICE), vol = HistoryDealGetDouble(d, DEAL_VOLUME);
+      if(!HistoryOrderSelect(ord)) return 0;
+      double sl = HistoryOrderGetDouble(ord, ORDER_SL);
+      if(sl <= 0) return 0;
+      double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+      slDist = MathAbs(price - sl);
+      return tsz > 0 ? slDist / tsz * tv * vol : 0;
+   }
+   return 0;
+}
+
 void WriteTradeFeatures(const ulong &ids[], const double &net[])
 {
    if(ArraySize(g_fT) == 0) LoadFunding();
@@ -28,10 +49,12 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
    int h = FileOpen(file, FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
    if(h == INVALID_HANDLE) return;
    FileWrite(h, "Lan", "ViThe", "Chieu", "ThoiGianVao", "KhoangCach_ATR", "DoRongKenh_ATR", "TuoiXuHuong_nen",
-             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu", "GioToiTin", "Tin", "Spread_diem");
+             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu", "GioToiTin", "Tin", "Spread_diem",
+             "ADX", "ER20", "ATR_PhanVi90ngay", "GioUTC", "Thu");
    double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    for(int j = 0; j < ArraySize(ids); j++)
    {
+      double slD = 0, riskM = PosRiskMoney(ids[j], slD);
       if(!HistorySelectByPosition(ids[j])) continue;
       datetime tin = 0, tout = 0; double pin = 0, pout = 0, vol = 0; bool buy = true;
       for(int i = 0; i < HistoryDealsTotal(); i++)
@@ -69,7 +92,7 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
       // Du dia di tiep (MFE) va muc bat loi lon nhat (MAE), tinh theo R = khoang SL ban dau.
       // Dung nen M1 nam tron trong khoang [vao, thoat] + gia vao/thoat that: khong tinh gia sau khi da dong lenh
       // (sai so toi da 1 phut o moi dau). Truoc day dung nen H4 gom ca nen thoat nen MFE bi thoi phong.
-      double rDist = atr * P_ATRMult, mfe = 0, mae = 0, hh = pin, ll = pin;
+      double rDist = slD > 0 ? slD : atr * P_ATRMult, mfe = 0, mae = 0, hh = pin, ll = pin;
       long spr = -1;
       MqlRates m1[];
       int n1 = CopyRates(_Symbol, PERIOD_M1, tin - 60, tout > tin ? tout : tin, m1);
@@ -85,14 +108,26 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
          mfe = (buy ? hh - pin : pin - ll) / rDist;
          mae = (buy ? pin - ll : hh - pin) / rDist;
       }
-      double riskMoney = (tsz > 0 ? rDist / tsz * tv * vol : 0);
+      double riskMoney = riskM > 0 ? riskM : (tsz > 0 ? rDist / tsz * tv * vol : 0);
+      // Che do thi truong luc vao (nen tin hieu s): ADX, Efficiency Ratio 20 nen, phan vi ATR trong 90 ngay
+      double adxV[]; double adxS = CopyBuffer(hADX, 0, s, 1, adxV) == 1 ? adxV[0] : -1;
+      double er = -1, pathSum = 0;
+      for(int q = s; q < s + 20; q++) pathSum += MathAbs(iClose(_Symbol, P_TF, q) - iClose(_Symbol, P_TF, q + 1));
+      if(pathSum > 0) er = MathAbs(iClose(_Symbol, P_TF, s) - iClose(_Symbol, P_TF, s + 20)) / pathSum;
+      int nA = (int)MathMin(3000, 90 * 86400 / PeriodSeconds(P_TF));
+      double aH[]; double atrPct = -1;
+      int gotA = CopyBuffer(hATR, 0, s, nA, aH);
+      if(gotA > 50) { int below = 0; for(int q = 0; q < gotA; q++) if(aH[q] < atr) below++; atrPct = 100.0 * below / gotA; }
+      MqlDateTime tm; TimeToStruct(tin, tm);
       FileWrite(h, P_TestLabel, (long)ids[j], buy ? "Buy" : "Sell", TimeToString(tin, TIME_DATE | TIME_MINUTES),
                 DoubleToString(dist, 2), DoubleToString(width, 2), k - s, first >= 0 ? first - s : -1, breaks,
                 f == EMPTY_VALUE ? "" : DoubleToString(f, 4), fp < 0 ? "" : DoubleToString(fp, 0),
                 DoubleToString(net[j], 2), DoubleToString(riskMoney > 0 ? net[j] / riskMoney : 0, 2),
                 DoubleToString(mfe, 2), DoubleToString(mae, 2),
                 DoubleToString(tout > tin ? (double)(tout - tin) / 3600.0 : 0, 1),
-                DoubleToString(hn, 1), nn, spr < 0 ? "" : IntegerToString(spr));
+                DoubleToString(hn, 1), nn, spr < 0 ? "" : IntegerToString(spr),
+                adxS < 0 ? "" : DoubleToString(adxS, 1), er < 0 ? "" : DoubleToString(er, 2),
+                atrPct < 0 ? "" : DoubleToString(atrPct, 0), tm.hour, tm.day_of_week);
    }
    FileClose(h);
 }
@@ -173,17 +208,39 @@ double OnTester()
          if(net > 0) stressGP[s2] += net; else stressGL[s2] -= net;
       }
 
+   // Thong ke theo R (1R = tien rui ro o SL ban dau): E[R], t-stat, ty le thang kem can duoi Wilson 95%
+   int nP = ArraySize(posIds);
+   double posR[]; ArrayResize(posR, nP);
+   double sumR = 0, sumR2 = 0; int nR = 0, nWin = 0;
+   for(int j = 0; j < nP; j++)
+   {
+      double sd = 0, rm = PosRiskMoney(posIds[j], sd);
+      posR[j] = rm > 0 ? posNet[j] / rm : 0;
+      if(rm <= 0) continue;
+      sumR += posR[j]; sumR2 += posR[j] * posR[j]; nR++;
+      if(posNet[j] > 0) nWin++;
+   }
+   double meanR = nR > 0 ? sumR / nR : 0;
+   double sdR   = nR > 1 ? MathSqrt(MathMax(0, (sumR2 - nR * meanR * meanR) / (nR - 1))) : 0;
+   double tStat = sdR > 0 ? meanR / (sdR / MathSqrt(nR)) : 0;
+   double wilson = 0;
+   if(nR > 0)
+   {
+      double ph = (double)nWin / nR, z = 1.96, z2 = z * z;
+      wilson = (ph + z2 / (2 * nR) - z * MathSqrt(ph * (1 - ph) / nR + z2 / (4.0 * nR * nR))) / (1 + z2 / nR) * 100.0;
+   }
+
    // Monte Carlo (bootstrap): rut ngau nhien co hoan lai tu lai/lo cac vi the, 1000 lan, de xem
    // sut giam co the te toi dau neu thu tu lenh khac di. Mau duoi ~200 lenh thi chi nen xem la tham khao.
    double dep = TesterStatistics(STAT_INITIAL_DEPOSIT);
    int    nPos = ArraySize(posNet), sims = 1000, ruin = 0, blk = 5;
    double stopDD = P_MaxDrawdownPct > 0 ? P_MaxDrawdownPct : 15.0;   // nguong bot tu dung han
-   double mcDD[];
-   ArrayResize(mcDD, sims);
+   double mcDD[], mcStreak[];
+   ArrayResize(mcDD, sims); ArrayResize(mcStreak, sims);
    MathSrand(12345);                                   // co dinh de chay lai ra cung so
    for(int m = 0; m < sims; m++)
    {
-      double eq = dep, pk = dep, dd = 0;
+      double eq = dep, pk = dep, dd = 0; int run = 0, maxRun = 0;
       // Rut theo khoi 5 lenh lien tiep (giu cac chuoi thua theo cum khi thi truong di ngang)
       for(int j = 0; j < nPos; j += blk)
       {
@@ -191,14 +248,16 @@ double OnTester()
          for(int q = 0; q < blk && j + q < nPos; q++)
          {
             eq += posNet[(st + q) % nPos];
+            if(posNet[(st + q) % nPos] < 0) { run++; if(run > maxRun) maxRun = run; } else run = 0;
             if(eq > pk) pk = eq;
             if(pk > 0) dd = MathMax(dd, (pk - eq) / pk * 100.0);
          }
       }
-      mcDD[m] = dd;
+      mcDD[m] = dd; mcStreak[m] = maxRun;
       if(dd >= stopDD) ruin++;
    }
-   ArraySort(mcDD);
+   ArraySort(mcDD); ArraySort(mcStreak);
+   double mcStreak95 = nPos > 0 ? mcStreak[(int)(sims * 0.95)] : 0;
    double mcMed = nPos > 0 ? mcDD[sims / 2] : 0;
    double mc95  = nPos > 0 ? mcDD[(int)(sims * 0.95)] : 0;
 
@@ -228,7 +287,8 @@ double OnTester()
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
                    "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin",
-                   "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%");
+                   "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
+                   "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -252,7 +312,9 @@ double OnTester()
                 g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2),
                 DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2), g_newsBlocked,
                 DoubleToString(plNoTop, 2), DoubleToString(rGL > 0 ? rGP / rGL : 0, 2),
-                DoubleToString(totNet > 0 ? top5 / totNet * 100.0 : 0, 0));
+                DoubleToString(totNet > 0 ? top5 / totNet * 100.0 : 0, 0),
+                DoubleToString(meanR, 3), DoubleToString(tStat, 2), DoubleToString(wilson, 1),
+                DoubleToString(mcStreak95, 0), g_ddScaled);
       FileClose(h);
    }
    else
