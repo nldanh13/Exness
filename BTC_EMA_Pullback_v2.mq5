@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.6"
-#property version   "3.60"
+#define  BOT_VERSION "3.7"
+#property version   "3.70"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -33,6 +33,14 @@ input int             InpATRPeriod       = 14;        // Chu ky ATR
 input group "=== Bo loc thi truong ==="
 input bool            InpUseFunding      = false;     // Loc funding rate Binance Futures (dam dong dung don bay qua lech)
 input double          InpFundingMax      = 0.03;      // Bo Buy khi funding > X% / 8 gio, bo Sell khi funding < -X%
+input bool            InpUseFearGreed    = false;     // Loc Fear & Greed Index (tam ly dam dong, alternative.me)
+input int             InpFngGreedMax     = 76;        // Bo Buy khi chi so hom qua >= muc nay (tham lam cuc do)
+input int             InpFngFearMin      = 24;        // Bo Sell khi chi so hom qua <= muc nay (so hai cuc do)
+input bool            InpUseAttention    = false;     // Chi vao lenh khi luot xem Wikipedia TB 7 ngay > TB 30 ngay (su chu y tang)
+input bool            InpUseMarketFilter = false;     // Chi Buy khi Nasdaq tren EMA200 D1, chi Sell khi duoi
+input string          InpMarketSymbol    = "USTEC";   // Ma Nasdaq tren san (tu thu them duoi "m" neu khong co)
+input bool            InpAvoidUSNews     = false;     // Khong vao lenh gan tin My quan trong (lich kinh te MT5, chi khi chay that)
+input int             InpNewsHours       = 2;         // So gio truoc/sau tin
 input bool            InpUseHTF          = true;      // Xac nhan xu huong khung lon
 input ENUM_TIMEFRAMES InpHTF             = PERIOD_D1; // Khung lon
 input int             InpHTFEMA          = 200;       // EMA khung lon
@@ -45,6 +53,8 @@ input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
+input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
+input double          InpCorrRiskScale   = 0.5;       // He so rui ro khi ma cung nhom dang co lenh (1 = tat)
 
 input group "=== Quan ly lenh ==="
 input bool            InpUsePartial      = false;     // Chot loi mot phan
@@ -93,6 +103,8 @@ input string          InpTestLabel       = "";        // Ten lan chay backtest (
 CTrade   trade;
 int      hFast = INVALID_HANDLE, hTrend = INVALID_HANDLE, hATR = INVALID_HANDLE;
 int      hHTF  = INVALID_HANDLE, hADX   = INVALID_HANDLE;
+int      hMkt  = INVALID_HANDLE;
+string   g_mktSym = "";
 datetime lastBarTime    = 0;
 datetime lastPanel      = 0;
 double   dayStartEquity = 0;     // "Von cua bot" luc dau ngay
@@ -563,6 +575,161 @@ double FundingNow()
    return FundingAt(TimeCurrent());
 }
 
+//--- Chuoi so lieu theo ngay (Fear & Greed, luot xem Wikipedia) ------
+// File trong Common\Files, moi dong "unix_giay,gia_tri" (script ChayThuNghiem tai ve).
+// Chi dung so lieu cua NGAY HOM QUA tro ve truoc, tranh nhin truoc tuong lai trong backtest.
+datetime g_fngT[];  double g_fngV[];
+datetime g_wikT[];  double g_wikV[];
+datetime g_fngLiveAt = 0, g_wikLiveAt = 0;
+int      g_fngBlocked = 0, g_attBlocked = 0, g_mktBlocked = 0, g_newsBlocked = 0;
+datetime DayOf(const datetime t) { return t - t % 86400; }
+string WikiArticle()
+{
+   if(StringFind(_Symbol, "BTC") >= 0) return "Bitcoin";
+   if(StringFind(_Symbol, "ETH") >= 0) return "Ethereum";
+   return "";
+}
+// Them / cap nhat 1 ngay, giu mang tang dan theo thoi gian
+void MergeDaily(datetime &t[], double &v[], const datetime day, const double val)
+{
+   int n = ArraySize(t);
+   if(n > 0 && day == t[n - 1]) { v[n - 1] = val; return; }
+   if(n > 0 && day < t[n - 1])
+   {
+      for(int i = n - 1; i >= 0 && t[i] >= day; i--) if(t[i] == day) { v[i] = val; return; }
+      return;                                    // ngay cu khong co trong file: bo qua
+   }
+   ArrayResize(t, n + 1); ArrayResize(v, n + 1);
+   t[n] = day; v[n] = val;
+}
+void LoadDaily(const string file, datetime &t[], double &v[])
+{
+   ArrayResize(t, 0); ArrayResize(v, 0);
+   int h = FileOpen(file, FILE_READ | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   if(h == INVALID_HANDLE) { Print("Chua co file ", file, ": bo loc dung file nay se khong chan lenh nao."); return; }
+   while(!FileIsEnding(h))
+   {
+      long   ts = StringToInteger(FileReadString(h));
+      double x  = StringToDouble(FileReadString(h));
+      if(ts > 0) MergeDaily(t, v, DayOf((datetime)ts), x);
+   }
+   FileClose(h);
+   PrintFormat("Da nap %d ngay tu %s.", ArraySize(t), file);
+}
+// Trung binh cac ngay trong [lastDay - days + 1, lastDay]. EMPTY_VALUE neu thieu qua 30% so ngay.
+double DailyAvg(const datetime &t[], const double &v[], const datetime lastDay, const int days)
+{
+   int n = ArraySize(t);
+   if(n == 0 || lastDay < t[0]) return EMPTY_VALUE;
+   int lo = 0, hi = n - 1;
+   while(lo < hi) { int mid = (lo + hi + 1) / 2; if(t[mid] <= lastDay) lo = mid; else hi = mid - 1; }
+   double sum = 0; int cnt = 0;
+   for(int i = lo; i >= 0 && t[i] > lastDay - days * 86400; i--) { sum += v[i]; cnt++; }
+   if(cnt < days * 0.7) return EMPTY_VALUE;
+   return sum / cnt;
+}
+string JsonValue(const string js, const string key, const int from, int &pos)
+{
+   string k = "\"" + key + "\":";
+   pos = StringFind(js, k, from);
+   if(pos < 0) return "";
+   int a = pos + StringLen(k);
+   while(a < StringLen(js) && (StringGetCharacter(js, a) == ' ' || StringGetCharacter(js, a) == '"')) a++;
+   int b = a;
+   while(b < StringLen(js)) { ushort c = StringGetCharacter(js, b); if(c == '"' || c == ',' || c == '}') break; b++; }
+   return StringSubstr(js, a, b - a);
+}
+bool HttpGet(const string url, string &body)
+{
+   char req[], res[]; string hdr;
+   int code = WebRequest("GET", url, "User-Agent: BTC-EA/1.0\r\n", 8000, req, res, hdr);
+   body = CharArrayToString(res, 0, WHOLE_ARRAY, CP_UTF8);
+   if(code != 200 && ShouldNotify("http" + StringSubstr(url, 0, 30), 86400))
+   {
+      int e = StringFind(url, "/", 8);
+      PrintFormat("Khong tai duoc %s (%d). Them %s vao Tools > Options > Expert Advisors > Allow WebRequest.",
+                  url, code, StringSubstr(url, 0, e));
+   }
+   return code == 200;
+}
+// Chay that: cap nhat so lieu moi qua mang (6 gio / lan)
+void RefreshDailyLive()
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   string js; int pos;
+   if(InpUseFearGreed && TimeCurrent() - g_fngLiveAt >= 6 * 3600)
+   {
+      g_fngLiveAt = TimeCurrent();
+      datetime td[]; double tv[];
+      if(HttpGet("https://api.alternative.me/fng/?limit=10", js))
+         for(int from = 0; ; )
+         {
+            string val = JsonValue(js, "value", from, pos);
+            if(pos < 0) break;
+            string ts  = JsonValue(js, "timestamp", pos, pos);
+            if(pos < 0) break;
+            from = pos + 1;
+            int k = ArraySize(td);
+            ArrayResize(td, k + 1); ArrayResize(tv, k + 1);
+            td[k] = DayOf((datetime)StringToInteger(ts)); tv[k] = StringToDouble(val);
+         }
+      // API tra ngay moi nhat truoc: sap xep tang dan roi gop vao chuoi
+      for(int i = 1; i < ArraySize(td); i++)
+         for(int j = i; j > 0 && td[j] < td[j - 1]; j--)
+         { datetime x = td[j]; td[j] = td[j - 1]; td[j - 1] = x; double y = tv[j]; tv[j] = tv[j - 1]; tv[j - 1] = y; }
+      for(int i = 0; i < ArraySize(td); i++) MergeDaily(g_fngT, g_fngV, td[i], tv[i]);
+   }
+   if(InpUseAttention && WikiArticle() != "" && TimeCurrent() - g_wikLiveAt >= 6 * 3600)
+   {
+      g_wikLiveAt = TimeCurrent();
+      string a = TimeToString(TimeGMT() - 45 * 86400, TIME_DATE), b = TimeToString(TimeGMT(), TIME_DATE);
+      StringReplace(a, ".", ""); StringReplace(b, ".", "");
+      if(HttpGet("https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/"
+                 + WikiArticle() + "/daily/" + a + "/" + b, js))
+         for(int from = 0; ; )
+         {
+            string ts = JsonValue(js, "timestamp", from, pos);     // dang 2026110500
+            if(pos < 0) break;
+            string vw = JsonValue(js, "views", pos, pos);
+            if(pos < 0) break;
+            from = pos + 1;
+            MqlDateTime m; ZeroMemory(m);
+            m.year = (int)StringToInteger(StringSubstr(ts, 0, 4));
+            m.mon  = (int)StringToInteger(StringSubstr(ts, 4, 2));
+            m.day  = (int)StringToInteger(StringSubstr(ts, 6, 2));
+            MergeDaily(g_wikT, g_wikV, StructToTime(m), StringToDouble(vw));
+         }
+   }
+}
+// Tin vi mo My quan trong trong khoang +-InpNewsHours (chi chay that; lich kinh te khong co trong backtest)
+bool USNewsNear(string &name)
+{
+   if(MQLInfoInteger(MQL_TESTER)) return false;
+   MqlCalendarValue vals[];
+   datetime now = TimeTradeServer();
+   if(CalendarValueHistory(vals, now - InpNewsHours * 3600, now + InpNewsHours * 3600, "US") <= 0) return false;
+   for(int i = 0; i < ArraySize(vals); i++)
+   {
+      MqlCalendarEvent ev;
+      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      { name = ev.name; return true; }
+   }
+   return false;
+}
+
+// Ma khac trong InpCorrSymbols dang co lenh (cua bat ky bot nao) -> tra ten ma, khong co -> ""
+string CorrOpen()
+{
+   string list = "," + InpCorrSymbols + ",";
+   StringReplace(list, " ", "");
+   if(StringFind(list, "," + _Symbol + ",") < 0) return "";
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      string sym = PositionGetSymbol(i);
+      if(sym != "" && sym != _Symbol && StringFind(list, "," + sym + ",") >= 0) return sym;
+   }
+   return "";
+}
 int g_minLotSkips = 0;   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
 double CalcLots(const double slDistance)
 {
@@ -575,6 +742,13 @@ double CalcLots(const double slDistance)
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
    double riskBase   = BotEquity();
    double riskMoney  = riskBase * InpRiskPercent / 100.0;
+   // BTC va ETH di cung nhau (tuong quan cao): ma cung nhom dang co lenh thi giam rui ro lenh moi
+   string corr = CorrOpen();
+   if(corr != "" && InpCorrRiskScale > 0 && InpCorrRiskScale < 1)
+   {
+      riskMoney *= InpCorrRiskScale;
+      PrintFormat("%s dang co lenh, giam rui ro lenh nay x%.2f.", corr, InpCorrRiskScale);
+   }
    double lossPerLot = slDistance / tickSize * tickValue;
    double lots       = NormalizeVolume(riskMoney / lossPerLot);
    double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
@@ -895,6 +1069,16 @@ void UpdatePanel()
 int OnInit()
 {
    if(InpUseFunding) LoadFunding();
+   if(InpUseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
+   if(InpUseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
+   if(InpUseMarketFilter)
+   {
+      g_mktSym = InpMarketSymbol;
+      if(!SymbolSelect(g_mktSym, true)) g_mktSym = InpMarketSymbol + "m";
+      if(!SymbolSelect(g_mktSym, true))
+      { Print("Khong tim thay ma ", InpMarketSymbol, " / ", g_mktSym, ": tat bo loc Nasdaq."); g_mktSym = ""; }
+      else hMkt = iMA(g_mktSym, PERIOD_D1, 200, 0, MODE_EMA, PRICE_CLOSE);
+   }
    hFast  = iMA(_Symbol, InpTF,  InpFastEMA,  0, MODE_EMA, PRICE_CLOSE);
    hTrend = iMA(_Symbol, InpTF,  InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
    hHTF   = iMA(_Symbol, InpHTF, InpHTFEMA,   0, MODE_EMA, PRICE_CLOSE);
@@ -956,7 +1140,53 @@ void OnDeinit(const int reason)
    IndicatorRelease(hHTF);
    IndicatorRelease(hATR);
    IndicatorRelease(hADX);
+   if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    Comment("");
+}
+
+// Cac bo loc tu nghien cuu tam ly / thi truong. Thieu so lieu thi KHONG chan (bot van chay nhu cu).
+bool MarketFiltersOk(const bool isBuy)
+{
+   RefreshDailyLive();
+   datetime yday = DayOf(TimeCurrent()) - 86400;          // chi dung so lieu da biet: hom qua tro ve truoc
+   if(InpUseFearGreed)
+   {
+      double f = DailyAvg(g_fngT, g_fngV, yday, 1);
+      if(f != EMPTY_VALUE && ((isBuy && f >= InpFngGreedMax) || (!isBuy && f <= InpFngFearMin)))
+      {
+         g_fngBlocked++;
+         g_status = StringFormat("Bo tin hieu vi Fear & Greed = %.0f", f);
+         return false;
+      }
+   }
+   if(InpUseAttention)
+   {
+      double a7 = DailyAvg(g_wikT, g_wikV, yday, 7), a30 = DailyAvg(g_wikT, g_wikV, yday, 30);
+      if(a7 != EMPTY_VALUE && a30 != EMPTY_VALUE && a7 <= a30)
+      {
+         g_attBlocked++;
+         g_status = "Bo tin hieu vi su chu y dang giam (Wikipedia)";
+         return false;
+      }
+   }
+   if(hMkt != INVALID_HANDLE)
+   {
+      double ema, cl = iClose(g_mktSym, PERIOD_D1, 1);
+      if(cl > 0 && GetValue(hMkt, 0, 1, ema) && ((isBuy && cl < ema) || (!isBuy && cl > ema)))
+      {
+         g_mktBlocked++;
+         g_status = "Bo tin hieu vi Nasdaq nguoc chieu";
+         return false;
+      }
+   }
+   string news;
+   if(InpAvoidUSNews && USNewsNear(news))
+   {
+      g_newsBlocked++;
+      g_status = "Gan tin My: " + news;
+      return false;
+   }
+   return true;
 }
 
 //+------------------------------------------------------------------+
@@ -1058,6 +1288,8 @@ void OnTick()
          return;
       }
    }
+
+   if((buySignal || sellSignal) && !MarketFiltersOk(buySignal)) return;
 
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
@@ -1217,7 +1449,7 @@ double OnTester()
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
-                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%", "ChanFunding");
+                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1237,7 +1469,8 @@ double OnTester()
                 byYear,
                 DoubleToString(stressPL[0], 2), DoubleToString(stressGL[0] > 0 ? stressGP[0] / stressGL[0] : 0, 2),
                 DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2),
-                DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked);
+                DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked,
+                g_fngBlocked, g_attBlocked, g_mktBlocked);
       FileClose(h);
    }
    else

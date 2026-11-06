@@ -68,6 +68,18 @@ $Runs = @(
     @{ Name = "C+funding";              Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }) },
     @{ Name = "C+funding-truoc";        Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }); From = $OOSFrom; To = $FromDate },
     @{ Name = "C+funding-ETH";          Inputs = (Cfg $Brk $Q @{ InpUseFunding = "true" }); Symbol = "ETHUSDm" },
+    # Tu tai lieu tam ly: bo Buy khi Fear & Greed hom qua >= 76 (tham lam cuc do), bo Sell khi <= 24.
+    @{ Name = "C+fearGreed";            Inputs = (Cfg $Brk $Q @{ InpUseFearGreed = "true" }) },
+    @{ Name = "C+fearGreed-truoc";      Inputs = (Cfg $Brk $Q @{ InpUseFearGreed = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+fearGreed-ETH";        Inputs = (Cfg $Brk $Q @{ InpUseFearGreed = "true" }); Symbol = "ETHUSDm" },
+    # Su chu y (Kristoufek 2013): chi vao lenh khi luot xem Wikipedia TB 7 ngay > TB 30 ngay.
+    @{ Name = "C+chuY";                 Inputs = (Cfg $Brk $Q @{ InpUseAttention = "true" }) },
+    @{ Name = "C+chuY-truoc";           Inputs = (Cfg $Brk $Q @{ InpUseAttention = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+chuY-ETH";             Inputs = (Cfg $Brk $Q @{ InpUseAttention = "true" }); Symbol = "ETHUSDm" },
+    # Tuong quan voi chung khoan My: Buy chi khi USTEC tren EMA200 D1, Sell chi khi duoi.
+    @{ Name = "C+nasdaq";               Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }) },
+    @{ Name = "C+nasdaq-truoc";         Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+nasdaq-ETH";           Inputs = (Cfg $Brk $Q @{ InpUseMarketFilter = "true" }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
@@ -99,6 +111,7 @@ try {
     Write-Host "Da compile ban moi nhat cua bot. $($r.Summary)" -ForegroundColor Green
     Write-Host "Cap nhat du lieu funding rate tu Binance..." -ForegroundColor Cyan
     Update-FundingData $mt5 @("BTCUSDT", "ETHUSDT")
+    Update-SentimentData $mt5
 } catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log

@@ -165,6 +165,39 @@ function Update-FundingData($mt5, [string[]]$pairs, [int]$years = 7) {
     }
 }
 
+# Tai Fear & Greed Index (alternative.me, tu 2018) va luot xem Wikipedia theo ngay (tu 2015-07)
+# vao Common\Files: fng.csv, wiki_Bitcoin.csv, wiki_Ethereum.csv. Moi dong "unix_giay,gia_tri".
+function Update-SentimentData($mt5, [string[]]$articles = @("Bitcoin", "Ethereum")) {
+    $ua = @{ "User-Agent" = "BTC-EA-backtest/1.0" }
+    try {
+        $fng = Invoke-RestMethod -Uri "https://api.alternative.me/fng/?limit=0" -TimeoutSec 60 -Headers $ua
+        $rows = @($fng.data | Sort-Object { [long]$_.timestamp } | ForEach-Object { "{0},{1}" -f $_.timestamp, $_.value })
+        if ($rows.Count -gt 0) {
+            (@("time,value") + $rows) | Set-Content -Path (Join-Path $mt5.CommonFiles "fng.csv") -Encoding ASCII
+            Write-Host "  Fear & Greed: $($rows.Count) ngay." -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  Khong tai duoc Fear & Greed ($($_.Exception.Message)). Dung file cu neu co." -ForegroundColor Yellow
+    }
+    $end = (Get-Date).ToUniversalTime().ToString("yyyyMMdd")
+    foreach ($a in $articles) {
+        try {
+            $url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/$a/daily/20150701/$end"
+            $res = Invoke-RestMethod -Uri $url -TimeoutSec 60 -Headers $ua
+            $rows = @($res.items | ForEach-Object {
+                $d = [DateTime]::ParseExact($_.timestamp.Substring(0, 8), "yyyyMMdd", $null)
+                "{0},{1}" -f ([DateTimeOffset]::new($d, [TimeSpan]::Zero)).ToUnixTimeSeconds(), $_.views
+            })
+            if ($rows.Count -gt 0) {
+                (@("time,value") + $rows) | Set-Content -Path (Join-Path $mt5.CommonFiles "wiki_$a.csv") -Encoding ASCII
+                Write-Host "  Wikipedia $a : $($rows.Count) ngay." -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "  Khong tai duoc luot xem Wikipedia $a ($($_.Exception.Message)). Dung file cu neu co." -ForegroundColor Yellow
+        }
+    }
+}
+
 # Dong MT5 (hoi truoc). Tra ve $false neu nguoi dung khong dong y.
 function Stop-MT5($mt5) {
     $running = Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq $mt5.Terminal }
