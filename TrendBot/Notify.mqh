@@ -21,9 +21,9 @@ string UrlEncode(const string s)
 
 void SendTelegram(const string msg)
 {
-   if(InpTgToken == "" || InpTgChatId == "") return;
-   string url  = "https://api.telegram.org/bot" + InpTgToken + "/sendMessage";
-   string body = "chat_id=" + UrlEncode(InpTgChatId) + "&text=" + UrlEncode(msg);
+   if(P_TgToken == "" || P_TgChatId == "") return;
+   string url  = "https://api.telegram.org/bot" + P_TgToken + "/sendMessage";
+   string body = "chat_id=" + UrlEncode(P_TgChatId) + "&text=" + UrlEncode(msg);
    char data[];
    int n = StringToCharArray(body, data, 0, WHOLE_ARRAY, CP_UTF8);
    if(n > 0) ArrayResize(data, n - 1);           // bo ky tu ket thuc chuoi
@@ -43,6 +43,6 @@ void Notify(const string msg)
 {
    Print(msg);
    if(MQLInfoInteger(MQL_TESTER)) return;          // khong gui khi backtest
-   if(InpPushNotify) SendNotification(msg);
-   if(InpTelegram)   SendTelegram(msg);
+   if(P_PushNotify) SendNotification(msg);
+   if(P_Telegram)   SendTelegram(msg);
 }

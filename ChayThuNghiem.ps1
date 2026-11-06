@@ -4,7 +4,9 @@
 
 # Mac dinh chay che do NHANH (gia OHLC tung phut, Model=1): nhanh hon nhieu, du dung de loc cau hinh
 # cho chien luoc khung H1/H4/D1. Them -ChinhXac de chay tick that (Model=4) cho cau hinh cuoi cung.
-param([switch]$ChinhXac)
+# Cac lan chay cung ma / cung khoang ngay / cung von duoc gom thanh 1 dot "Optimization" cua MT5,
+# MT5 tu chia cho moi nhan CPU (nhanh gap nhieu lan). Them -TuanTu de chay lan luot tung lan nhu cu.
+param([switch]$ChinhXac, [switch]$TuanTu)
 
 $ErrorActionPreference = "Stop"
 $Model = if ($ChinhXac) { 4 } else { 1 }
@@ -86,11 +88,13 @@ $Runs = @(
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
+# Lan doi chieu: kiem tra lenh o MOI tick (nhu ban cu) de do sai khac cua viec chi kiem tra moi giay
+$Runs += @{ Name = "C-moiTick"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 0 }) }
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "C-lamTronLot1.5", "C-lamTronLot1.5-truoc", "C-lamTronLot1.5-ETH", "C+fearGreed", "C+fearGreed-truoc", "C+fearGreed-ETH", "C+nasdaq", "C+nasdaq-truoc", "C+nasdaq-ETH", "C+funding", "C+funding-truoc", "C+funding-ETH", "C-von30000", "MacDinh-nhu-chay-that") }) }
-Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "C-lamTronLot1.5", "C-lamTronLot1.5-truoc", "C-lamTronLot1.5-ETH", "C+fearGreed", "C+fearGreed-truoc", "C+fearGreed-ETH", "C+nasdaq", "C+nasdaq-truoc", "C+nasdaq-ETH", "C+funding", "C+funding-truoc", "C+funding-ETH", "C-von30000", "C-moiTick", "MacDinh-nhu-chay-that") }) }
+Write-Host "Se chay $($Runs.Count) cau hinh." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ProjectDir "MT5Common.ps1")
@@ -122,26 +126,64 @@ $startTime  = Get-Date
 
 $resultFile = Join-Path $mt5.CommonFiles "BTC_EMA_results.csv"
 if (Test-Path $resultFile) { Remove-Item $resultFile -Force }
+$resDirMT5 = Join-Path $mt5.CommonFiles "TrendBotRes"
+if (Test-Path $resDirMT5) { Remove-Item (Join-Path $resDirMT5 "*") -Force -ErrorAction SilentlyContinue }
+else { New-Item -ItemType Directory -Path $resDirMT5 | Out-Null }
 
-
-Write-Host "Chay $($Runs.Count) lan backtest $Symbol, $FromDate -> $ToDate, che do $ModeLabel. Dung tat MT5." -ForegroundColor Cyan
-$i = 0
+# Gom cac lan chay theo (ma, tu ngay, den ngay, von): moi nhom 1 dot chay song song.
+# So thu tu cau hinh (InpPreset) lien tiep trong moi nhom; bot doc cau hinh tu TrendBot_presets.csv.
+$groups = [ordered]@{}
 foreach ($run in $Runs) {
-    $i++
-    Write-Host "[$i/$($Runs.Count)] $($run.Name) ..." -NoNewline
-    $ini = Join-Path $dataDir "$BotName-run$i.ini"
-    $ov = $run.Inputs.Clone(); $ov["InpTestLabel"] = $run.Name
-    $sym = if ($run.Symbol)  { $run.Symbol }  else { $Symbol }
-    $dep = if ($run.Deposit) { $run.Deposit } else { $Deposit }
-    $frm = if ($run.From)    { $run.From }    else { $FromDate }
-    $tod = if ($run.To)      { $run.To }      else { $ToDate }
-    New-TesterIni $mt5 $Inputs $ov $ini @{ Symbol = $sym; From = $frm; To = $tod; Deposit = $dep;
-                                           Leverage = $Leverage; Report = "$BotName-$($run.Name)"; Shutdown = $true; Model = $Model }
-
-    $sw = [Diagnostics.Stopwatch]::StartNew()
-    Start-Process -FilePath $mt5.Terminal -ArgumentList "/config:`"$ini`"" -Wait
-    Write-Host " xong ($([int]$sw.Elapsed.TotalSeconds)s)" -ForegroundColor Green
+    $run.Sym = if ($run.Symbol)  { $run.Symbol }  else { $Symbol }
+    $run.Dep = if ($run.Deposit) { $run.Deposit } else { $Deposit }
+    $run.Frm = if ($run.From)    { $run.From }    else { $FromDate }
+    $run.Tod = if ($run.To)      { $run.To }      else { $ToDate }
+    $key = "$($run.Sym)|$($run.Frm)|$($run.Tod)|$($run.Dep)"
+    if (-not $groups.Contains($key)) { $groups[$key] = New-Object System.Collections.ArrayList }
+    [void]$groups[$key].Add($run)
 }
+$id = 0
+$presetLines = foreach ($g in $groups.Values) { foreach ($run in $g) {
+    $id++; $run.Id = $id
+    (@("$id", $run.Name) + @($run.Inputs.Keys | Sort-Object | ForEach-Object { "$_=$($run.Inputs[$_])" })) -join ";"
+} }
+$presetLines | Set-Content -Path (Join-Path $mt5.CommonFiles "TrendBot_presets.csv") -Encoding ASCII
+$cacheDir = Join-Path $dataDir "Tester\cache"
+
+$cach = if ($TuanTu) { "lan luot tung lan" } else { "song song, $($groups.Count) dot" }
+Write-Host "Chay $($Runs.Count) lan backtest ($cach), che do $ModeLabel. Dung tat MT5." -ForegroundColor Cyan
+$j = 0
+foreach ($g in $groups.Values) {
+    $j++
+    $first = $g[0]
+    $jobs = New-Object System.Collections.ArrayList
+    if ($TuanTu) { foreach ($r in $g) { [void]$jobs.Add(@($r)) } } else { [void]$jobs.Add(@($g)) }
+    foreach ($job in $jobs) {
+        $a = $job[0].Id; $b = $job[$job.Count - 1].Id
+        $names = ($job | ForEach-Object { $_.Name }) -join ", "
+        Write-Host "[dot $j/$($groups.Count)] $($first.Sym) $($first.Frm)->$($first.Tod) von $($first.Dep): $names ..." -NoNewline
+        # Xoa cache toi uu cua MT5, neu khong MT5 lay ket qua cu va bot khong chay lai (khong ghi file ket qua)
+        if (Test-Path $cacheDir) { Get-ChildItem $cacheDir -Filter *.opt -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }
+        $ini = Join-Path $dataDir "$BotName-dot$j-$a.ini"
+        $opt = @{ Symbol = $first.Sym; From = $first.Frm; To = $first.Tod; Deposit = $first.Dep; Leverage = $Leverage;
+                  Report = "$BotName-dot$j-$a"; Shutdown = $true; Model = $Model }
+        if ($a -eq $b) { $ov = @{ InpPreset = $a } } else { $ov = @{}; $opt.OptKey = "InpPreset"; $opt.OptFrom = $a; $opt.OptTo = $b }
+        New-TesterIni $mt5 $Inputs $ov $ini $opt
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        Start-Process -FilePath $mt5.Terminal -ArgumentList "/config:`"$ini`"" -Wait
+        Write-Host " xong ($([int]$sw.Elapsed.TotalSeconds)s)" -ForegroundColor Green
+    }
+}
+
+# Gom file ket qua tung lan (TrendBotRes\001.csv ...) theo dung thu tu trong $Runs
+$rows = New-Object System.Collections.ArrayList
+$missing = @()
+foreach ($run in $Runs) {
+    $f = Join-Path $resDirMT5 ("{0:D3}.csv" -f $run.Id)
+    if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$rows.Add($r) } } else { $missing += $run.Name }
+}
+if ($missing.Count -gt 0) { Write-Host "CANH BAO: thieu ket qua cua: $($missing -join ', ')" -ForegroundColor Yellow }
+if ($rows.Count -gt 0) { $rows | Export-Csv -Path $resultFile -NoTypeInformation -Encoding ASCII }
 
 Write-Host ""
 $summary = Join-Path $ProjectDir "ket-qua-so-sanh.csv"

@@ -81,7 +81,7 @@ double OnTester()
    // sut giam co the te toi dau neu thu tu lenh khac di. Mau duoi ~200 lenh thi chi nen xem la tham khao.
    double dep = TesterStatistics(STAT_INITIAL_DEPOSIT);
    int    nPos = ArraySize(posNet), sims = 1000, ruin = 0, blk = 5;
-   double stopDD = InpMaxDrawdownPct > 0 ? InpMaxDrawdownPct : 15.0;   // nguong bot tu dung han
+   double stopDD = P_MaxDrawdownPct > 0 ? P_MaxDrawdownPct : 15.0;   // nguong bot tu dung han
    double mcDD[];
    ArrayResize(mcDD, sims);
    MathSrand(12345);                                   // co dinh de chay lai ra cung so
@@ -110,19 +110,19 @@ double OnTester()
    for(int j = 0; j < ArraySize(years); j++)
       byYear += (j > 0 ? " " : "") + StringFormat("%d=%+.0f", years[j], yearPL[j]);
 
-   string file = "BTC_EMA_results.csv";
-   int h = FileOpen(file, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
+   // Moi lan chay 1 file rieng (chay song song nhieu lan cung luc khong ghi de nhau); script gom lai theo so thu tu.
+   string file = InpPreset > 0 ? StringFormat("TrendBotRes\\%03d.csv", InpPreset)
+                               : "TrendBotRes\\" + (P_TestLabel == "" ? "khong-ten" : P_TestLabel) + ".csv";
+   int h = FileOpen(file, FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
    if(h != INVALID_HANDLE)
    {
-      if(FileSize(h) == 0)
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
                    "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi");
-      FileSeek(h, 0, SEEK_END);
       FileWrite(h,
-                InpTestLabel == "" ? "khong-ten" : InpTestLabel,
+                P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
                 DoubleToString(pf, 2),
                 (int)trades,

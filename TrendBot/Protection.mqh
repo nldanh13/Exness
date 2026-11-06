@@ -38,7 +38,7 @@ void RefreshClosedPL()
       ulong d = HistoryDealGetTicket(i);
       if(d == 0) continue;
       if(HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol ||
-         HistoryDealGetInteger(d, DEAL_MAGIC) != (long)InpMagic) continue;
+         HistoryDealGetInteger(d, DEAL_MAGIC) != (long)P_Magic) continue;
       double net = DealNet(d);
       all += net;
       if((datetime)HistoryDealGetInteger(d, DEAL_TIME) >= today) day += net;
@@ -60,7 +60,7 @@ double FloatingPL()
    return f;
 }
 
-double BaseCapital() { return InpCapital > 0 ? InpCapital : GVGet("base"); }
+double BaseCapital() { return P_Capital > 0 ? P_Capital : GVGet("base"); }
 double BotEquity() { return BaseCapital() + g_closedPL + FloatingPL(); }
 
 // Von dung de xet gioi han: chi tru phan lo dang chay (duoi gia vao), KHONG tinh lai dang chay.
@@ -118,9 +118,9 @@ double DayPL() { return BotEquityForLimits() - dayStartEquity; }
 bool DailyLocked() { return (int)GVGet("dayLock", -1) == currentDay; }
 bool DailyLossHit()
 {
-   if(InpMaxDailyLossPct <= 0 || dayStartEquity <= 0) return false;
+   if(P_MaxDailyLossPct <= 0 || dayStartEquity <= 0) return false;
    if(DailyLocked()) return true;
-   return DayPL() <= -dayStartEquity * InpMaxDailyLossPct / 100.0;
+   return DayPL() <= -dayStartEquity * P_MaxDailyLossPct / 100.0;
 }
 
 // Kiem tra lo ngay moi tick: chan lenh moi va (tuy chon) dong lenh dang mo
@@ -133,10 +133,10 @@ void CheckDailyLoss()
    if(!dailyNotified)
    {
       Notify(StringFormat("[%s] Cham gioi han lo ngay %.1f%% (%.2f). Ngung vao lenh den mai%s.",
-                          _Symbol, InpMaxDailyLossPct, DayPL(), InpCloseOnDailyLoss ? ", da dong lenh dang mo" : ""));
+                          _Symbol, P_MaxDailyLossPct, DayPL(), P_CloseOnDailyLoss ? ", da dong lenh dang mo" : ""));
       dailyNotified = true;
    }
-   if(InpCloseOnDailyLoss && HasOwnPosition()) CloseAll();
+   if(P_CloseOnDailyLoss && HasOwnPosition()) CloseAll();
 }
 
 bool IsHalted() { return GVGet("halt") > 0; }
@@ -166,13 +166,13 @@ void CheckDrawdown()
    double peak = GVGet("peak");
    if(eq > peak) { GlobalVariableSet(GVName("peak"), eq); peak = eq; }
    static int hits = 0;
-   if(InpMaxDrawdownPct <= 0 || IsHalted() || peak <= 0) return;
-   if(eq > peak * (1.0 - InpMaxDrawdownPct / 100.0)) { hits = 0; return; }
+   if(P_MaxDrawdownPct <= 0 || IsHalted() || peak <= 0) return;
+   if(eq > peak * (1.0 - P_MaxDrawdownPct / 100.0)) { hits = 0; return; }
    if(++hits >= 2)
    {
       GlobalVariableSet(GVName("halt"), 1);
       Notify(StringFormat("[%s] BOT DUNG HAN: von cua bot sut %.1f%% tu dinh %.2f. Dat InpResetHalt=true de chay lai.",
                           _Symbol, (1.0 - eq / peak) * 100.0, peak));
-      if(InpCloseOnHalt) CloseAll();
+      if(P_CloseOnHalt) CloseAll();
    }
 }

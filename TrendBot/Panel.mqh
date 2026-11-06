@@ -14,7 +14,7 @@ int TradesToday()
       ulong d = HistoryDealGetTicket(i);
       if(d == 0) continue;
       if(HistoryDealGetString(d, DEAL_SYMBOL) == _Symbol &&
-         HistoryDealGetInteger(d, DEAL_MAGIC) == (long)InpMagic &&
+         HistoryDealGetInteger(d, DEAL_MAGIC) == (long)P_Magic &&
          HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) n++;
    }
    return n;
@@ -22,7 +22,7 @@ int TradesToday()
 
 void UpdatePanel()
 {
-   if(!InpShowPanel) return;
+   if(!P_ShowPanel) return;
    if(MQLInfoInteger(MQL_TESTER) && !MQLInfoInteger(MQL_VISUAL_MODE)) return;
    if(TimeCurrent() - lastPanel < 2) return;
    lastPanel = TimeCurrent();
@@ -42,12 +42,12 @@ void UpdatePanel()
       "Lenh hom nay: %d\n"
       "Sut giam tu dinh: %.2f%% / gioi han %.1f%%\n"
       "Spread: %d point%s",
-      InpStrategy == STRAT_DONCHIAN ? "Donchian" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
+      P_Strategy == STRAT_DONCHIAN ? "Donchian" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
       eq, cur, dayPL, cur, dayStartEquity > 0 ? dayPL / dayStartEquity * 100.0 : 0,
       DailyLocked() ? "  [DA KHOA HOM NAY]" : "", g_closedToday, cur,
-      TradesToday(), dd, InpMaxDrawdownPct,
+      TradesToday(), dd, P_MaxDrawdownPct,
       (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
-      InpUseFunding ? "\nFunding: " + (g_fundState == "" ? "chua kiem tra" : g_fundState) : ""));
+      P_UseFunding ? "\nFunding: " + (g_fundState == "" ? "chua kiem tra" : g_fundState) : ""));
 }
 
 //+------------------------------------------------------------------+

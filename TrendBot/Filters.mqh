@@ -13,18 +13,18 @@ bool TimeAllowed(string &why)
 {
    MqlDateTime dt;
    TimeToStruct(TimeCurrent(), dt);
-   if(InpSkipWeekend && (dt.day_of_week == 0 || dt.day_of_week == 6)) { why = "cuoi tuan"; return false; }
-   if(InWindow(dt.hour, InpBlock1Start, InpBlock1End) ||
-      InWindow(dt.hour, InpBlock2Start, InpBlock2End)) { why = "khung gio tin tuc"; return false; }
+   if(P_SkipWeekend && (dt.day_of_week == 0 || dt.day_of_week == 6)) { why = "cuoi tuan"; return false; }
+   if(InWindow(dt.hour, P_Block1Start, P_Block1End) ||
+      InWindow(dt.hour, P_Block2Start, P_Block2End)) { why = "khung gio tin tuc"; return false; }
    return true;
 }
 
 //--- Mau nen -------------------------------------------------------
 bool BullCandle()
 {
-   double o1 = iOpen(_Symbol, InpTF, 1), c1 = iClose(_Symbol, InpTF, 1);
-   double h1 = iHigh(_Symbol, InpTF, 1), l1 = iLow(_Symbol, InpTF, 1);
-   double o2 = iOpen(_Symbol, InpTF, 2), c2 = iClose(_Symbol, InpTF, 2);
+   double o1 = iOpen(_Symbol, P_TF, 1), c1 = iClose(_Symbol, P_TF, 1);
+   double h1 = iHigh(_Symbol, P_TF, 1), l1 = iLow(_Symbol, P_TF, 1);
+   double o2 = iOpen(_Symbol, P_TF, 2), c2 = iClose(_Symbol, P_TF, 2);
    double range = h1 - l1;
    if(range <= 0) return false;
    double body      = MathAbs(c1 - o1);
@@ -36,9 +36,9 @@ bool BullCandle()
 
 bool BearCandle()
 {
-   double o1 = iOpen(_Symbol, InpTF, 1), c1 = iClose(_Symbol, InpTF, 1);
-   double h1 = iHigh(_Symbol, InpTF, 1), l1 = iLow(_Symbol, InpTF, 1);
-   double o2 = iOpen(_Symbol, InpTF, 2), c2 = iClose(_Symbol, InpTF, 2);
+   double o1 = iOpen(_Symbol, P_TF, 1), c1 = iClose(_Symbol, P_TF, 1);
+   double h1 = iHigh(_Symbol, P_TF, 1), l1 = iLow(_Symbol, P_TF, 1);
+   double o2 = iOpen(_Symbol, P_TF, 2), c2 = iClose(_Symbol, P_TF, 2);
    double range = h1 - l1;
    if(range <= 0) return false;
    double body      = MathAbs(c1 - o1);
@@ -60,7 +60,7 @@ datetime g_liveFundingAt = 0;
 int      g_fundBlocked = 0;     // so tin hieu bi bo vi funding (ghi vao ket qua backtest)
 string FundingPair()
 {
-   if(InpFundingSymbol != "") return InpFundingSymbol;
+   if(P_FundingSymbol != "") return P_FundingSymbol;
    if(StringFind(_Symbol, "BTC") >= 0) return "BTCUSDT";
    if(StringFind(_Symbol, "ETH") >= 0) return "ETHUSDT";
    return "";
@@ -142,7 +142,7 @@ int      g_fngBlocked = 0, g_attBlocked = 0, g_mktBlocked = 0, g_newsBlocked = 0
 datetime DayOf(const datetime t) { return t - t % 86400; }
 string WikiArticle()
 {
-   if(InpWikiArticle != "") return InpWikiArticle;
+   if(P_WikiArticle != "") return P_WikiArticle;
    if(StringFind(_Symbol, "BTC") >= 0) return "Bitcoin";
    if(StringFind(_Symbol, "ETH") >= 0) return "Ethereum";
    return "";
@@ -215,7 +215,7 @@ void RefreshDailyLive()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    string js; int pos;
-   if(InpUseFearGreed && TimeCurrent() - g_fngLiveAt >= 6 * 3600)
+   if(P_UseFearGreed && TimeCurrent() - g_fngLiveAt >= 6 * 3600)
    {
       g_fngLiveAt = TimeCurrent();
       datetime td[]; double tv[];
@@ -237,7 +237,7 @@ void RefreshDailyLive()
          { datetime x = td[j]; td[j] = td[j - 1]; td[j - 1] = x; double y = tv[j]; tv[j] = tv[j - 1]; tv[j - 1] = y; }
       for(int i = 0; i < ArraySize(td); i++) MergeDaily(g_fngT, g_fngV, td[i], tv[i]);
    }
-   if(InpUseAttention && WikiArticle() != "" && TimeCurrent() - g_wikLiveAt >= 6 * 3600)
+   if(P_UseAttention && WikiArticle() != "" && TimeCurrent() - g_wikLiveAt >= 6 * 3600)
    {
       g_wikLiveAt = TimeCurrent();
       string a = TimeToString(TimeGMT() - 45 * 86400, TIME_DATE), b = TimeToString(TimeGMT(), TIME_DATE);
@@ -265,7 +265,7 @@ bool USNewsNear(string &name)
    if(MQLInfoInteger(MQL_TESTER)) return false;
    MqlCalendarValue vals[];
    datetime now = TimeTradeServer();
-   if(CalendarValueHistory(vals, now - InpNewsHours * 3600, now + InpNewsHours * 3600, "US") <= 0) return false;
+   if(CalendarValueHistory(vals, now - P_NewsHours * 3600, now + P_NewsHours * 3600, "US") <= 0) return false;
    for(int i = 0; i < ArraySize(vals); i++)
    {
       MqlCalendarEvent ev;
@@ -279,17 +279,17 @@ bool MarketFiltersOk(const bool isBuy)
 {
    RefreshDailyLive();
    datetime yday = DayOf(TimeCurrent()) - 86400;          // chi dung so lieu da biet: hom qua tro ve truoc
-   if(InpUseFearGreed)
+   if(P_UseFearGreed)
    {
       double f = DailyAvg(g_fngT, g_fngV, yday, 1);
-      if(f != EMPTY_VALUE && ((isBuy && f >= InpFngGreedMax) || (!isBuy && f <= InpFngFearMin)))
+      if(f != EMPTY_VALUE && ((isBuy && f >= P_FngGreedMax) || (!isBuy && f <= P_FngFearMin)))
       {
          g_fngBlocked++;
          g_status = StringFormat("Bo tin hieu vi Fear & Greed = %.0f", f);
          return false;
       }
    }
-   if(InpUseAttention)
+   if(P_UseAttention)
    {
       double a7 = DailyAvg(g_wikT, g_wikV, yday, 7), a30 = DailyAvg(g_wikT, g_wikV, yday, 30);
       if(a7 != EMPTY_VALUE && a30 != EMPTY_VALUE && a7 <= a30)
@@ -310,7 +310,7 @@ bool MarketFiltersOk(const bool isBuy)
       }
    }
    string news;
-   if(InpAvoidUSNews && USNewsNear(news))
+   if(P_AvoidUSNews && USNewsNear(news))
    {
       g_newsBlocked++;
       g_status = "Gan tin My: " + news;

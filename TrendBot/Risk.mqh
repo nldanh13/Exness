@@ -7,7 +7,7 @@
 string GrpKey(const string x) { return "BTCEA_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_GRP_" + x; }
 bool InGroup()
 {
-   string list = "," + InpCorrSymbols + ",";
+   string list = "," + P_CorrSymbols + ",";
    StringReplace(list, " ", "");
    return StringFind(list, "," + _Symbol + ",") >= 0;
 }
@@ -54,7 +54,7 @@ double g_lastRisk = 0;   // rui ro (tien) cua lenh CalcLots vua tinh
 // Lenh khong co SL: tinh bang rui ro chuan cua 1 lenh. SL da qua gia vao (khoa lai): 0.
 double GroupOpenRisk(const double stdRisk)
 {
-   string list = "," + InpCorrSymbols + ",";
+   string list = "," + P_CorrSymbols + ",";
    StringReplace(list, " ", "");
    if(StringFind(list, "," + _Symbol + ",") < 0) return 0;
    double sum = 0;
@@ -73,7 +73,7 @@ double GroupOpenRisk(const double stdRisk)
       if(dist > 0) sum += dist / ts * tv * vol;
    }
    string syms[];
-   int n = StringSplit(InpCorrSymbols, ',', syms);
+   int n = StringSplit(P_CorrSymbols, ',', syms);
    for(int i = 0; i < n; i++)
    {
       StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
@@ -84,7 +84,7 @@ double GroupOpenRisk(const double stdRisk)
 // Ma khac trong InpCorrSymbols dang co lenh (cua bat ky bot nao) -> tra ten ma, khong co -> ""
 string CorrOpen()
 {
-   string list = "," + InpCorrSymbols + ",";
+   string list = "," + P_CorrSymbols + ",";
    StringReplace(list, " ", "");
    if(StringFind(list, "," + _Symbol + ",") < 0) return "";
    for(int i = PositionsTotal() - 1; i >= 0; i--)
@@ -93,7 +93,7 @@ string CorrOpen()
       if(sym != "" && sym != _Symbol && StringFind(list, "," + sym + ",") >= 0) return sym;
    }
    string syms[];
-   int n = StringSplit(InpCorrSymbols, ',', syms);
+   int n = StringSplit(P_CorrSymbols, ',', syms);
    for(int i = 0; i < n; i++)
    {
       StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
@@ -114,25 +114,25 @@ double CalcLots(const double slDistance)
    // Rui ro tinh tren "von cua bot" (cung moc voi gioi han lo), khong phai equity ca tai khoan.
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
    double riskBase   = BotEquity();
-   double riskMoney  = riskBase * InpRiskPercent / 100.0;
+   double riskMoney  = riskBase * P_RiskPercent / 100.0;
    // BTC va ETH di cung nhau (tuong quan cao): ma cung nhom dang co lenh thi giam rui ro lenh moi
    string corr = CorrOpen();
-   if(corr != "" && InpCorrRiskScale > 0 && InpCorrRiskScale < 1)
+   if(corr != "" && P_CorrRiskScale > 0 && P_CorrRiskScale < 1)
    {
-      riskMoney *= InpCorrRiskScale;
-      PrintFormat("%s dang co lenh, giam rui ro lenh nay x%.2f.", corr, InpCorrRiskScale);
+      riskMoney *= P_CorrRiskScale;
+      PrintFormat("%s dang co lenh, giam rui ro lenh nay x%.2f.", corr, P_CorrRiskScale);
    }
    // Tran chung cho ca nhom: lenh moi + lenh dang mo tren ma cung nhom khong vuot InpMaxGroupRiskPct
    double allowed = DBL_MAX;
-   if(InpMaxGroupRiskPct > 0 && corr != "")
+   if(P_MaxGroupRiskPct > 0 && corr != "")
    {
-      double used = GroupOpenRisk(riskBase * InpRiskPercent / 100.0);
-      allowed = riskBase * InpMaxGroupRiskPct / 100.0 - used;
+      double used = GroupOpenRisk(riskBase * P_RiskPercent / 100.0);
+      allowed = riskBase * P_MaxGroupRiskPct / 100.0 - used;
       if(allowed <= 0)
       {
          g_groupSkips++;
          g_status = "Nhom BTC/ETH da dung het tran rui ro, bo qua lenh";
-         PrintFormat("Lenh dang mo trong nhom da rui ro %.2f (tran %.2f%%). Bo qua tin hieu.", used, InpMaxGroupRiskPct);
+         PrintFormat("Lenh dang mo trong nhom da rui ro %.2f (tran %.2f%%). Bo qua tin hieu.", used, P_MaxGroupRiskPct);
          return 0;
       }
       if(riskMoney > allowed) riskMoney = allowed;
@@ -142,12 +142,12 @@ double CalcLots(const double slDistance)
    double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
    // Lam tron len cung bi gioi han boi he so nhom va tran nhom, khong duoc vuot qua cac gioi han do
-   double roundCap = riskBase * InpMaxRiskRoundUp / 100.0 * (corr != "" ? MathMin(1.0, MathMax(InpCorrRiskScale, 0.0)) : 1.0);
+   double roundCap = riskBase * P_MaxRiskRoundUp / 100.0 * (corr != "" ? MathMin(1.0, MathMax(P_CorrRiskScale, 0.0)) : 1.0);
    if(roundCap > allowed) roundCap = allowed;
-   if(lots < minL && InpMaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= roundCap)
+   if(lots < minL && P_MaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= roundCap)
    {
       g_roundUps++;
-      PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, InpMaxRiskRoundUp);
+      PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, P_MaxRiskRoundUp);
       lots = minL;
    }
    if(lots < minL)

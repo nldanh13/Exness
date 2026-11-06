@@ -22,7 +22,7 @@ datetime lastLossTime   = 0;
 // Ten bien trang thai gan voi tai khoan + symbol + magic, tranh xung dot giua nhieu bieu do / tai khoan
 string GVName(const string key)
 {
-   return "BTCEA_" + (string)AccountInfoInteger(ACCOUNT_LOGIN) + "_" + _Symbol + "_" + (string)InpMagic + "_" + key;
+   return "BTCEA_" + (string)AccountInfoInteger(ACCOUNT_LOGIN) + "_" + _Symbol + "_" + (string)P_Magic + "_" + key;
 }
 
 // Gioi han thong bao: moi loai (key) toi da 1 lan moi `seconds` giay
@@ -68,8 +68,8 @@ bool TradeDone(const bool sent, const string kind, const string detail = "")
    // Sua SL chi ghi log; cac loai khac bao ve dien thoai toi da 1 lan / 5 phut moi loai
    if(kind != "Sua SL" && ShouldNotify(kind, 300) && !MQLInfoInteger(MQL_TESTER))
    {
-      if(InpPushNotify) SendNotification(msg);
-      if(InpTelegram)   SendTelegram(msg);
+      if(P_PushNotify) SendNotification(msg);
+      if(P_Telegram)   SendTelegram(msg);
    }
    return false;
 }
@@ -90,7 +90,7 @@ bool PositionOpenById(const ulong id)
 bool IsOwnSelected()
 {
    return PositionGetString(POSITION_SYMBOL) == _Symbol &&
-          PositionGetInteger(POSITION_MAGIC) == (long)InpMagic;
+          PositionGetInteger(POSITION_MAGIC) == (long)P_Magic;
 }
 
 bool GetValue(const int handle, const int buffer, const int shift, double &value)

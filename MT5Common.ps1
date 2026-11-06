@@ -114,7 +114,8 @@ function New-TesterIni($mt5, $inputs, [hashtable]$overrides, [string]$iniPath, [
     }
     $lines = foreach ($k in $vals.Keys) {
         $v = $vals[$k]
-        if ($inputs.Strings.Contains($k)) { "$k=$v" } else { "$k=$v||$v||1||$v||N" }
+        if ($opt.OptKey -and $k -eq $opt.OptKey) { "$k=$($opt.OptFrom)||$($opt.OptFrom)||1||$($opt.OptTo)||Y" }   # tham so chay song song
+        elseif ($inputs.Strings.Contains($k)) { "$k=$v" } else { "$k=$v||$v||1||$v||N" }
     }
     @"
 [Tester]
@@ -123,7 +124,8 @@ Symbol=$($opt.Symbol)
 Period=H1
 Model=$(if ($null -ne $opt.Model) { $opt.Model } else { 4 })
 ExecutionMode=100
-Optimization=0
+Optimization=$(if ($opt.OptKey) { 1 } else { 0 })
+OptimizationCriterion=0
 FromDate=$($opt.From)
 ToDate=$($opt.To)
 ForwardMode=0

@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.1"
-#property version   "4.10"
+#define  BOT_VERSION "4.2"
+#property version   "4.20"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -102,6 +102,255 @@ input group "=== Khac ==="
 input bool            InpShowPanel       = true;      // Hien bang thong tin
 input ulong           InpMagic           = 20261105;  // Magic number
 input string          InpTestLabel       = "";        // Ten lan chay backtest (ghi vao file ket qua)
+input int             InpManageEverySec  = 1;         // Kiem tra lenh dang mo / gioi han lo toi da moi X giay (0 = moi tick). Nhanh hon khi backtest
+input int             InpPreset          = 0;         // Backtest: so thu tu cau hinh trong file TrendBot_presets.csv (0 = dung tham so tren)
+
+
+//--- Ban sao co the doi cua cac tham so (code dung P_..., khong dung Inp... truc tiep) ----
+// De backtest song song: moi lan chay trong che do Optimization chon 1 dong cau hinh (InpPreset)
+// trong file TrendBot_presets.csv (Common\Files) va ghi de cac P_ tuong ung.
+// THEM INPUT MOI: them ca dong khai bao P_, dong trong LoadParams va dong trong SetParam.
+ENUM_STRATEGY   P_Strategy;
+int             P_DonchianPeriod;
+double          P_BreakMinATR;
+double          P_BreakMinBody;
+bool            P_BreakConfirm;
+double          P_BreakMaxATR;
+ENUM_TIMEFRAMES P_TF;
+int             P_FastEMA;
+int             P_TrendEMA;
+int             P_ATRPeriod;
+bool            P_UseFunding;
+double          P_FundingMax;
+string          P_FundingSymbol;
+bool            P_UseFearGreed;
+int             P_FngGreedMax;
+int             P_FngFearMin;
+bool            P_UseAttention;
+string          P_WikiArticle;
+bool            P_UseMarketFilter;
+string          P_MarketSymbol;
+bool            P_AvoidUSNews;
+int             P_NewsHours;
+bool            P_UseHTF;
+ENUM_TIMEFRAMES P_HTF;
+int             P_HTFEMA;
+bool            P_UseADX;
+int             P_ADXPeriod;
+double          P_ADXMin;
+bool            P_UseCandle;
+double          P_ATRMult;
+double          P_RR;
+double          P_RiskPercent;
+double          P_MaxRiskRoundUp;
+string          P_CorrSymbols;
+double          P_CorrRiskScale;
+double          P_MaxGroupRiskPct;
+bool            P_UsePartial;
+double          P_PartialR;
+double          P_PartialPct;
+bool            P_UseBreakeven;
+double          P_BreakevenR;
+double          P_BEBufferR;
+bool            P_UseTrailing;
+double          P_TrailStartR;
+double          P_TrailATRMult;
+bool            P_SkipWeekend;
+int             P_Block1Start;
+int             P_Block1End;
+int             P_Block2Start;
+int             P_Block2End;
+int             P_MaxSpreadPoints;
+bool            P_AllowBuy;
+bool            P_AllowSell;
+int             P_MaxTradesPerDay;
+int             P_CooldownBars;
+double          P_MaxDailyLossPct;
+bool            P_CloseOnDailyLoss;
+double          P_MaxDrawdownPct;
+bool            P_CloseOnHalt;
+bool            P_ResetHalt;
+double          P_Capital;
+bool            P_PushNotify;
+bool            P_Telegram;
+string          P_TgToken;
+string          P_TgChatId;
+bool            P_ShowPanel;
+ulong           P_Magic;
+string          P_TestLabel;
+int             P_ManageEverySec;
+int             P_Preset;
+void LoadParams()
+{
+   P_Strategy = InpStrategy;
+   P_DonchianPeriod = InpDonchianPeriod;
+   P_BreakMinATR = InpBreakMinATR;
+   P_BreakMinBody = InpBreakMinBody;
+   P_BreakConfirm = InpBreakConfirm;
+   P_BreakMaxATR = InpBreakMaxATR;
+   P_TF = InpTF;
+   P_FastEMA = InpFastEMA;
+   P_TrendEMA = InpTrendEMA;
+   P_ATRPeriod = InpATRPeriod;
+   P_UseFunding = InpUseFunding;
+   P_FundingMax = InpFundingMax;
+   P_FundingSymbol = InpFundingSymbol;
+   P_UseFearGreed = InpUseFearGreed;
+   P_FngGreedMax = InpFngGreedMax;
+   P_FngFearMin = InpFngFearMin;
+   P_UseAttention = InpUseAttention;
+   P_WikiArticle = InpWikiArticle;
+   P_UseMarketFilter = InpUseMarketFilter;
+   P_MarketSymbol = InpMarketSymbol;
+   P_AvoidUSNews = InpAvoidUSNews;
+   P_NewsHours = InpNewsHours;
+   P_UseHTF = InpUseHTF;
+   P_HTF = InpHTF;
+   P_HTFEMA = InpHTFEMA;
+   P_UseADX = InpUseADX;
+   P_ADXPeriod = InpADXPeriod;
+   P_ADXMin = InpADXMin;
+   P_UseCandle = InpUseCandle;
+   P_ATRMult = InpATRMult;
+   P_RR = InpRR;
+   P_RiskPercent = InpRiskPercent;
+   P_MaxRiskRoundUp = InpMaxRiskRoundUp;
+   P_CorrSymbols = InpCorrSymbols;
+   P_CorrRiskScale = InpCorrRiskScale;
+   P_MaxGroupRiskPct = InpMaxGroupRiskPct;
+   P_UsePartial = InpUsePartial;
+   P_PartialR = InpPartialR;
+   P_PartialPct = InpPartialPct;
+   P_UseBreakeven = InpUseBreakeven;
+   P_BreakevenR = InpBreakevenR;
+   P_BEBufferR = InpBEBufferR;
+   P_UseTrailing = InpUseTrailing;
+   P_TrailStartR = InpTrailStartR;
+   P_TrailATRMult = InpTrailATRMult;
+   P_SkipWeekend = InpSkipWeekend;
+   P_Block1Start = InpBlock1Start;
+   P_Block1End = InpBlock1End;
+   P_Block2Start = InpBlock2Start;
+   P_Block2End = InpBlock2End;
+   P_MaxSpreadPoints = InpMaxSpreadPoints;
+   P_AllowBuy = InpAllowBuy;
+   P_AllowSell = InpAllowSell;
+   P_MaxTradesPerDay = InpMaxTradesPerDay;
+   P_CooldownBars = InpCooldownBars;
+   P_MaxDailyLossPct = InpMaxDailyLossPct;
+   P_CloseOnDailyLoss = InpCloseOnDailyLoss;
+   P_MaxDrawdownPct = InpMaxDrawdownPct;
+   P_CloseOnHalt = InpCloseOnHalt;
+   P_ResetHalt = InpResetHalt;
+   P_Capital = InpCapital;
+   P_PushNotify = InpPushNotify;
+   P_Telegram = InpTelegram;
+   P_TgToken = InpTgToken;
+   P_TgChatId = InpTgChatId;
+   P_ShowPanel = InpShowPanel;
+   P_Magic = InpMagic;
+   P_TestLabel = InpTestLabel;
+   P_ManageEverySec = InpManageEverySec;
+   P_Preset = InpPreset;
+}
+bool SetParam(const string k, const string v)
+{
+   if(k == "InpStrategy") { P_Strategy = (ENUM_STRATEGY)StringToInteger(v); return true; }
+   if(k == "InpDonchianPeriod") { P_DonchianPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpBreakMinATR") { P_BreakMinATR = StringToDouble(v); return true; }
+   if(k == "InpBreakMinBody") { P_BreakMinBody = StringToDouble(v); return true; }
+   if(k == "InpBreakConfirm") { P_BreakConfirm = (v == "true" || v == "1"); return true; }
+   if(k == "InpBreakMaxATR") { P_BreakMaxATR = StringToDouble(v); return true; }
+   if(k == "InpTF") { P_TF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
+   if(k == "InpFastEMA") { P_FastEMA = (int)StringToInteger(v); return true; }
+   if(k == "InpTrendEMA") { P_TrendEMA = (int)StringToInteger(v); return true; }
+   if(k == "InpATRPeriod") { P_ATRPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpUseFunding") { P_UseFunding = (v == "true" || v == "1"); return true; }
+   if(k == "InpFundingMax") { P_FundingMax = StringToDouble(v); return true; }
+   if(k == "InpFundingSymbol") { P_FundingSymbol = v; return true; }
+   if(k == "InpUseFearGreed") { P_UseFearGreed = (v == "true" || v == "1"); return true; }
+   if(k == "InpFngGreedMax") { P_FngGreedMax = (int)StringToInteger(v); return true; }
+   if(k == "InpFngFearMin") { P_FngFearMin = (int)StringToInteger(v); return true; }
+   if(k == "InpUseAttention") { P_UseAttention = (v == "true" || v == "1"); return true; }
+   if(k == "InpWikiArticle") { P_WikiArticle = v; return true; }
+   if(k == "InpUseMarketFilter") { P_UseMarketFilter = (v == "true" || v == "1"); return true; }
+   if(k == "InpMarketSymbol") { P_MarketSymbol = v; return true; }
+   if(k == "InpAvoidUSNews") { P_AvoidUSNews = (v == "true" || v == "1"); return true; }
+   if(k == "InpNewsHours") { P_NewsHours = (int)StringToInteger(v); return true; }
+   if(k == "InpUseHTF") { P_UseHTF = (v == "true" || v == "1"); return true; }
+   if(k == "InpHTF") { P_HTF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
+   if(k == "InpHTFEMA") { P_HTFEMA = (int)StringToInteger(v); return true; }
+   if(k == "InpUseADX") { P_UseADX = (v == "true" || v == "1"); return true; }
+   if(k == "InpADXPeriod") { P_ADXPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpADXMin") { P_ADXMin = StringToDouble(v); return true; }
+   if(k == "InpUseCandle") { P_UseCandle = (v == "true" || v == "1"); return true; }
+   if(k == "InpATRMult") { P_ATRMult = StringToDouble(v); return true; }
+   if(k == "InpRR") { P_RR = StringToDouble(v); return true; }
+   if(k == "InpRiskPercent") { P_RiskPercent = StringToDouble(v); return true; }
+   if(k == "InpMaxRiskRoundUp") { P_MaxRiskRoundUp = StringToDouble(v); return true; }
+   if(k == "InpCorrSymbols") { P_CorrSymbols = v; return true; }
+   if(k == "InpCorrRiskScale") { P_CorrRiskScale = StringToDouble(v); return true; }
+   if(k == "InpMaxGroupRiskPct") { P_MaxGroupRiskPct = StringToDouble(v); return true; }
+   if(k == "InpUsePartial") { P_UsePartial = (v == "true" || v == "1"); return true; }
+   if(k == "InpPartialR") { P_PartialR = StringToDouble(v); return true; }
+   if(k == "InpPartialPct") { P_PartialPct = StringToDouble(v); return true; }
+   if(k == "InpUseBreakeven") { P_UseBreakeven = (v == "true" || v == "1"); return true; }
+   if(k == "InpBreakevenR") { P_BreakevenR = StringToDouble(v); return true; }
+   if(k == "InpBEBufferR") { P_BEBufferR = StringToDouble(v); return true; }
+   if(k == "InpUseTrailing") { P_UseTrailing = (v == "true" || v == "1"); return true; }
+   if(k == "InpTrailStartR") { P_TrailStartR = StringToDouble(v); return true; }
+   if(k == "InpTrailATRMult") { P_TrailATRMult = StringToDouble(v); return true; }
+   if(k == "InpSkipWeekend") { P_SkipWeekend = (v == "true" || v == "1"); return true; }
+   if(k == "InpBlock1Start") { P_Block1Start = (int)StringToInteger(v); return true; }
+   if(k == "InpBlock1End") { P_Block1End = (int)StringToInteger(v); return true; }
+   if(k == "InpBlock2Start") { P_Block2Start = (int)StringToInteger(v); return true; }
+   if(k == "InpBlock2End") { P_Block2End = (int)StringToInteger(v); return true; }
+   if(k == "InpMaxSpreadPoints") { P_MaxSpreadPoints = (int)StringToInteger(v); return true; }
+   if(k == "InpAllowBuy") { P_AllowBuy = (v == "true" || v == "1"); return true; }
+   if(k == "InpAllowSell") { P_AllowSell = (v == "true" || v == "1"); return true; }
+   if(k == "InpMaxTradesPerDay") { P_MaxTradesPerDay = (int)StringToInteger(v); return true; }
+   if(k == "InpCooldownBars") { P_CooldownBars = (int)StringToInteger(v); return true; }
+   if(k == "InpMaxDailyLossPct") { P_MaxDailyLossPct = StringToDouble(v); return true; }
+   if(k == "InpCloseOnDailyLoss") { P_CloseOnDailyLoss = (v == "true" || v == "1"); return true; }
+   if(k == "InpMaxDrawdownPct") { P_MaxDrawdownPct = StringToDouble(v); return true; }
+   if(k == "InpCloseOnHalt") { P_CloseOnHalt = (v == "true" || v == "1"); return true; }
+   if(k == "InpResetHalt") { P_ResetHalt = (v == "true" || v == "1"); return true; }
+   if(k == "InpCapital") { P_Capital = StringToDouble(v); return true; }
+   if(k == "InpPushNotify") { P_PushNotify = (v == "true" || v == "1"); return true; }
+   if(k == "InpTelegram") { P_Telegram = (v == "true" || v == "1"); return true; }
+   if(k == "InpTgToken") { P_TgToken = v; return true; }
+   if(k == "InpTgChatId") { P_TgChatId = v; return true; }
+   if(k == "InpShowPanel") { P_ShowPanel = (v == "true" || v == "1"); return true; }
+   if(k == "InpMagic") { P_Magic = (ulong)StringToInteger(v); return true; }
+   if(k == "InpTestLabel") { P_TestLabel = v; return true; }
+   if(k == "InpManageEverySec") { P_ManageEverySec = (int)StringToInteger(v); return true; }
+   if(k == "InpPreset") { P_Preset = (int)StringToInteger(v); return true; }
+   return false;
+}
+// Dong cau hinh: id;ten;Inp1=gia_tri;Inp2=gia_tri...
+bool ApplyPreset(const int id)
+{
+   int h = FileOpen("TrendBot_presets.csv", FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON);
+   if(h == INVALID_HANDLE) { Print("Khong mo duoc TrendBot_presets.csv"); return false; }
+   bool found = false;
+   while(!FileIsEnding(h) && !found)
+   {
+      string parts[];
+      int n = StringSplit(FileReadString(h), ';', parts);
+      if(n < 2 || (int)StringToInteger(parts[0]) != id) continue;
+      found = true;
+      P_TestLabel = parts[1];
+      for(int i = 2; i < n; i++)
+      {
+         int e = StringFind(parts[i], "=");
+         if(e <= 0) continue;
+         string k = StringSubstr(parts[i], 0, e), v = StringSubstr(parts[i], e + 1);
+         if(!SetParam(k, v)) { PrintFormat("Cau hinh %d: khong biet tham so %s", id, k); found = false; break; }
+      }
+   }
+   FileClose(h);
+   return found;
+}
 
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
@@ -116,29 +365,31 @@ input string          InpTestLabel       = "";        // Ten lan chay backtest (
 
 int OnInit()
 {
-   if(InpUseFunding) LoadFunding();
-   if(InpUseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
-   if(InpUseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
-   if(InpUseMarketFilter)
+   LoadParams();
+   if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
+   if(P_UseFunding) LoadFunding();
+   if(P_UseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
+   if(P_UseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
+   if(P_UseMarketFilter)
    {
-      g_mktSym = InpMarketSymbol;
-      if(!SymbolSelect(g_mktSym, true)) g_mktSym = InpMarketSymbol + "m";
+      g_mktSym = P_MarketSymbol;
+      if(!SymbolSelect(g_mktSym, true)) g_mktSym = P_MarketSymbol + "m";
       if(!SymbolSelect(g_mktSym, true))
-      { Print("Khong tim thay ma ", InpMarketSymbol, " / ", g_mktSym, ": tat bo loc Nasdaq."); g_mktSym = ""; }
+      { Print("Khong tim thay ma ", P_MarketSymbol, " / ", g_mktSym, ": tat bo loc Nasdaq."); g_mktSym = ""; }
       else hMkt = iMA(g_mktSym, PERIOD_D1, 200, 0, MODE_EMA, PRICE_CLOSE);
    }
-   hFast  = iMA(_Symbol, InpTF,  InpFastEMA,  0, MODE_EMA, PRICE_CLOSE);
-   hTrend = iMA(_Symbol, InpTF,  InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
-   hHTF   = iMA(_Symbol, InpHTF, InpHTFEMA,   0, MODE_EMA, PRICE_CLOSE);
-   hATR   = iATR(_Symbol, InpTF, InpATRPeriod);
-   hADX   = iADX(_Symbol, InpTF, InpADXPeriod);
+   hFast  = iMA(_Symbol, P_TF,  P_FastEMA,  0, MODE_EMA, PRICE_CLOSE);
+   hTrend = iMA(_Symbol, P_TF,  P_TrendEMA, 0, MODE_EMA, PRICE_CLOSE);
+   hHTF   = iMA(_Symbol, P_HTF, P_HTFEMA,   0, MODE_EMA, PRICE_CLOSE);
+   hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
+   hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
    if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
       hATR == INVALID_HANDLE || hADX == INVALID_HANDLE)
    {
       Print("Khong tao duoc chi bao");
       return INIT_FAILED;
    }
-   trade.SetExpertMagicNumber(InpMagic);
+   trade.SetExpertMagicNumber(P_Magic);
    trade.SetTypeFillingBySymbol(_Symbol);
    trade.SetDeviationInPoints(100);
 
@@ -159,16 +410,16 @@ bool TryInitState()
    }
    // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
    // bi hieu nham la sut giam 66% va bot dung han.
-   bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != InpCapital;
-   if(InpResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
+   bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != P_Capital;
+   if(P_ResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
    {
-      ResetBaseline(InpResetHalt);
-      if(InpResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
+      ResetBaseline(P_ResetHalt);
+      if(P_ResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
       if(capitalChanged) Print("InpCapital da thay doi, tu dat lai moc von va dinh von.");
-      if(capitalChanged && !InpResetHalt && (IsHalted() || GlobalVariableCheck(GVName("dayLock"))))
+      if(capitalChanged && !P_ResetHalt && (IsHalted() || GlobalVariableCheck(GVName("dayLock"))))
          Print("Bot VAN DANG DUNG / KHOA LO NGAY. Doi von khong mo khoa; muon mo, dat InpResetHalt = true mot lan.");
    }
-   GlobalVariableSet(GVName("capital"), InpCapital);
+   GlobalVariableSet(GVName("capital"), P_Capital);
    lastLossTime = (datetime)GVGet("lastLoss", 0);
    g_plDirty = true;
    RefreshClosedPL();
@@ -192,22 +443,28 @@ void OnDeinit(const int reason)
    Comment("");
 }
 
-// Cac bo loc tu nghien cuu tam ly / thi truong. Thieu so lieu thi KHONG chan (bot van chay nhu cu).
+datetime g_lastManage = 0;
 void OnTick()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
+   // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
+   // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
+   datetime barNow = iTime(_Symbol, P_TF, 0);
+   if(P_ManageEverySec > 0 && barNow == lastBarTime && !g_reconcile &&
+      TimeCurrent() - g_lastManage < P_ManageEverySec) return;
+   g_lastManage = TimeCurrent();
    bool ready = LimitsReady();
    RefreshClosedPL();
    UpdateDay();
    if(ready) CheckDrawdown();
    // Da dung han ma van con lenh (vd. dong that bai lan truoc) thi thu dong lai moi tick
-   if(IsHalted() && InpCloseOnHalt && HasOwnPosition()) CloseAll();
+   if(IsHalted() && P_CloseOnHalt && HasOwnPosition()) CloseAll();
    if(ready) CheckDailyLoss();
    ManagePositions();
    ReconcileClosed();
    UpdatePanel();
 
-   datetime barTime = iTime(_Symbol, InpTF, 0);
+   datetime barTime = iTime(_Symbol, P_TF, 0);
    if(barTime == 0 || barTime == lastBarTime) return;
    lastBarTime = barTime;
 
@@ -216,18 +473,18 @@ void OnTick()
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return; }
    string why = "";
    if(!TimeAllowed(why)) { g_status = "Tam nghi: " + why; return; }
-   if(InpMaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > InpMaxSpreadPoints)
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints)
    {
       g_status = "Spread qua rong";
       return;
    }
-   if(InpMaxTradesPerDay > 0 && TradesToday() >= InpMaxTradesPerDay)
+   if(P_MaxTradesPerDay > 0 && TradesToday() >= P_MaxTradesPerDay)
    {
       g_status = "Du so lenh trong ngay";
       return;
    }
-   if(InpCooldownBars > 0 && lastLossTime > 0 &&
-      TimeCurrent() - lastLossTime < (long)InpCooldownBars * PeriodSeconds(InpTF))
+   if(P_CooldownBars > 0 && lastLossTime > 0 &&
+      TimeCurrent() - lastLossTime < (long)P_CooldownBars * PeriodSeconds(P_TF))
    {
       g_status = "Nghi sau lenh thua";
       return;
@@ -235,29 +492,29 @@ void OnTick()
 
    double fast, trend, atr, adx = 0, htfEma = 0;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hTrend, 0, 1, trend) || !GetValue(hATR, 0, 1, atr)) return;
-   if(InpUseADX && !GetValue(hADX, 0, 1, adx)) return;          // buffer 0 = ADX chinh
-   if(InpUseHTF && !GetValue(hHTF, 0, 1, htfEma)) return;
-   double htfClose = iClose(_Symbol, InpHTF, 1);
+   if(P_UseADX && !GetValue(hADX, 0, 1, adx)) return;          // buffer 0 = ADX chinh
+   if(P_UseHTF && !GetValue(hHTF, 0, 1, htfEma)) return;
+   double htfClose = iClose(_Symbol, P_HTF, 1);
 
-   double c1 = iClose(_Symbol, InpTF, 1);
-   double h1 = iHigh(_Symbol,  InpTF, 1);
-   double l1 = iLow(_Symbol,   InpTF, 1);
+   double c1 = iClose(_Symbol, P_TF, 1);
+   double h1 = iHigh(_Symbol,  P_TF, 1);
+   double l1 = iLow(_Symbol,   P_TF, 1);
 
-   bool adxOk = !InpUseADX || adx >= InpADXMin;
+   bool adxOk = !P_UseADX || adx >= P_ADXMin;
    bool buyBase, sellBase;
    if(!BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase)) return;
-   bool buySignal  = InpAllowBuy && buyBase
-                     && (!InpUseHTF || htfClose > htfEma) && adxOk
-                     && (!InpUseCandle || BullCandle());
-   bool sellSignal = InpAllowSell && sellBase
-                     && (!InpUseHTF || htfClose < htfEma) && adxOk
-                     && (!InpUseCandle || BearCandle());
-   if(InpUseFunding && (buySignal || sellSignal))
+   bool buySignal  = P_AllowBuy && buyBase
+                     && (!P_UseHTF || htfClose > htfEma) && adxOk
+                     && (!P_UseCandle || BullCandle());
+   bool sellSignal = P_AllowSell && sellBase
+                     && (!P_UseHTF || htfClose < htfEma) && adxOk
+                     && (!P_UseCandle || BearCandle());
+   if(P_UseFunding && (buySignal || sellSignal))
    {
       // Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.
       // Funding qua am: nguoc lai voi Sell.
       double f = FundingNow();
-      if(f != EMPTY_VALUE && ((buySignal && f > InpFundingMax) || (sellSignal && f < -InpFundingMax)))
+      if(f != EMPTY_VALUE && ((buySignal && f > P_FundingMax) || (sellSignal && f < -P_FundingMax)))
       {
          g_fundBlocked++;
          g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);
@@ -270,7 +527,7 @@ void OnTick()
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
 
-   double slDist   = atr * InpATRMult;
+   double slDist   = atr * P_ATRMult;
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 
@@ -286,14 +543,14 @@ void OnTick()
       double price = tick.ask;
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
-                     InpRR > 0 ? NormalizeDouble(price + slDist * InpRR, _Digits) : 0.0, "BTC bot BUY");
+                     P_RR > 0 ? NormalizeDouble(price + slDist * P_RR, _Digits) : 0.0, "BTC bot BUY");
    }
    else
    {
       double price = tick.bid;
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
-                      InpRR > 0 ? NormalizeDouble(price - slDist * InpRR, _Digits) : 0.0, "BTC bot SELL");
+                      P_RR > 0 ? NormalizeDouble(price - slDist * P_RR, _Digits) : 0.0, "BTC bot SELL");
    }
    if(!ok) GroupClear();
    GroupUnlock();
@@ -307,7 +564,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 {
    if(trans.type != TRADE_TRANSACTION_DEAL_ADD || !g_stateReady) return;
    if(!HistoryDealSelect(trans.deal)) return;
-   if(HistoryDealGetInteger(trans.deal, DEAL_MAGIC) != (long)InpMagic ||
+   if(HistoryDealGetInteger(trans.deal, DEAL_MAGIC) != (long)P_Magic ||
       HistoryDealGetString(trans.deal, DEAL_SYMBOL) != _Symbol) return;
    g_plDirty = true;                                // tinh lai lai/lo cua bot o tick sau
 

@@ -111,8 +111,8 @@ void ManagePositions()
       if(!GlobalVariableCheck(rKey))
       {
          // 1) Nhan lai trang thai tu ten bien cua ban cu (truoc v2.3: chi co magic)
-         string oldR = "BTCEA_" + (string)InpMagic + "_R_" + (string)ticket;   // ban <= 2.2
-         string oldP = "BTCEA_" + (string)InpMagic + "_P_" + (string)ticket;
+         string oldR = "BTCEA_" + (string)P_Magic + "_R_" + (string)ticket;   // ban <= 2.2
+         string oldP = "BTCEA_" + (string)P_Magic + "_P_" + (string)ticket;
          if(!GlobalVariableCheck(oldR))                                         // ban 2.3-2.5 (theo ticket)
          {
             oldR = GVName("R_" + (string)ticket);
@@ -128,7 +128,7 @@ void ManagePositions()
          {
             if(sl <= 0) continue;
             bool slOnProfitSide = isBuy ? (sl >= open) : (sl <= open);
-            double estR = haveAtr ? atr * InpATRMult : 0;
+            double estR = haveAtr ? atr * P_ATRMult : 0;
             if(slOnProfitSide || (estR > 0 && MathAbs(open - sl) < 0.3 * estR))
             {
                // 2) Mat trang thai va SL da doi ve hoa von/lai: khong suy ra duoc 1R that.
@@ -167,7 +167,7 @@ void ManagePositions()
       double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
       double costMoney = GlobalVariableGet(cKey) * vol * 2.0 + MathMax(0.0, -PositionGetDouble(POSITION_SWAP));
       double costPrice = (tickSize > 0 && tickValue > 0) ? costMoney / (tickValue * vol) * tickSize : 0;
-      double beOffset  = costPrice + InpBEBufferR * risk;
+      double beOffset  = costPrice + P_BEBufferR * risk;
       double beLevel   = isBuy ? open + beOffset : open - beOffset;
 
       double price = isBuy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
@@ -177,11 +177,11 @@ void ManagePositions()
       // Luu khoi luong CON LAI muc tieu (PV_) o lan dau. Moi lan chi dong phan con thieu so voi muc tieu,
       // nen neu server chi khop mot phan (DONE_PARTIAL) thi lan sau bot dong not, khong dong lo qua tay.
       string vKey = GVName("PV_" + (string)posId);
-      if(InpUsePartial && !GlobalVariableCheck(pKey) && (rNow >= InpPartialR || GlobalVariableCheck(vKey)))
+      if(P_UsePartial && !GlobalVariableCheck(pKey) && (rNow >= P_PartialR || GlobalVariableCheck(vKey)))
       {
          if(!GlobalVariableCheck(vKey))
          {
-            double firstClose = NormalizeVolume(vol * InpPartialPct / 100.0);
+            double firstClose = NormalizeVolume(vol * P_PartialPct / 100.0);
             if(firstClose < minL || vol - firstClose < minL - 1e-9)
             {
                GlobalVariableSet(pKey, 1);              // lot qua nho de chia, bo qua
@@ -233,14 +233,14 @@ void ManagePositions()
 
       // 2) Hoa von va 3) trailing ATR
       double newSL = sl;
-      if(InpUseBreakeven && rNow >= InpBreakevenR)
+      if(P_UseBreakeven && rNow >= P_BreakevenR)
       {
          if(isBuy  && (sl <= 0 || sl < beLevel)) newSL = beLevel;
          if(!isBuy && (sl <= 0 || sl > beLevel)) newSL = beLevel;
       }
-      if(InpUseTrailing && haveAtr && rNow >= InpTrailStartR)
+      if(P_UseTrailing && haveAtr && rNow >= P_TrailStartR)
       {
-         double cand = isBuy ? price - atr * InpTrailATRMult : price + atr * InpTrailATRMult;
+         double cand = isBuy ? price - atr * P_TrailATRMult : price + atr * P_TrailATRMult;
          if(isBuy  && cand > newSL) newSL = cand;
          if(!isBuy && (newSL <= 0 || cand < newSL)) newSL = cand;
       }
