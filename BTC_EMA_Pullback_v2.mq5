@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.3"
-#property version   "3.30"
+#define  BOT_VERSION "3.4"
+#property version   "3.40"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -21,6 +21,9 @@ enum ENUM_STRATEGY
 input group "=== Tin hieu ==="
 input ENUM_STRATEGY   InpStrategy        = STRAT_DONCHIAN;     // Chien luoc vao lenh
 input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchian (breakout)
+input double          InpBreakMinATR     = 0.0;       // Donchian: gia dong cua phai vuot kenh it nhat x ATR (0 = tat)
+input double          InpBreakMinBody    = 0.0;       // Donchian: than nen pha vo >= % bien do nen, cung chieu (0 = tat)
+input bool            InpBreakConfirm    = false;     // Donchian: cho them 1 nen, gia van giu ngoai kenh moi vao
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
@@ -936,14 +939,24 @@ void OnTick()
    bool buyBase, sellBase;
    if(InpStrategy == STRAT_DONCHIAN)
    {
-      // Pha vo: nen vua dong vuot dinh/day cao nhat/thap nhat cua N nen truoc do
-      int hiIdx = iHighest(_Symbol, InpTF, MODE_HIGH, InpDonchianPeriod, 2);
-      int loIdx = iLowest(_Symbol,  InpTF, MODE_LOW,  InpDonchianPeriod, 2);
+      // Pha vo: nen "b" dong vuot dinh/day cao nhat/thap nhat cua N nen truoc no.
+      // b = 1 (nen vua dong); neu InpBreakConfirm thi b = 2 va nen 1 phai van dong ngoai kenh.
+      int b = InpBreakConfirm ? 2 : 1;
+      int hiIdx = iHighest(_Symbol, InpTF, MODE_HIGH, InpDonchianPeriod, b + 1);
+      int loIdx = iLowest(_Symbol,  InpTF, MODE_LOW,  InpDonchianPeriod, b + 1);
       if(hiIdx < 0 || loIdx < 0) return;
       double chHigh = iHigh(_Symbol, InpTF, hiIdx);
       double chLow  = iLow(_Symbol,  InpTF, loIdx);
-      buyBase  = c1 > chHigh && c1 > trend;
-      sellBase = c1 < chLow  && c1 < trend;
+      double cb = iClose(_Symbol, InpTF, b), ob = iOpen(_Symbol, InpTF, b);
+      double hb = iHigh(_Symbol, InpTF, b),  lb = iLow(_Symbol, InpTF, b);
+      double margin = InpBreakMinATR * atr;                         // vuot kenh bao xa
+      double range  = hb - lb;
+      double body   = MathAbs(cb - ob);
+      // Than nen: nen pha vo phai la nen cung chieu, than chiem it nhat X% bien do (khong phai chi rau dai)
+      bool   bodyBuy  = InpBreakMinBody <= 0 || (cb > ob && range > 0 && body >= range * InpBreakMinBody / 100.0);
+      bool   bodySell = InpBreakMinBody <= 0 || (cb < ob && range > 0 && body >= range * InpBreakMinBody / 100.0);
+      buyBase  = cb > chHigh + margin && bodyBuy  && c1 > trend && (b == 1 || c1 > chHigh);
+      sellBase = cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
    }
    else
    {
@@ -1051,6 +1064,35 @@ double OnTester()
          if(k < 0) { k = ArraySize(years); ArrayResize(years, k + 1); ArrayResize(yearPL, k + 1); years[k] = t.year; yearPL[k] = 0; }
          yearPL[k] += DealNet(d);
       }
+   // Phep thu chiu dung: tru them chi phi truot gia + spread moi chieu = % gia, cong theo tung vi the
+   double stressPL[2], stressGP[2], stressGL[2];
+   double stressPct[2] = {0.05, 0.10};
+   ArrayInitialize(stressPL, 0); ArrayInitialize(stressGP, 0); ArrayInitialize(stressGL, 0);
+   ulong  posIds[]; double posNet[]; double posCost[];
+   double contract = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_CONTRACT_SIZE);
+   if(HistorySelect(0, TimeCurrent()))
+      for(int i = 0; i < HistoryDealsTotal(); i++)
+      {
+         ulong d = HistoryDealGetTicket(i);
+         if(d == 0) continue;
+         long ty = HistoryDealGetInteger(d, DEAL_TYPE);
+         if(ty != DEAL_TYPE_BUY && ty != DEAL_TYPE_SELL) continue;
+         ulong pid = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
+         int k = -1;
+         for(int j = ArraySize(posIds) - 1; j >= 0; j--) if(posIds[j] == pid) { k = j; break; }
+         if(k < 0) { k = ArraySize(posIds); ArrayResize(posIds, k + 1); ArrayResize(posNet, k + 1); ArrayResize(posCost, k + 1);
+                     posIds[k] = pid; posNet[k] = 0; posCost[k] = 0; }
+         posNet[k]  += DealNet(d);
+         posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * contract * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0;  // = 1% gia
+      }
+   for(int s2 = 0; s2 < 2; s2++)
+      for(int j = 0; j < ArraySize(posIds); j++)
+      {
+         double net = posNet[j] - posCost[j] * stressPct[s2];
+         stressPL[s2] += net;
+         if(net > 0) stressGP[s2] += net; else stressGL[s2] -= net;
+      }
+
    string byYear = "";
    for(int j = 0; j < ArraySize(years); j++)
       byYear += (j > 0 ? " " : "") + StringFormat("%d=%+.0f", years[j], yearPL[j]);
@@ -1061,7 +1103,8 @@ double OnTester()
    {
       if(FileSize(h) == 0)
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
-                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam");
+                   "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
+                   "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1078,7 +1121,9 @@ double OnTester()
                 (int)TesterStatistics(STAT_SHORT_TRADES),
                 g_minLotSkips,
                 firstDeal > 0 ? TimeToString(firstDeal, TIME_DATE) : "-",
-                byYear);
+                byYear,
+                DoubleToString(stressPL[0], 2), DoubleToString(stressGL[0] > 0 ? stressGP[0] / stressGL[0] : 0, 2),
+                DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2));
       FileClose(h);
    }
    else

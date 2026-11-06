@@ -33,6 +33,7 @@ function Cfg { $h = $Base.Clone(); foreach ($x in $args) { if ($x) { foreach ($k
 #  - ETHUSDm: cung tham so tren cap khac (du lieu chua dung de chon)
 #  - 2020-2023: giai doan truoc 3 nam da dung de chon (ngoai mau)
 # Moi lan co the ghi de: Deposit, Symbol, From, To.
+$Q = @{ InpUseADX = "true" }   # C = Donchian20 H4 + ADX
 $OOSFrom = (Get-Date).AddYears(-6).ToString("yyyy.MM.dd")
 $Runs = @(
     @{ Name = "B-Donchian20-H4";        Inputs = (Cfg $Brk) },
@@ -44,6 +45,17 @@ $Runs = @(
     @{ Name = "C-ETH";                  Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Symbol = "ETHUSDm" },
     @{ Name = "B-truoc-3nam";           Inputs = (Cfg $Brk);                          From = $OOSFrom; To = $FromDate },
     @{ Name = "C-truoc-3nam";           Inputs = (Cfg $Brk @{ InpUseADX = "true" });  From = $OOSFrom; To = $FromDate },
+    # Chat luong breakout (them vao C): than nen >= 50%, vuot kenh >= 0.25 ATR, cho 1 nen xac nhan.
+    # Chi giu bo loc nao tot hon C o CA 3 noi: 3 nam gan day, 3 nam truoc, ETH.
+    @{ Name = "C+than50";               Inputs = (Cfg $Brk $Q @{ InpBreakMinBody = 50 }) },
+    @{ Name = "C+than50-truoc";         Inputs = (Cfg $Brk $Q @{ InpBreakMinBody = 50 });  From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+than50-ETH";           Inputs = (Cfg $Brk $Q @{ InpBreakMinBody = 50 });  Symbol = "ETHUSDm" },
+    @{ Name = "C+vuot0.25ATR";          Inputs = (Cfg $Brk $Q @{ InpBreakMinATR = 0.25 }) },
+    @{ Name = "C+vuot0.25ATR-truoc";    Inputs = (Cfg $Brk $Q @{ InpBreakMinATR = 0.25 }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+vuot0.25ATR-ETH";      Inputs = (Cfg $Brk $Q @{ InpBreakMinATR = 0.25 }); Symbol = "ETHUSDm" },
+    @{ Name = "C+xacnhan";              Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }) },
+    @{ Name = "C+xacnhan-truoc";        Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+xacnhan-ETH";          Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
