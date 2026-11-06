@@ -184,6 +184,11 @@ So sánh lãi ròng, R trung bình, tỷ lệ thắng và MFE giữa ba nhóm. C
 - **ETH yếu hơn BTC** (PF khoảng 1,35–1,4 so với khoảng 2, sụt giảm Monte Carlo 95% khoảng 15%). Giai đoạn demo nên chỉ chạy BTC; nếu chạy cả ETH thì đặt rủi ro ETH thấp hơn (ví dụ một nửa) trong cài đặt của chart ETH.
 - **Lợi nhuận dồn vào vài lệnh:** trong lần tick thật, 5 lệnh tốt nhất chiếm khoảng 29,7R trên tổng 33R của 85 lệnh. Chuẩn bị tinh thần cho những đợt dài hòa hoặc lỗ nhẹ, không tắt bot giữa chuỗi thua, và ưu tiên bot chạy liên tục (VPS).
 
+## Vốn nhỏ (1–2 triệu VNĐ) và tài khoản Cent
+BTC không chạy được với vốn này: lot nhỏ nhất 0,01 BTC với SL 2,5 × ATR H4 (khoảng 3.000 USD) là mất khoảng 30 USD mỗi lần dính SL. Tài khoản Standard Cent của Exness không có BTC.
+
+Tài khoản Cent có vàng và forex, nơi 0,01 lot rủi ro nhỏ hơn nhiều. Nút 1 vì vậy chạy thêm cấu hình C trên `XAUUSDm`, `EURUSDm`, `GBPUSDm`, `USDJPYm` với vốn 3.800 (bằng 1 triệu VNĐ ≈ 3.800 USC, vì lot Cent bằng 1/100 lot thường), cả 3 năm gần đây lẫn 3 năm trước đó. Một mã chỉ được xem xét khi đạt **cả** ba điều kiện (đặt trước khi xem số): PF ≥ 1,3 ở cả hai giai đoạn, ít nhất 30 lệnh mỗi giai đoạn, và `BoQuaLot` thấp. Mã đạt vẫn phải chạy demo trước khi dùng tiền thật.
+
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
 - Muốn tắt hẳn việc tự compile khi mở VS Code, xóa khối `"runOptions"` trong `.vscode/tasks.json`. Nếu compile lỗi, script trả lại file bot cũ nên bot trên chart vẫn chạy bản trước.

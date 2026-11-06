@@ -94,6 +94,13 @@ $Runs = @(
 )
 # Lan doi chieu: chi kiem tra lenh moi giay (nhanh hon) de do sai khac so voi moi tick (mac dinh)
 $Runs += @{ Name = "C-moiGiay"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 1 }) }
+# Tai khoan Cent (1 trieu VND ~ 3.800 USC): Cent khong co BTC, nen thu cung cau hinh C tren vang va forex.
+# Lot Cent = 1/100 lot thuong, nen backtest ma "m" voi von 3800 USD cho cung ket qua (tinh bang %) nhu Cent 3800 USC.
+# Tieu chi dat truoc: PF >= 1,3 o CA 3 nam gan day lan 3 nam truoc, it nhat 30 lenh moi giai doan, BoQuaLot thap.
+foreach ($cs in @("XAUUSDm", "EURUSDm", "GBPUSDm", "USDJPYm")) {
+    $Runs += @{ Name = "Cent-$cs";       Inputs = (Cfg $Brk $Q); Symbol = $cs; Deposit = 3800 }
+    $Runs += @{ Name = "Cent-$cs-truoc"; Inputs = (Cfg $Brk $Q); Symbol = $cs; Deposit = 3800; From = $OOSFrom; To = $FromDate }
+}
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
