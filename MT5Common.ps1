@@ -51,14 +51,23 @@ function Invoke-BotCompile($mt5, [string]$src) {
     $target = Join-Path $mt5.Experts "$name.mq5"
     $ex5    = Join-Path $mt5.Experts "$name.ex5"
     $log    = Join-Path $env:TEMP "$name-compile.log"
+    $bak    = "$ex5.bak"
     Copy-Item $src $target -Force
-    foreach ($f in @($log, $ex5)) { if (Test-Path $f) { Remove-Item $f -Force } }
+    if (Test-Path $log) { Remove-Item $log -Force }
+    # Giu ban .ex5 cu: compile loi thi tra lai, bot tren chart khong bi mat file chay
+    if (Test-Path $ex5) { Move-Item $ex5 $bak -Force }
     Start-Process -FilePath $mt5.Editor -ArgumentList "/compile:`"$target`"", "/log:`"$log`"" -Wait
     $lines = if (Test-Path $log) { Get-Content $log } else { @() }
     $errors = @($lines | Where-Object { $_ -match "(?i):\s*error\s" })
+    $ok = (Test-Path $ex5) -and ($errors.Count -eq 0)
+    if ($ok) { if (Test-Path $bak) { Remove-Item $bak -Force } }
+    elseif (Test-Path $bak) {
+        Move-Item $bak $ex5 -Force
+        Write-Host "Compile loi: da tra lai ban .ex5 cu, bot tren chart van chay ban cu." -ForegroundColor Yellow
+    }
     [pscustomobject]@{
         Name     = $name
-        Ok       = (Test-Path $ex5) -and ($errors.Count -eq 0)
+        Ok       = $ok
         Errors   = $errors
         Warnings = @($lines | Where-Object { $_ -match "(?i):\s*warning\s" })
         Summary  = ($lines | Where-Object { $_ -match "(?i)result|errors" } | Select-Object -Last 1)

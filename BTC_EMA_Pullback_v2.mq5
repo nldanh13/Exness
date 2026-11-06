@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.2"
-#property version   "3.20"
+#define  BOT_VERSION "3.3"
+#property version   "3.30"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -329,13 +329,18 @@ double BotEquity() { return BaseCapital() + g_closedPL + FloatingPL(); }
 double BotEquityForLimits() { return BaseCapital() + g_closedPL + MathMin(0.0, FloatingPL()); }
 
 // Dat moc von cua bot (lan dau chay, hoac khi InpResetHalt = true)
-void ResetBaseline()
+// unlock = true chi khi nguoi dung chu dong dat InpResetHalt. Doi InpCapital chi dat lai moc,
+// KHONG go trang thai dung han / khoa lo ngay, de khong vo tinh mo khoa bot da cham gioi han rui ro.
+void ResetBaseline(const bool unlock)
 {
    GlobalVariableSet(GVName("epoch"), (double)TimeCurrent());
    GlobalVariableSet(GVName("base"),  AccountInfoDouble(ACCOUNT_BALANCE));
-   GlobalVariableDel(GVName("halt"));
+   if(unlock)
+   {
+      GlobalVariableDel(GVName("halt"));
+      GlobalVariableDel(GVName("dayLock"));
+   }
    GlobalVariableDel(GVName("dayId"));
-   GlobalVariableDel(GVName("dayLock"));
    currentDay = -1;                                   // de UpdateDay chup lai moc dau ngay
    g_plDirty = true;
    RefreshClosedPL();
@@ -707,8 +712,10 @@ void ManagePositions()
          }
          // Thu lai toi da 1 lan / 10 giay moi lenh (tu choi, hoac cho vi the cap nhat sau khop mot phan)
          string tKey = GVName("PT_" + (string)posId);
+         bool sentNow = false;
          if(TimeCurrent() - (datetime)(GlobalVariableCheck(tKey) ? GlobalVariableGet(tKey) : 0) >= 10)
          {
+            sentNow = true;
             GlobalVariableSet(tKey, (double)TimeCurrent());
             bool sent;
             if(IsHedging())
@@ -731,7 +738,9 @@ void ManagePositions()
                   TradeDone(PrepSend() && trade.PositionModify(_Symbol, sl, tp), "Dat lai SL/TP", _Symbol);
             }
          }
-         continue;                                      // xu ly SL o tick sau
+         // Vua gui lenh dong thi de tick sau moi sua SL (khoi luong/vi the co the vua doi).
+         // Neu dang cho thu lai (bi tu choi), van chay hoa von + trailing ben duoi de SL khong bi dung.
+         if(sentNow) continue;
       }
 
       // 2) Hoa von va 3) trailing ATR
@@ -843,9 +852,11 @@ bool TryInitState()
    bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != InpCapital;
    if(InpResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
    {
-      ResetBaseline();
+      ResetBaseline(InpResetHalt);
       if(InpResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
       if(capitalChanged) Print("InpCapital da thay doi, tu dat lai moc von va dinh von.");
+      if(capitalChanged && !InpResetHalt && (IsHalted() || GlobalVariableCheck(GVName("dayLock"))))
+         Print("Bot VAN DANG DUNG / KHOA LO NGAY. Doi von khong mo khoa; muon mo, dat InpResetHalt = true mot lan.");
    }
    GlobalVariableSet(GVName("capital"), InpCapital);
    lastLossTime = (datetime)GVGet("lastLoss", 0);

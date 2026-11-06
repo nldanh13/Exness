@@ -43,12 +43,14 @@ $Runs = @(
     @{ Name = "B-ETH";                  Inputs = (Cfg $Brk);                          Symbol = "ETHUSDm" },
     @{ Name = "C-ETH";                  Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Symbol = "ETHUSDm" },
     @{ Name = "B-truoc-3nam";           Inputs = (Cfg $Brk);                          From = $OOSFrom; To = $FromDate },
-    @{ Name = "C-truoc-3nam";           Inputs = (Cfg $Brk @{ InpUseADX = "true" });  From = $OOSFrom; To = $FromDate }
+    @{ Name = "C-truoc-3nam";           Inputs = (Cfg $Brk @{ InpUseADX = "true" });  From = $OOSFrom; To = $FromDate },
+    # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
+    @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
-if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam") }) }
+if ($ChinhXac) { $Runs = @($Runs | Where-Object { $_.Name -in @("B-Donchian20-H4", "C-Donchian20-H4-ADX", "B-ETH", "C-ETH", "B-truoc-3nam", "C-truoc-3nam", "MacDinh-nhu-chay-that") }) }
 Write-Host "Se chay $($Runs.Count) cau hinh, moi cau hinh vai phut." -ForegroundColor Cyan
 
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -148,14 +150,21 @@ if ($summary) {
     Copy-Item $summary (Join-Path $resDir $resName) -Force
     if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
         $rel = "ket-qua/$resName"
-        & git -C $ProjectDir add -- $rel 2>&1 | Out-Null
-        & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $rel 2>&1 | Out-Null
-        $pushOut = & git -C $ProjectDir push -q 2>&1
+        $gitOut = & git -C $ProjectDir add -- $rel 2>&1
+        if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $rel 2>&1 }
+        if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir push -q 2>&1 }
+        # Kiem tra chac chan file da co tren GitHub (khong chi tin ma thoat cua push)
+        $onRemote = $false
         if ($LASTEXITCODE -eq 0) {
+            & git -C $ProjectDir fetch -q 2>&1 | Out-Null
+            & git -C $ProjectDir cat-file -e "@{u}:$rel" 2>&1 | Out-Null
+            $onRemote = ($LASTEXITCODE -eq 0)
+        }
+        if ($onRemote) {
             Write-Host "==> Da day ket qua len GitHub ($rel). Chi can nhan Claude 'xong roi', khong can gui zip." -ForegroundColor Green
         } else {
             Write-Host "Khong day duoc ket qua len GitHub, hay gui file zip:" -ForegroundColor Yellow
-            $pushOut | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+            $gitOut | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
         }
     }
 }
