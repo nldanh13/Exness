@@ -182,7 +182,12 @@ foreach ($run in $Runs) {
     $f = Join-Path $resDirMT5 ("{0:D3}.csv" -f $run.Id)
     if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$rows.Add($r) } } else { $missing += $run.Name }
 }
-if ($missing.Count -gt 0) { Write-Host "CANH BAO: thieu ket qua cua: $($missing -join ', ')" -ForegroundColor Yellow }
+# Thieu bat ky cau hinh nao = dot chay CHUA HOAN THANH: van luu de xem, nhung khong day len GitHub, khong dung de chon.
+$incomplete = $missing.Count -gt 0
+if ($incomplete) {
+    Write-Host "LOI: thieu ket qua cua $($missing.Count)/$($Runs.Count) cau hinh: $($missing -join ', ')" -ForegroundColor Red
+    Write-Host "Dot chay nay CHUA HOAN THANH: khong day len GitHub. Hay chay lai, hoac gui file zip cho Claude de tim nguyen nhan." -ForegroundColor Red
+}
 if ($rows.Count -gt 0) { $rows | Export-Csv -Path $resultFile -NoTypeInformation -Encoding ASCII }
 
 Write-Host ""
@@ -230,9 +235,12 @@ if ($summary) {
     $resDir = Join-Path $ProjectDir "ket-qua"
     if (-not (Test-Path $resDir)) { New-Item -ItemType Directory -Path $resDir | Out-Null }
     $tag     = if ($ChinhXac) { "chinhxac" } else { "nhanh" }
+    if ($incomplete) { $tag += "-CHUADU" }
     $resName = (Get-Date -Format "yyyyMMdd-HHmm") + "-$tag.csv"
     Copy-Item $summary (Join-Path $resDir $resName) -Force
-    if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
+    if ($incomplete) {
+        Write-Host "Da luu ban CHUA DU o ket-qua\$resName (chi tren may, khong day len GitHub)." -ForegroundColor Yellow
+    } elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
         $rel = "ket-qua/$resName"
         # Neu may ban dang co commit chua day len, KHONG day ho (git push day ca nhanh).
         & git -C $ProjectDir fetch -q 2>&1 | Out-Null

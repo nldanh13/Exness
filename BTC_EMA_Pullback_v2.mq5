@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.4"
-#property version   "4.40"
+#define  BOT_VERSION "4.5"
+#property version   "4.50"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -438,6 +438,9 @@ bool TryInitState()
    UpdateDay();
    if(!IsHedging())
       Print("CANH BAO: tai khoan NETTING. Bot duoc thiet ke cho tai khoan HEDGING; chot mot phan se dong theo symbol.");
+   if(!MQLInfoInteger(MQL_TESTER) && InGroup() && (P_CorrRiskScale < 1 || P_MaxGroupRiskPct > 0))
+      Print("Luu y: tran rui ro chung BTC/ETH chi dong bo giua cac bot chay tren CUNG terminal MT5 nay. ",
+            "Bot o terminal / VPS khac khong biet phan rui ro da giu cho.");
    g_stateReady = true;
    Notify(StringFormat("[%s] Bot v" + BOT_VERSION + " khoi dong. Von cua bot %.2f %s", _Symbol,
                        BotEquity(), AccountInfoString(ACCOUNT_CURRENCY)));

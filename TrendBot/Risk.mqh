@@ -18,7 +18,9 @@ bool GroupLock()
    g_grpLocked = false;
    if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return true;     // backtest 1 ma / khong thuoc nhom: khong can khoa
    string k = GrpKey("LOCK");
-   if(!GlobalVariableCheck(k) && GlobalVariableSet(k, 0) == 0 && !GlobalVariableCheck(k)) return false;
+   // Tao bien khoa mot cach nguyen tu: GlobalVariableTemp chi tao khi chua co (gia tri 0) va KHONG ghi de
+   // khoa bot kia vua dat. (Check roi Set(0) co the xoa mat khoa cua bot kia neu hai bot cung khoi tao.)
+   if(!GlobalVariableCheck(k) && !GlobalVariableTemp(k) && !GlobalVariableCheck(k)) return false;
    for(int i = 0; i < 100 && !IsStopped(); i++)                // toi da ~5 giay
    {
       double now = (double)TimeLocal();
