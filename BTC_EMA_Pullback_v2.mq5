@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.8"
-#property version   "4.80"
+#define  BOT_VERSION "4.9"
+#property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -576,8 +576,12 @@ void OnTick()
                       NormalizeDouble(price + slDist, _Digits),
                       P_RR > 0 ? NormalizeDouble(price - slDist * P_RR, _Digits) : 0.0, "BTC bot SELL");
    }
-   if(!ok) GroupClear();
-   GroupUnlock();
+   // trade.Buy/Sell tra true chi la gui duoc; server van co the tu choi -> xem ma ket qua.
+   // Chua khop that thi bo phan rui ro da giu cho ngay, khong de treo 2 phut chan bot khac.
+   uint rc = trade.ResultRetcode();
+   bool filled = ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
+   if(!filled) GroupClear();
+   GroupUnlock();                                    // mo khoa truoc khi gui thong bao (Telegram co the cham)
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");
 }
 

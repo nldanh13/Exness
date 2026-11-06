@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v4.8
+# Hướng dẫn bot BTC (MT5) v4.9
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -18,7 +18,7 @@ File bot: `BTC_EMA_Pullback_v2.mq5`, chỉ chứa tham số và thứ tự chạ
 Các nút trong VS Code tự chép cả thư mục này vào MT5 khi compile. Bot chạy được cho mã khác ngoài BTC/ETH: đặt `InpFundingSymbol` và `InpWikiArticle` nếu dùng hai bộ lọc đó. Phiên bản hiện ra ở bảng thông tin trên chart. Lịch sử thay đổi xem trong GitHub (Commits).
 
 ## Dùng hằng ngày với VS Code
-Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task…**. Bạn không cần bấm Sync hay compile: mỗi nút tự lấy code mới nhất từ GitHub và compile trước khi chạy.
+Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task…**. Bạn không cần bấm Sync hay compile. Mỗi nút kiểm tra GitHub; nếu có code mới, script liệt kê các thay đổi và **hỏi bạn** (gõ `y` để lấy về, phím khác để giữ bản cũ) rồi mới compile. Vì mọi nút đều compile lại bot vào MT5, hãy gõ `n` nếu MT5 đó đang chạy bot trên tài khoản thật.
 
 | Nút | Khi nào dùng |
 |---|---|
@@ -114,6 +114,7 @@ File `ket-qua-so-sanh.csv` trong zip có một dòng cho mỗi lần chạy:
 | `LaiTheoNam` | Lãi/lỗ từng năm, để xem có lãi đều hay chỉ nhờ một đợt |
 | `LoiNhuan_Truot0.05%`, `PF_Truot0.05%` (và `0.1%`) | Kết quả nếu mỗi lần vào/ra lệnh tốn thêm 0,05% (hoặc 0,1%) giá vì trượt giá và spread. Ví dụ BTC 100.000 USD: thêm 50 (hoặc 100) USD mỗi chiều cho 1 BTC. PF vẫn trên 1,2 ở mức 0,1% thì chiến lược chịu được chi phí xấu |
 | `ChanFunding`, `ChanFearGreed`, `ChanChuY`, `ChanNasdaq` | Số tín hiệu bị bộ lọc tương ứng chặn. Bằng 0 khi bộ lọc bật thì có thể thiếu dữ liệu |
+| `LoiNhuan_BoTop5`, `PF_BoTop5`, `TyTrongTop5%` | Kết quả nếu bỏ 5 lệnh lãi lớn nhất, và phần lãi ròng mà 5 lệnh đó đóng góp. Tỷ trọng gần hoặc trên 100% nghĩa là phần còn lại chỉ hòa hoặc lỗ: lỡ 1–2 lệnh lớn (VPS tắt, lot bị bỏ, tự tắt bot giữa chuỗi thua) là mất phần lớn lợi nhuận |
 | `MC_SutGiamTB%`, `MC_SutGiam95%`, `MC_XacSuatDungHan%` | Monte Carlo: rút lại các lệnh 1.000 lần theo khối 5 lệnh liền nhau (giữ các chuỗi thua theo cụm). Cho biết sụt giảm thường gặp, sụt giảm ở trường hợp xấu (chỉ 5% số lần tệ hơn), và xác suất bot chạm mức dừng hẳn `InpMaxDrawdownPct` (15%). Dưới 200 lệnh thì chỉ nên xem là tham khảo |
 
 Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (không lọc ADX), C (có ADX), D (Donchian 55), cùng các lần chạy với vốn 30.000, trên `ETHUSDm`, và trên 3 năm **trước** giai đoạn đã dùng để chọn cấu hình. Các lần này tắt giới hạn sụt giảm để so sánh chiến lược. Lần cuối `MacDinh-nhu-chay-that` dùng nguyên cài đặt mặc định của bot, gồm cả dừng hẳn khi sụt 15% và khóa lỗ ngày 3%, đúng như khi chạy thật. **Bộ lọc chất lượng breakout** (mặc định tắt, đang thử trên cấu hình C):
@@ -164,7 +165,8 @@ Câu hỏi: sau khi bot vào lệnh, thị trường còn bao nhiêu dư địa 
 | `TuoiXuHuong_nen` | Số nến H4 kể từ lần cuối giá đóng cửa ở nửa kia của giữa kênh |
 | `NenTuPhaVoDau`, `SoLanPhaVo` | Số nến kể từ lần phá vỡ đầu tiên của đợt này, và đợt này đã phá vỡ mấy lần |
 | `Funding%`, `FundingPhanVi` | Funding lúc vào và phân vị của nó so với 365 ngày trước (0–100) |
-| `R`, `MFE_R`, `MAE_R` | Lãi ròng, mức đi thuận lớn nhất và mức đi ngược lớn nhất, đều tính theo R (khoảng SL ban đầu) |
+| `R`, `MFE_R`, `MAE_R` | Lãi ròng, mức đi thuận lớn nhất và mức đi ngược lớn nhất, đều tính theo R (khoảng SL ban đầu). Từ v4.9 tính bằng nến M1 nằm trọn từ lúc vào tới lúc thoát, cộng giá vào/thoát thật (sai số tối đa 1 phút mỗi đầu). Bản trước dùng nến H4 gồm cả nến thoát nên tính cả giá sau khi đã đóng lệnh: đừng dùng số MFE/MAE của file trước v4.9 |
+| `Spread_diem` | Spread (point) của phút vào lệnh, theo dữ liệu MT5. Dùng để chọn ngưỡng `InpMaxSpreadPoints` (đang tắt) từ số đo thay vì đoán |
 
 Open interest chưa có: Binance chỉ cho tải miễn phí 30 ngày gần nhất.
 
@@ -175,8 +177,15 @@ Open interest chưa có: Binance chỉ cho tải miễn phí 30 ngày gần nh�
 
 So sánh lãi ròng, R trung bình, tỷ lệ thắng và MFE giữa ba nhóm. Chỉ khi nhóm "muộn" kém rõ ràng ở **cả** 3 năm gần đây, 3 năm trước đó và ETH thì mới thêm bộ lọc tương ứng. Bộ lọc đó vẫn phải qua tiêu chí chung (PF +0,2 ở cả 3 nơi, số lệnh không giảm quá 25%). Không chỉnh lại ngưỡng sau khi đã xem số.
 
+## Giai đoạn tiếp theo: chốt C và chạy demo
+- **Ngừng thêm bộ lọc.** Đã thử hơn 40 cấu hình; càng thử nhiều, cấu hình "tốt nhất" càng dễ chỉ là may trên dữ liệu cũ. Giữ C (Donchian 20 H4 + ADX). Các bộ lọc vẫn có trong code nhưng tắt.
+- **Chạy demo 2–3 tháng**, rồi so từng lệnh demo với backtest cùng giai đoạn: giờ vào, giá khớp, trượt giá, spread, swap. Đây là phép thử còn thiếu.
+- **Vốn:** với 3.000, khoảng 27% tín hiệu bị bỏ vì lot dưới 0,01, và chúng rơi đúng lúc ATR cao (thị trường chạy mạnh). Hãy backtest và demo với đúng số vốn sẽ dùng thật, hoặc bật `InpMaxRiskRoundUp` (ví dụ 1,5) để không bỏ các tín hiệu đó.
+- **ETH yếu hơn BTC** (PF khoảng 1,35–1,4 so với khoảng 2, sụt giảm Monte Carlo 95% khoảng 15%). Giai đoạn demo nên chỉ chạy BTC; nếu chạy cả ETH thì đặt rủi ro ETH thấp hơn (ví dụ một nửa) trong cài đặt của chart ETH.
+- **Lợi nhuận dồn vào vài lệnh:** trong lần tick thật, 5 lệnh tốt nhất chiếm khoảng 29,7R trên tổng 33R của 85 lệnh. Chuẩn bị tinh thần cho những đợt dài hòa hoặc lỗ nhẹ, không tắt bot giữa chuỗi thua, và ưu tiên bot chạy liên tục (VPS).
+
 ## Khi chuyển sang tiền thật
-- Các nút trong VS Code kéo code mới và compile thẳng vào MT5, nên bot trên chart có thể nạp code bạn chưa kịp xem. Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
+- Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
 - Muốn tắt hẳn việc tự compile khi mở VS Code, xóa khối `"runOptions"` trong `.vscode/tasks.json`. Nếu compile lỗi, script trả lại file bot cũ nên bot trên chart vẫn chạy bản trước.
 - BTC có thể trượt giá qua SL khi có tin, và swap crypto qua đêm có thể cao.
 - Không bao giờ chia sẻ mật khẩu MT5. Giữ repo GitHub ở chế độ riêng tư.

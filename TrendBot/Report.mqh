@@ -28,12 +28,12 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
    int h = FileOpen(file, FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON, ',');
    if(h == INVALID_HANDLE) return;
    FileWrite(h, "Lan", "ViThe", "Chieu", "ThoiGianVao", "KhoangCach_ATR", "DoRongKenh_ATR", "TuoiXuHuong_nen",
-             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu", "GioToiTin", "Tin");
+             "NenTuPhaVoDau", "SoLanPhaVo", "Funding%", "FundingPhanVi", "LaiRong", "R", "MFE_R", "MAE_R", "GioGiu", "GioToiTin", "Tin", "Spread_diem");
    double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    for(int j = 0; j < ArraySize(ids); j++)
    {
       if(!HistorySelectByPosition(ids[j])) continue;
-      datetime tin = 0, tout = 0; double pin = 0, vol = 0; bool buy = true;
+      datetime tin = 0, tout = 0; double pin = 0, pout = 0, vol = 0; bool buy = true;
       for(int i = 0; i < HistoryDealsTotal(); i++)
       {
          ulong d = HistoryDealGetTicket(i);
@@ -43,7 +43,8 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
             tin = (datetime)HistoryDealGetInteger(d, DEAL_TIME); pin = HistoryDealGetDouble(d, DEAL_PRICE);
             vol = HistoryDealGetDouble(d, DEAL_VOLUME); buy = HistoryDealGetInteger(d, DEAL_TYPE) == DEAL_TYPE_BUY;
          }
-         if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY) tout = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
+         if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY)
+         { tout = (datetime)HistoryDealGetInteger(d, DEAL_TIME); pout = HistoryDealGetDouble(d, DEAL_PRICE); }
       }
       if(tin == 0) continue;
       int s = iBarShift(_Symbol, P_TF, tin, false) + 1;          // nen tin hieu (nen vua dong luc vao lenh)
@@ -65,14 +66,22 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
       double f  = FundingAt(tin);
       double fp = FundingPct(tin, f);
       string nn; double hn = HoursToNews(tin, nn);           // tin FOMC / CPI gan nhat (am = da ra truoc khi vao)
-      // Du dia di tiep (MFE) va muc bat loi lon nhat (MAE), tinh theo R = khoang SL ban dau
-      double rDist = atr * P_ATRMult, mfe = 0, mae = 0;
-      int e = tout > 0 ? iBarShift(_Symbol, P_TF, tout, false) : 0;
-      int sh = s - 1;
-      if(sh >= e && rDist > 0)
+      // Du dia di tiep (MFE) va muc bat loi lon nhat (MAE), tinh theo R = khoang SL ban dau.
+      // Dung nen M1 nam tron trong khoang [vao, thoat] + gia vao/thoat that: khong tinh gia sau khi da dong lenh
+      // (sai so toi da 1 phut o moi dau). Truoc day dung nen H4 gom ca nen thoat nen MFE bi thoi phong.
+      double rDist = atr * P_ATRMult, mfe = 0, mae = 0, hh = pin, ll = pin;
+      long spr = -1;
+      MqlRates m1[];
+      int n1 = CopyRates(_Symbol, PERIOD_M1, tin - 60, tout > tin ? tout : tin, m1);
+      for(int q = 0; q < n1; q++)
       {
-         double hh = iHigh(_Symbol, P_TF, iHighest(_Symbol, P_TF, MODE_HIGH, sh - e + 1, e));
-         double ll = iLow(_Symbol,  P_TF, iLowest(_Symbol,  P_TF, MODE_LOW,  sh - e + 1, e));
+         if(m1[q].time <= tin && m1[q].time + 60 > tin) spr = m1[q].spread;   // spread cua phut vao lenh
+         if(m1[q].time <= tin || (tout > 0 && m1[q].time + 60 > tout)) continue;
+         hh = MathMax(hh, m1[q].high); ll = MathMin(ll, m1[q].low);
+      }
+      if(pout > 0) { hh = MathMax(hh, pout); ll = MathMin(ll, pout); }
+      if(rDist > 0)
+      {
          mfe = (buy ? hh - pin : pin - ll) / rDist;
          mae = (buy ? pin - ll : hh - pin) / rDist;
       }
@@ -83,7 +92,7 @@ void WriteTradeFeatures(const ulong &ids[], const double &net[])
                 DoubleToString(net[j], 2), DoubleToString(riskMoney > 0 ? net[j] / riskMoney : 0, 2),
                 DoubleToString(mfe, 2), DoubleToString(mae, 2),
                 DoubleToString(tout > tin ? (double)(tout - tin) / 3600.0 : 0, 1),
-                DoubleToString(hn, 1), nn);
+                DoubleToString(hn, 1), nn, spr < 0 ? "" : IntegerToString(spr));
    }
    FileClose(h);
 }
@@ -193,6 +202,17 @@ double OnTester()
    double mcMed = nPos > 0 ? mcDD[sims / 2] : 0;
    double mc95  = nPos > 0 ? mcDD[(int)(sims * 0.95)] : 0;
 
+   // Phu thuoc vao vai lenh thang lon: bo 5 vi the lai nhieu nhat roi tinh lai loi nhuan va PF
+   double srt[]; ArrayCopy(srt, posNet); ArraySort(srt);
+   double top5 = 0, rGP = 0, rGL = 0, totNet = 0;
+   for(int j = 0; j < nPos; j++)
+   {
+      totNet += srt[j];
+      if(j >= nPos - 5 && srt[j] > 0) { top5 += srt[j]; continue; }
+      if(srt[j] > 0) rGP += srt[j]; else rGL -= srt[j];
+   }
+   double plNoTop = totNet - top5;
+
    string byYear = "";
    for(int j = 0; j < ArraySize(years); j++)
       byYear += (j > 0 ? " " : "") + StringFormat("%d=%+.0f", years[j], yearPL[j]);
@@ -207,7 +227,8 @@ double OnTester()
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
-                   "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin");
+                   "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin",
+                   "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -229,7 +250,9 @@ double OnTester()
                 DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked,
                 g_fngBlocked, g_attBlocked, g_mktBlocked,
                 g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2),
-                DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2), g_newsBlocked);
+                DoubleToString(commSum, 2), DoubleToString(TesterStatistics(STAT_PROFIT) - swapSum - commSum, 2), g_newsBlocked,
+                DoubleToString(plNoTop, 2), DoubleToString(rGL > 0 ? rGP / rGL : 0, 2),
+                DoubleToString(totNet > 0 ? top5 / totNet * 100.0 : 0, 0));
       FileClose(h);
    }
    else

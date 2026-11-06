@@ -1,5 +1,5 @@
 # Chay.ps1 - Diem vao duy nhat cho cac nut trong VS Code (Terminal > Run Task).
-# Moi lan bam: tu lay code moi nhat tu GitHub (git pull), roi moi lam viec duoc chon.
+# Moi lan bam: kiem tra code moi tren GitHub, hoi ban truoc khi lay ve, roi moi lam viec duoc chon.
 #   -Viec sosanh           : so sanh 7 cau hinh, che do nhanh
 #   -Viec sosanh-chinhxac  : so sanh 7 cau hinh, tick that (cham)
 #   -Viec capnhat          : compile ban moi vao MT5
@@ -8,16 +8,32 @@
 param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest')][string]$Viec = 'sosanh')
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# 1) Lay code moi (khong bat buoc: loi mang hay chua cai git thi van chay ban dang co)
-# "theodoi" tu chay khi mo VS Code nen KHONG tu lay code: chi compile code dang co tren may.
+# 1) Lay code moi - CHI khi ban dong y. Moi nut deu compile lai bot vao MT5 (MT5 nap lai bot dang chay
+#    tren bieu do khi file .ex5 doi), nen code moi tu GitHub phai duoc ban xem va bam "y" truoc.
+# "theodoi" tu chay khi mo VS Code nen KHONG lay code: chi compile code dang co tren may.
 if ($Viec -eq 'theodoi') { }
 elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
-    Write-Host "Dang lay code moi tu GitHub..." -ForegroundColor Cyan
-    $out = & git -C $ProjectDir pull --ff-only 2>&1
-    if ($LASTEXITCODE -eq 0) { Write-Host "  $($out | Select-Object -Last 1)" -ForegroundColor Green }
-    else {
-        Write-Host "  Khong lay duoc code moi, se chay ban dang co tren may:" -ForegroundColor Yellow
-        $out | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    Write-Host "Dang kiem tra code moi tren GitHub..." -ForegroundColor Cyan
+    $null = & git -C $ProjectDir fetch -q origin 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  Khong ket noi duoc GitHub, se chay ban dang co tren may." -ForegroundColor Yellow
+    } else {
+        $new = @(& git -C $ProjectDir log --oneline "HEAD..@{u}" 2>$null)
+        if ($new.Count -eq 0) { Write-Host "  Da la ban moi nhat." -ForegroundColor Green }
+        else {
+            Write-Host "  Co $($new.Count) thay doi moi:" -ForegroundColor Yellow
+            $new | Select-Object -First 15 | ForEach-Object { Write-Host "    $_" }
+            Write-Host "  Neu MT5 nay dang chay bot tren TAI KHOAN THAT, hay go 'n' (hoac tat bot truoc)." -ForegroundColor Yellow
+            $ans = Read-Host "  Lay ban moi va compile? (y = co, phim khac = giu ban cu)"
+            if ($ans -match '^(y|yes|c|co)$') {
+                $out = & git -C $ProjectDir pull --ff-only 2>&1
+                if ($LASTEXITCODE -eq 0) { Write-Host "  $($out | Select-Object -Last 1)" -ForegroundColor Green }
+                else {
+                    Write-Host "  Khong lay duoc code moi, se chay ban dang co tren may:" -ForegroundColor Yellow
+                    $out | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+                }
+            } else { Write-Host "  Giu ban dang co tren may." -ForegroundColor Cyan }
+        }
     }
 } else {
     Write-Host "Khong thay git, bo qua buoc lay code moi (hay bam Sync trong VS Code)." -ForegroundColor Yellow
