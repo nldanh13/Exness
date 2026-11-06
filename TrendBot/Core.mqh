@@ -5,6 +5,8 @@ CTrade   trade;
 int      hFast = INVALID_HANDLE, hTrend = INVALID_HANDLE, hATR = INVALID_HANDLE;
 int      hHTF  = INVALID_HANDLE, hADX   = INVALID_HANDLE;
 int      hMkt  = INVALID_HANDLE;
+int      hRSI  = INVALID_HANDLE;
+double   g_rsi = 50;
 string   g_mktSym = "";
 datetime lastBarTime    = 0;
 datetime lastPanel      = 0;

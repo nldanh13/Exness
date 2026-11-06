@@ -42,7 +42,7 @@ void UpdatePanel()
       "Lenh hom nay: %d\n"
       "Sut giam tu dinh: %.2f%% / gioi han %.1f%%\n"
       "Spread: %d point%s",
-      P_Strategy == STRAT_DONCHIAN ? "Donchian" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
+      P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI luot song" : P_Strategy == STRAT_ORB ? "ORB phien My" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
       eq, cur, dayPL, cur, dayStartEquity > 0 ? dayPL / dayStartEquity * 100.0 : 0,
       DailyLocked() ? "  [DA KHOA HOM NAY]" : "", g_closedToday, cur,
       TradesToday(), dd, P_MaxDrawdownPct,

@@ -40,6 +40,30 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       sellBase = volOk && cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
       if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; return false; }
    }
+   else if(P_Strategy == STRAT_RSI_REVERT)
+   {
+      // Gia tren EMA xu huong (xu huong len) nhung vua giam manh ngan han (RSI rat thap) -> mua hoi; nguoc lai voi Sell
+      buyBase  = c1 > trend && g_rsi < P_RsiLow;
+      sellBase = c1 < trend && g_rsi > P_RsiHigh;
+   }
+   else if(P_Strategy == STRAT_ORB)
+   {
+      // Vung gia [bat dau, bat dau + N phut] moi ngay (gio server). Trong 4 gio sau do, nen dau tien dong
+      // ngoai vung thi vao theo huong pha vo. Nen gioi han 1 lenh/ngay bang InpMaxTradesPerDay.
+      datetime t1 = iTime(_Symbol, P_TF, 1);
+      MqlDateTime d; TimeToStruct(t1, d);
+      datetime day = t1 - (d.hour * 3600 + d.min * 60 + d.sec);
+      datetime rs = day + P_OrbStartMin * 60, re = rs + P_OrbMinutes * 60;
+      if(t1 < re || t1 >= re + 4 * 3600) return true;
+      int sIdx = iBarShift(_Symbol, P_TF, rs, false), eIdx = iBarShift(_Symbol, P_TF, re - 1, false);
+      if(sIdx < 0 || eIdx < 1 || sIdx < eIdx || iTime(_Symbol, P_TF, sIdx) < rs - PeriodSeconds(P_TF)) return true;
+      int cnt = sIdx - eIdx + 1;
+      double rh = iHigh(_Symbol, P_TF, iHighest(_Symbol, P_TF, MODE_HIGH, cnt, eIdx));
+      double rl = iLow(_Symbol,  P_TF, iLowest(_Symbol,  P_TF, MODE_LOW,  cnt, eIdx));
+      double c2 = iClose(_Symbol, P_TF, 2);
+      buyBase  = c1 > rh && (c2 <= rh || eIdx == 2);
+      sellBase = c1 < rl && (c2 >= rl || eIdx == 2);
+   }
    else
    {
       buyBase  = c1 > trend && fast > trend && l1 <= fast && c1 > fast;

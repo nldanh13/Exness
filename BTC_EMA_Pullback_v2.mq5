@@ -14,7 +14,9 @@
 enum ENUM_STRATEGY
 {
    STRAT_EMA_PULLBACK = 0,   // Hoi ve EMA20 theo xu huong
-   STRAT_DONCHIAN     = 1    // Pha vo kenh Donchian (breakout)
+   STRAT_DONCHIAN     = 1,   // Pha vo kenh Donchian (breakout)
+   STRAT_RSI_REVERT   = 2,   // Luot song: RSI qua ban/qua mua, vao theo xu huong lon (an hoi)
+   STRAT_ORB          = 3    // Luot song: pha vo vung gia dau phien My (opening range breakout)
 };
 
 input group "=== Tin hieu ==="
@@ -25,6 +27,11 @@ input double          InpBreakMinBody    = 0.0;       // Donchian: than nen pha 
 input bool            InpBreakConfirm    = false;     // Donchian: cho them 1 nen, gia van giu ngoai kenh moi vao
 input double          InpBreakMinVol     = 0.0;       // Donchian: khoi luong (tick) nen pha vo >= x lan TB 20 nen truoc (0 = tat)
 input double          InpBreakMaxATR     = 0.0;       // Donchian: bo qua nen pha vo dai hon x ATR (nen thanh ly day chuyen, 0 = tat)
+input int             InpRsiPeriod       = 2;         // RSI: so nen
+input double          InpRsiLow          = 10.0;      // RSI: Buy khi RSI < muc nay (va gia tren EMA xu huong)
+input double          InpRsiHigh         = 90.0;      // RSI: Sell khi RSI > muc nay (va gia duoi EMA xu huong)
+input int             InpOrbStartMin     = 810;       // ORB: phut bat dau vung gia, tinh tu 00:00 gio server (810 = 13:30)
+input int             InpOrbMinutes      = 30;        // ORB: do dai vung gia (phut)
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
@@ -118,6 +125,11 @@ double          P_BreakMinBody;
 bool            P_BreakConfirm;
 double          P_BreakMaxATR;
 double          P_BreakMinVol;
+int             P_RsiPeriod;
+double          P_RsiLow;
+double          P_RsiHigh;
+int             P_OrbStartMin;
+int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
 int             P_TrendEMA;
@@ -191,6 +203,11 @@ void LoadParams()
    P_BreakConfirm = InpBreakConfirm;
    P_BreakMaxATR = InpBreakMaxATR;
    P_BreakMinVol = InpBreakMinVol;
+   P_RsiPeriod = InpRsiPeriod;
+   P_RsiLow = InpRsiLow;
+   P_RsiHigh = InpRsiHigh;
+   P_OrbStartMin = InpOrbStartMin;
+   P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
    P_TrendEMA = InpTrendEMA;
@@ -265,6 +282,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpBreakConfirm") { P_BreakConfirm = (v == "true" || v == "1"); return true; }
    if(k == "InpBreakMaxATR") { P_BreakMaxATR = StringToDouble(v); return true; }
    if(k == "InpBreakMinVol") { P_BreakMinVol = StringToDouble(v); return true; }
+   if(k == "InpRsiPeriod") { P_RsiPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpRsiLow") { P_RsiLow = StringToDouble(v); return true; }
+   if(k == "InpRsiHigh") { P_RsiHigh = StringToDouble(v); return true; }
+   if(k == "InpOrbStartMin") { P_OrbStartMin = (int)StringToInteger(v); return true; }
+   if(k == "InpOrbMinutes") { P_OrbMinutes = (int)StringToInteger(v); return true; }
    if(k == "InpTF") { P_TF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
    if(k == "InpFastEMA") { P_FastEMA = (int)StringToInteger(v); return true; }
    if(k == "InpTrendEMA") { P_TrendEMA = (int)StringToInteger(v); return true; }
@@ -400,6 +422,11 @@ int OnInit()
    hHTF   = iMA(_Symbol, P_HTF, P_HTFEMA,   0, MODE_EMA, PRICE_CLOSE);
    hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
    hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
+   if(P_Strategy == STRAT_RSI_REVERT)
+   {
+      hRSI = iRSI(_Symbol, P_TF, P_RsiPeriod, PRICE_CLOSE);
+      if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return INIT_FAILED; }
+   }
    if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
       hATR == INVALID_HANDLE || hADX == INVALID_HANDLE)
    {
@@ -459,6 +486,7 @@ void OnDeinit(const int reason)
    IndicatorRelease(hHTF);
    IndicatorRelease(hATR);
    IndicatorRelease(hADX);
+   if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    Comment("");
 }
@@ -514,6 +542,7 @@ void OnTick()
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hTrend, 0, 1, trend) || !GetValue(hATR, 0, 1, atr)) return;
    if(P_UseADX && !GetValue(hADX, 0, 1, adx)) return;          // buffer 0 = ADX chinh
    if(P_UseHTF && !GetValue(hHTF, 0, 1, htfEma)) return;
+   if(P_Strategy == STRAT_RSI_REVERT && !GetValue(hRSI, 0, 1, g_rsi)) return;
    double htfClose = iClose(_Symbol, P_HTF, 1);
 
    double c1 = iClose(_Symbol, P_TF, 1);

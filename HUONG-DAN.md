@@ -189,6 +189,12 @@ Chỉ giao dịch BTC. Bot H4 không chạy được với vốn này: lot nhỏ
 
 Nút 1 chạy thêm cùng cấu trúc C trên khung M30, M15, M10, M5, M3 và M1 (`Ngan-M30` … `Ngan-M1`, cả 3 năm gần đây lẫn 3 năm trước), vốn 30.000 để đo lợi thế mà lot tối thiểu không cắt lệnh. Tiêu chí đặt trước: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn. Khung đạt phải chạy lại bằng tick thật rồi demo. Mỗi khung có thêm bản `+khoiLuong` (`InpBreakMinVol = 1,5`): nến phá vỡ phải có số tick ít nhất 1,5 lần trung bình 20 nến trước. MT5 của Exness chỉ có số tick, không có khối lượng thật. Chi phí trong backtest lấy từ spread lịch sử của MT5; "Phí" hiện trong app Exness chính là spread (6,4 USD × 0,01 BTC ≈ 1.660 VNĐ), tài khoản Standard không có hoa hồng riêng. Với M3 và M1, chế độ nhanh chỉ có 4 giá mỗi phút nên kết quả rất thô, chỉ dùng để loại bớt. Kể cả lướt sóng, với 1 triệu VNĐ, SL khoảng 95 USD đã là khoảng 2,5% tài khoản mỗi lệnh.
 
+**Hai chiến thuật lướt sóng khác** (tham số cố định từ đầu, không dò tìm, có TP, không trailing):
+- **RSI hồi** (`InpStrategy = 2`, `Ngan-RSI-M5`, `Ngan-RSI-M15`): giá trên EMA200 của khung nhưng RSI(2) dưới 10 (vừa giảm mạnh ngắn hạn) thì Buy, ngược lại thì Sell. SL 1,5 ATR, TP 1R. Ý tưởng: trong xu hướng, các cú giảm ngắn thường hồi lại.
+- **ORB phiên Mỹ** (`InpStrategy = 3`, `Ngan-ORB-M5`): lấy vùng giá 13:30–14:00 giờ server (giờ mở cửa chứng khoán Mỹ mùa hè; mùa đông là 14:30, nên mùa đông vùng này lệch 1 giờ). Trong 4 giờ sau, nến đầu tiên đóng ngoài vùng thì vào theo hướng đó. SL 1 ATR, TP 2R, tối đa 1 lệnh/ngày. Ý tưởng: lúc thị trường Mỹ mở, khối lượng BTC tăng mạnh và giá hay chạy một chiều.
+
+Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạy lại bằng tick thật.
+
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
 - Muốn tắt hẳn việc tự compile khi mở VS Code, xóa khối `"runOptions"` trong `.vscode/tasks.json`. Nếu compile lỗi, script trả lại file bot cũ nên bot trên chart vẫn chạy bản trước.

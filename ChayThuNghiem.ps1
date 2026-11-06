@@ -104,6 +104,20 @@ foreach ($tf in @(@{ N = "M30"; V = 30 }, @{ N = "M15"; V = 15 }, @{ N = "M10"; 
     $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Chien thuat luot song khac (tham so co dinh, khong do tim): co TP, khong trailing, vang 30000.
+#  - RSI: gia tren EMA200 cua khung nhung RSI(2) < 10 thi mua hoi (nguoc lai voi Sell), SL 1,5 ATR, TP 1R. Thu M5, M15.
+#  - ORB: vung gia 13:30-14:00 (gio server ~ UTC, mo cua chung khoan My mua he), pha vo thi vao, SL 1 ATR, TP 2R, 1 lenh/ngay. Thu M5.
+# Tieu chi giong phan khung ngan: PF_Truot0.05% >= 1,3 o CA 2 giai doan.
+$Scalp = @{ InpUseADX = "false"; InpUseHTF = "false"; InpUseTrailing = "false"; InpTrailStartR = 0 }
+$ScalpRuns = @(
+    @{ N = "RSI-M5";  I = @{ InpStrategy = 2; InpTF = 5;  InpATRMult = 1.5; InpRR = 1 } },
+    @{ N = "RSI-M15"; I = @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1 } },
+    @{ N = "ORB-M5";  I = @{ InpStrategy = 3; InpTF = 5;  InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 } }
+)
+foreach ($sr in $ScalpRuns) {
+    $Runs += @{ Name = "Ngan-$($sr.N)";       Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($sr.N)-truoc"; Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 
 # Che do chinh xac: B va C tren 3 nam gan day, ETH va giai doan truoc do (bo von 30000 vi khong phu thuoc tick). Moi cai ~20 phut, tong ~2 gio.
