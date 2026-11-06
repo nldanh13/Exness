@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.7"
-#property version   "3.70"
+#define  BOT_VERSION "3.8"
+#property version   "3.80"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -53,6 +53,7 @@ input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
+input double          InpMaxRiskRoundUp  = 1.5;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
 input double          InpCorrRiskScale   = 0.5;       // He so rui ro khi ma cung nhom dang co lenh (1 = tat)
 
@@ -550,6 +551,9 @@ double FundingAt(const datetime t)
    while(lo < hi) { int mid = (lo + hi + 1) / 2; if(g_fT[mid] <= t) lo = mid; else hi = mid - 1; }
    return g_fR[lo];
 }
+string g_fundState = "";   // hien tren bang thong tin
+datetime g_liveFundingOk = 0;
+bool LiveFundingFresh() { return g_liveFunding != EMPTY_VALUE && TimeCurrent() - g_liveFundingOk <= 2 * 86400; }
 double FundingNow()
 {
    if(!MQLInfoInteger(MQL_TESTER) && FundingPair() != "" && TimeCurrent() - g_liveFundingAt >= 3600)
@@ -566,12 +570,19 @@ double FundingNow()
          {
             k += StringLen("\"lastFundingRate\":\"");
             g_liveFunding = StringToDouble(StringSubstr(js, k, StringFind(js, "\"", k) - k)) * 100.0;
+            g_liveFundingOk = TimeCurrent();
          }
       }
       else if(ShouldNotify("funding", 86400))
          PrintFormat("Khong lay duoc funding (%d). Them https://fapi.binance.com vao Tools > Options > Expert Advisors > Allow WebRequest.", code);
    }
-   if(!MQLInfoInteger(MQL_TESTER) && g_liveFunding != EMPTY_VALUE) return g_liveFunding;
+   if(!MQLInfoInteger(MQL_TESTER))
+   {
+      if(LiveFundingFresh()) { g_fundState = StringFormat("%.4f%% (Binance)", g_liveFunding); return g_liveFunding; }
+      double f = FundingAt(TimeCurrent());
+      g_fundState = f == EMPTY_VALUE ? "KHONG CO DU LIEU - bo loc dang tat" : StringFormat("%.4f%% (file cu)", f);
+      return f;
+   }
    return FundingAt(TimeCurrent());
 }
 
@@ -730,7 +741,8 @@ string CorrOpen()
    }
    return "";
 }
-int g_minLotSkips = 0;   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
+int g_minLotSkips = 0;
+int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)   // So tin hieu bi bo vi lot tinh ra nho hon lot toi thieu (ghi vao ket qua backtest)
 double CalcLots(const double slDistance)
 {
    double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
@@ -753,6 +765,12 @@ double CalcLots(const double slDistance)
    double lots       = NormalizeVolume(riskMoney / lossPerLot);
    double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   if(lots < minL && InpMaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= riskBase * InpMaxRiskRoundUp / 100.0)
+   {
+      g_roundUps++;
+      PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, InpMaxRiskRoundUp);
+      lots = minL;
+   }
    if(lots < minL)
    {
       g_status = "Von qua nho cho SL nay, bo qua lenh";
@@ -1057,12 +1075,13 @@ void UpdatePanel()
       "Da dong hom nay: %.2f %s\n"
       "Lenh hom nay: %d\n"
       "Sut giam tu dinh: %.2f%% / gioi han %.1f%%\n"
-      "Spread: %d point",
+      "Spread: %d point%s",
       InpStrategy == STRAT_DONCHIAN ? "Donchian" : "EMA pullback", _Symbol, IsHalted() ? "DUNG HAN (sut giam)" : g_status,
       eq, cur, dayPL, cur, dayStartEquity > 0 ? dayPL / dayStartEquity * 100.0 : 0,
       DailyLocked() ? "  [DA KHOA HOM NAY]" : "", g_closedToday, cur,
       TradesToday(), dd, InpMaxDrawdownPct,
-      (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)));
+      (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
+      InpUseFunding ? "\nFunding: " + (g_fundState == "" ? "chua kiem tra" : g_fundState) : ""));
 }
 
 //+------------------------------------------------------------------+
@@ -1257,13 +1276,14 @@ void OnTick()
       double margin = InpBreakMinATR * atr;                         // vuot kenh bao xa
       double range  = hb - lb;
       // Nen qua dai thuong la thanh ly day chuyen (lenh bi ep dong tren so lenh mong): vao theo la duoi gia
-      if(InpBreakMaxATR > 0 && range > InpBreakMaxATR * atr) { g_status = "Nen pha vo qua dai, bo qua"; return; }
+      bool   tooLong = InpBreakMaxATR > 0 && range > InpBreakMaxATR * atr;
       double body   = MathAbs(cb - ob);
       // Than nen: nen pha vo phai la nen cung chieu, than chiem it nhat X% bien do (khong phai chi rau dai)
       bool   bodyBuy  = InpBreakMinBody <= 0 || (cb > ob && range > 0 && body >= range * InpBreakMinBody / 100.0);
       bool   bodySell = InpBreakMinBody <= 0 || (cb < ob && range > 0 && body >= range * InpBreakMinBody / 100.0);
       buyBase  = cb > chHigh + margin && bodyBuy  && c1 > trend && (b == 1 || c1 > chHigh);
       sellBase = cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
+      if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; return; }
    }
    else
    {
@@ -1406,6 +1426,24 @@ double OnTester()
          posNet[k]  += DealNet(d);
          posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * contract * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0;  // = 1% gia
       }
+   // Thoi gian giu lenh TB (gio) va tong swap
+   double holdSum = 0, swapSum = 0; int holdN = 0;
+   if(HistorySelect(0, TimeCurrent()))
+      for(int j = 0; j < ArraySize(posIds); j++)
+      {
+         datetime tin = 0, tout = 0;
+         if(!HistorySelectByPosition(posIds[j])) continue;
+         for(int i = 0; i < HistoryDealsTotal(); i++)
+         {
+            ulong d = HistoryDealGetTicket(i);
+            long en = HistoryDealGetInteger(d, DEAL_ENTRY);
+            datetime tt = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
+            if(en == DEAL_ENTRY_IN && tin == 0) tin = tt;
+            if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY) tout = tt;
+            swapSum += HistoryDealGetDouble(d, DEAL_SWAP);
+         }
+         if(tin > 0 && tout > tin) { holdSum += (double)(tout - tin) / 3600.0; holdN++; }
+      }
    for(int s2 = 0; s2 < 2; s2++)
       for(int j = 0; j < ArraySize(posIds); j++)
       {
@@ -1417,21 +1455,27 @@ double OnTester()
    // Monte Carlo (bootstrap): rut ngau nhien co hoan lai tu lai/lo cac vi the, 1000 lan, de xem
    // sut giam co the te toi dau neu thu tu lenh khac di. Mau duoi ~200 lenh thi chi nen xem la tham khao.
    double dep = TesterStatistics(STAT_INITIAL_DEPOSIT);
-   int    nPos = ArraySize(posNet), sims = 1000, ruin = 0;
+   int    nPos = ArraySize(posNet), sims = 1000, ruin = 0, blk = 5;
+   double stopDD = InpMaxDrawdownPct > 0 ? InpMaxDrawdownPct : 15.0;   // nguong bot tu dung han
    double mcDD[];
    ArrayResize(mcDD, sims);
    MathSrand(12345);                                   // co dinh de chay lai ra cung so
    for(int m = 0; m < sims; m++)
    {
       double eq = dep, pk = dep, dd = 0;
-      for(int j = 0; j < nPos; j++)
+      // Rut theo khoi 5 lenh lien tiep (giu cac chuoi thua theo cum khi thi truong di ngang)
+      for(int j = 0; j < nPos; j += blk)
       {
-         eq += posNet[(int)((double)MathRand() / 32768.0 * nPos)];
-         if(eq > pk) pk = eq;
-         if(pk > 0) dd = MathMax(dd, (pk - eq) / pk * 100.0);
+         int st = (int)((double)MathRand() / 32768.0 * nPos);
+         for(int q = 0; q < blk && j + q < nPos; q++)
+         {
+            eq += posNet[(st + q) % nPos];
+            if(eq > pk) pk = eq;
+            if(pk > 0) dd = MathMax(dd, (pk - eq) / pk * 100.0);
+         }
       }
       mcDD[m] = dd;
-      if(dd >= 20.0) ruin++;
+      if(dd >= stopDD) ruin++;
    }
    ArraySort(mcDD);
    double mcMed = nPos > 0 ? mcDD[sims / 2] : 0;
@@ -1449,7 +1493,8 @@ double OnTester()
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
                    "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
-                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq");
+                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
+                   "LamTronLot", "GiuLenhTB_gio", "TongSwap");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1470,7 +1515,8 @@ double OnTester()
                 DoubleToString(stressPL[0], 2), DoubleToString(stressGL[0] > 0 ? stressGP[0] / stressGL[0] : 0, 2),
                 DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2),
                 DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1), g_fundBlocked,
-                g_fngBlocked, g_attBlocked, g_mktBlocked);
+                g_fngBlocked, g_attBlocked, g_mktBlocked,
+                g_roundUps, DoubleToString(holdN > 0 ? holdSum / holdN : 0, 1), DoubleToString(swapSum, 2));
       FileClose(h);
    }
    else

@@ -40,6 +40,7 @@ $Runs = @(
     @{ Name = "C-Donchian20-H4-ADX";    Inputs = (Cfg $Brk @{ InpUseADX = "true" }) },
     @{ Name = "D-Donchian55-H4";        Inputs = (Cfg $Brk @{ InpDonchianPeriod = 55 }) },
     @{ Name = "B-von30000";             Inputs = (Cfg $Brk);                          Deposit = 30000 },
+    @{ Name = "C-khongLamTronLot";      Inputs = (Cfg $Brk @{ InpUseADX = "true"; InpMaxRiskRoundUp = 0 }) },   # nhu v3.7: bo lenh khi lot < 0.01
     @{ Name = "C-von30000";             Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Deposit = 30000 },
     @{ Name = "B-ETH";                  Inputs = (Cfg $Brk);                          Symbol = "ETHUSDm" },
     @{ Name = "C-ETH";                  Inputs = (Cfg $Brk @{ InpUseADX = "true" });  Symbol = "ETHUSDm" },
@@ -189,8 +190,16 @@ if ($summary) {
     Copy-Item $summary (Join-Path $resDir $resName) -Force
     if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
         $rel = "ket-qua/$resName"
-        $gitOut = & git -C $ProjectDir add -- $rel 2>&1
+        # Neu may ban dang co commit chua day len, KHONG day ho (git push day ca nhanh).
+        & git -C $ProjectDir fetch -q 2>&1 | Out-Null
+        $ahead = [int](& git -C $ProjectDir rev-list --count "@{u}..HEAD" 2>$null)
+        if ($ahead -gt 0) {
+            $gitOut = @("May ban co $ahead commit chua day len GitHub. De tranh day nham, script khong tu day ket qua.")
+            $LASTEXITCODE = 1
+        } else { $gitOut = & git -C $ProjectDir add -- $rel 2>&1 }
         if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $rel 2>&1 }
+        # Trong 35-45 phut chay co the da co commit moi tren GitHub: keo ve truoc roi moi day
+        if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir pull -q --rebase --autostash 2>&1 }
         if ($LASTEXITCODE -eq 0) { $gitOut = & git -C $ProjectDir push -q 2>&1 }
         # Kiem tra chac chan file da co tren GitHub (khong chi tin ma thoat cua push)
         $onRemote = $false
