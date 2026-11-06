@@ -195,6 +195,8 @@ Nút 1 chạy thêm cùng cấu trúc C trên khung M30, M15, M10, M5, M3 và M1
 
 Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạy lại bằng tick thật. Mọi lần chạy lướt sóng không vào lệnh khi spread trên 1.500 point (15 USD, khoảng gấp đôi bình thường). Xét bằng lãi ròng sau spread, swap, phí và kịch bản trượt giá, không xét tỷ lệ thắng.
 
+**Kết quả 06/11/2026 (đợt nhanh 1756): không chiến thuật lướt sóng nào đạt.** Ngay cả khi chưa cộng trượt giá, mọi cấu hình đều có PF dưới 1 ở 3 năm trước (Donchian M1–M30, có và không có lọc khối lượng, RSI M5/M15, ORB M5). Cấu hình khá nhất ở 3 năm gần đây là Donchian M30 + khối lượng (PF 1,51), nhưng 3 năm trước chỉ 0,74, và 1,18 sau trượt giá. Với vốn 1 triệu, gần như mọi tín hiệu bị bỏ vì 0,01 BTC đã rủi ro quá 1% (RSI M15: 1.011 tín hiệu bị bỏ, 0 lệnh). Đối chiếu: Donchian H4 (C) vẫn PF 2,09 / 2,82 ở hai giai đoạn, nhưng bỏ 5 lệnh lớn nhất thì PF chỉ còn 1,15 / 1,36. Không thêm cấu hình nào vào `chinh-xac.txt`.
+
 **Vốn 1 triệu VNĐ:** các cấu hình lướt sóng ưu tiên (RSI M15, RSI M5, Donchian M15, M30, ORB M5) có thêm bản `-von1tr` với vốn 38 USD (≈ 1 triệu VNĐ). Bản 30.000 trả lời "chiến lược có lợi thế không"; bản `-von1tr` cho thấy kết quả thật với tài khoản của bạn, gồm số tín hiệu bị bỏ (`BoQuaLot`) vì 0,01 BTC đã rủi ro quá 1%.
 
 **Chạy tick thật cho lướt sóng:** chế độ nhanh chỉ có 4 giá mỗi phút, nên với M1–M5 việc chạm SL/TP có thể sai nhiều. Nút 3 chạy các cấu hình ghi trong file `chinh-xac.txt`. Sau mỗi đợt nhanh, Claude ghi vào file đó các cấu hình lướt sóng qua được tiêu chí; bạn chỉ cần bấm nút 3.
