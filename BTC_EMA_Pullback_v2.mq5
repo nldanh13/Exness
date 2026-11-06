@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.9"
-#property version   "3.90"
+#define  BOT_VERSION "4.0"
+#property version   "4.00"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -561,15 +561,16 @@ double FundingNow()
    {
       g_liveFundingAt = TimeCurrent();
       char req[], res[]; string hdr;
-      int code = WebRequest("GET", "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=" + FundingPair(),
+      // Muc funding DA CHOT gan nhat (giong du lieu backtest), khong dung muc du kien cua premiumIndex
+      int code = WebRequest("GET", "https://fapi.binance.com/fapi/v1/fundingRate?limit=1&symbol=" + FundingPair(),
                             "", 5000, req, res, hdr);
       if(code == 200)
       {
          string js = CharArrayToString(res);
-         int k = StringFind(js, "\"lastFundingRate\":\"");
+         int k = StringFind(js, "\"fundingRate\":\"");
          if(k >= 0)
          {
-            k += StringLen("\"lastFundingRate\":\"");
+            k += StringLen("\"fundingRate\":\"");
             g_liveFunding = StringToDouble(StringSubstr(js, k, StringFind(js, "\"", k) - k)) * 100.0;
             g_liveFundingOk = TimeCurrent();
          }
@@ -729,6 +730,55 @@ bool USNewsNear(string &name)
    return false;
 }
 
+//--- Khoa chung + giu cho rui ro giua cac bot trong nhom (cung 1 terminal) ---
+// Hai bot H4 dong nen cung luc nen co the cung vao lenh truoc khi thay lenh cua nhau.
+// Truoc khi tinh lot, bot giu khoa chung; tinh xong thi ghi "da giu cho" so rui ro cua minh roi moi gui lenh.
+string GrpKey(const string x) { return "BTCEA_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_GRP_" + x; }
+bool InGroup()
+{
+   string list = "," + InpCorrSymbols + ",";
+   StringReplace(list, " ", "");
+   return StringFind(list, "," + _Symbol + ",") >= 0;
+}
+bool g_grpLocked = false;
+void GroupLock()
+{
+   g_grpLocked = false;
+   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
+   string k = GrpKey("LOCK");
+   if(!GlobalVariableCheck(k)) GlobalVariableSet(k, 0);
+   for(int i = 0; i < 100 && !IsStopped(); i++)                // toi da ~5 giay
+   {
+      double now = (double)TimeLocal();
+      if(GlobalVariableSetOnCondition(k, now, 0)) { g_grpLocked = true; return; }
+      double v = GlobalVariableGet(k);
+      if(v > 0 && now - v > 15 && GlobalVariableSetOnCondition(k, now, v)) { g_grpLocked = true; return; }  // khoa bi bo quen
+      Sleep(50);
+   }
+   Print("Khong lay duoc khoa chung cua nhom sau 5 giay, van tiep tuc.");
+}
+void GroupUnlock() { if(g_grpLocked) GlobalVariableSet(GrpKey("LOCK"), 0); g_grpLocked = false; }
+void GroupReserve(const double risk)
+{
+   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
+   GlobalVariableSet(GrpKey("R_" + _Symbol), risk);
+   GlobalVariableSet(GrpKey("T_" + _Symbol), (double)TimeLocal());
+}
+void GroupClear() { GlobalVariableDel(GrpKey("R_" + _Symbol)); GlobalVariableDel(GrpKey("T_" + _Symbol)); }
+bool SymbolHasPosition(const string sym)
+{
+   for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetSymbol(i) == sym) return true;
+   return false;
+}
+// Rui ro ma bot khac da giu cho trong 2 phut qua nhung lenh chua hien ra
+double GroupReserved(const string sym)
+{
+   if(!GlobalVariableCheck(GrpKey("T_" + sym))) return 0;
+   if((double)TimeLocal() - GlobalVariableGet(GrpKey("T_" + sym)) > 120 || SymbolHasPosition(sym)) return 0;
+   return GlobalVariableGet(GrpKey("R_" + sym));
+}
+double g_lastRisk = 0;   // rui ro (tien) cua lenh CalcLots vua tinh
+
 // Tien co the mat (tinh tu gia vao toi SL) cua cac lenh dang mo tren ma khac trong nhom.
 // Lenh khong co SL: tinh bang rui ro chuan cua 1 lenh. SL da qua gia vao (khoa lai): 0.
 double GroupOpenRisk(const double stdRisk)
@@ -751,6 +801,13 @@ double GroupOpenRisk(const double stdRisk)
       double dist = buy ? op - sl : sl - op;
       if(dist > 0) sum += dist / ts * tv * vol;
    }
+   string syms[];
+   int n = StringSplit(InpCorrSymbols, ',', syms);
+   for(int i = 0; i < n; i++)
+   {
+      StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
+      if(syms[i] != "" && syms[i] != _Symbol) sum += GroupReserved(syms[i]);
+   }
    return sum;
 }
 // Ma khac trong InpCorrSymbols dang co lenh (cua bat ky bot nao) -> tra ten ma, khong co -> ""
@@ -763,6 +820,13 @@ string CorrOpen()
    {
       string sym = PositionGetSymbol(i);
       if(sym != "" && sym != _Symbol && StringFind(list, "," + sym + ",") >= 0) return sym;
+   }
+   string syms[];
+   int n = StringSplit(InpCorrSymbols, ',', syms);
+   for(int i = 0; i < n; i++)
+   {
+      StringTrimLeft(syms[i]); StringTrimRight(syms[i]);
+      if(syms[i] != "" && syms[i] != _Symbol && GroupReserved(syms[i]) > 0) return syms[i] + " (dang vao lenh)";
    }
    return "";
 }
@@ -823,6 +887,7 @@ double CalcLots(const double slDistance)
       return 0;
    }
    if(lots > maxL) lots = maxL;
+   g_lastRisk = lots * lossPerLot;
    return lots;
 }
 
@@ -1362,11 +1427,11 @@ void OnTick()
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 
+   GroupLock();                         // tu day toi khi gui lenh xong: giu khoa chung voi bot ma cung nhom
    double lots = CalcLots(slDist);
-   if(lots <= 0) return;
-
    MqlTick tick;
-   if(!SymbolInfoTick(_Symbol, tick)) return;
+   if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return; }
+   GroupReserve(g_lastRisk);
 
    bool ok;
    if(buySignal)
@@ -1383,6 +1448,8 @@ void OnTick()
                       NormalizeDouble(price + slDist, _Digits),
                       InpRR > 0 ? NormalizeDouble(price - slDist * InpRR, _Digits) : 0.0, "BTC bot SELL");
    }
+   if(!ok) GroupClear();
+   GroupUnlock();
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");
 }
 

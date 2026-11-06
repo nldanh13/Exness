@@ -140,14 +140,16 @@ function Update-FundingData($mt5, [string[]]$pairs, [int]$years = 7) {
         $rows = New-Object System.Collections.Generic.List[string]
         $start = [DateTimeOffset]::UtcNow.AddYears(-$years).ToUnixTimeMilliseconds()
         if (Test-Path $file) {
-            Get-Content $file | Where-Object { $_ -match '^\d+,' } | ForEach-Object { $rows.Add($_) }
+            Get-Content $file | Where-Object { $_ -match '^\d+,-?[\d.eE-]+$' } | ForEach-Object { $rows.Add($_) }
             if ($rows.Count -gt 0) { $start = [long]($rows[$rows.Count - 1].Split(',')[0]) + 1 }
         }
         $added = 0
         try {
             while ($true) {
                 $url  = "https://fapi.binance.com/fapi/v1/fundingRate?symbol=$pair&startTime=$start&limit=1000"
-                $data = @(Invoke-RestMethod -Uri $url -TimeoutSec 30)
+                # PowerShell 5.1: @(Invoke-RestMethod ...) boc ca mang JSON thanh 1 phan tu, phai gan vao bien truoc
+                $resp = Invoke-RestMethod -Uri $url -TimeoutSec 30
+                $data = @($resp)
                 if ($data.Count -eq 0) { break }
                 foreach ($d in $data) {
                     $rows.Add(("{0},{1}" -f $d.fundingTime, $d.fundingRate)); $added++
