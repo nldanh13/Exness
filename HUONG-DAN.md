@@ -9,7 +9,7 @@ Mở thư mục bot bằng VS Code. Các nút nằm ở **Terminal → Run Task�
 
 | Nút | Khi nào dùng |
 |---|---|
-| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 9 lần backtest (khoảng 10–15 phút), xong tạo file `ket-qua-backtest-....zip`. **Gửi file zip này cho Claude.** |
+| **1. So sanh cau hinh (nhanh)** | Việc chính lúc này. Chạy 9 lần backtest (khoảng 10–15 phút). Xong thì bảng kết quả **tự được đẩy lên GitHub** (thư mục `ket-qua/`), bạn chỉ cần nhắn Claude "xong rồi". Nếu đẩy lên thất bại, gửi file `ket-qua-backtest-....zip` thay thế. |
 | **2. Cap nhat bot vao MT5** (Ctrl+Shift+B) | Khi bot đang chạy trên chart và muốn nạp bản mới ngay. |
 | **3. So sanh cau hinh (chinh xac, cham)** | Chỉ khi Claude bảo. Chạy lại bằng tick thật, khoảng 2 giờ. |
 

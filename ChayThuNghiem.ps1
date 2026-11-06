@@ -138,4 +138,25 @@ $zip = Join-Path $outDir ("ket-qua-backtest-" + (Get-Date -Format "yyyyMMdd-HHmm
 Compress-Archive -Path (Join-Path $pack "*") -DestinationPath $zip -Force
 Write-Host ""
 Write-Host "==> GUI FILE NAY CHO CLAUDE: $zip" -ForegroundColor Yellow
+# Luu bang ket qua vao thu muc ket-qua/ va day len GitHub, de Claude doc thang (khong can gui zip).
+# Chi commit dung file nay; khong dung toi thay doi khac cua ban. Loi mang thi van con file zip de gui tay.
+if ($summary) {
+    $resDir = Join-Path $ProjectDir "ket-qua"
+    if (-not (Test-Path $resDir)) { New-Item -ItemType Directory -Path $resDir | Out-Null }
+    $tag     = if ($ChinhXac) { "chinhxac" } else { "nhanh" }
+    $resName = (Get-Date -Format "yyyyMMdd-HHmm") + "-$tag.csv"
+    Copy-Item $summary (Join-Path $resDir $resName) -Force
+    if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
+        $rel = "ket-qua/$resName"
+        & git -C $ProjectDir add -- $rel 2>&1 | Out-Null
+        & git -C $ProjectDir commit -q -m "Ket qua backtest $resName" -- $rel 2>&1 | Out-Null
+        $pushOut = & git -C $ProjectDir push -q 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "==> Da day ket qua len GitHub ($rel). Chi can nhan Claude 'xong roi', khong can gui zip." -ForegroundColor Green
+        } else {
+            Write-Host "Khong day duoc ket qua len GitHub, hay gui file zip:" -ForegroundColor Yellow
+            $pushOut | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+        }
+    }
+}
 Invoke-Item $outDir
