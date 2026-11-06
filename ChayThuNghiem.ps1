@@ -100,6 +100,9 @@ $Runs += @{ Name = "C-moiGiay"; Inputs = (Cfg $Brk $Q @{ InpManageEverySec = 1 }
 foreach ($tf in @(@{ N = "M30"; V = 30 }, @{ N = "M15"; V = 15 }, @{ N = "M10"; V = 10 }, @{ N = "M5"; V = 5 }, @{ N = "M3"; V = 3 }, @{ N = "M1"; V = 1 })) {
     $Runs += @{ Name = "Ngan-$($tf.N)";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V }); Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($tf.N)-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+    # Them dieu kien khoi luong: nen pha vo co so tick >= 1,5 lan trung binh 20 nen truoc
+    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong";       Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+khoiLuong-truoc"; Inputs = (Cfg $Brk $Q @{ InpTF = $tf.V; InpBreakMinVol = 1.5 }); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
 # Ma khung thoi gian: 16385 = H1, 16388 = H4, 16408 = D1, 32769 = W1
 

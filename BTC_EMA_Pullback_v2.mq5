@@ -23,6 +23,7 @@ input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchia
 input double          InpBreakMinATR     = 0.0;       // Donchian: gia dong cua phai vuot kenh it nhat x ATR (0 = tat)
 input double          InpBreakMinBody    = 0.0;       // Donchian: than nen pha vo >= % bien do nen, cung chieu (0 = tat)
 input bool            InpBreakConfirm    = false;     // Donchian: cho them 1 nen, gia van giu ngoai kenh moi vao
+input double          InpBreakMinVol     = 0.0;       // Donchian: khoi luong (tick) nen pha vo >= x lan TB 20 nen truoc (0 = tat)
 input double          InpBreakMaxATR     = 0.0;       // Donchian: bo qua nen pha vo dai hon x ATR (nen thanh ly day chuyen, 0 = tat)
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
@@ -116,6 +117,7 @@ double          P_BreakMinATR;
 double          P_BreakMinBody;
 bool            P_BreakConfirm;
 double          P_BreakMaxATR;
+double          P_BreakMinVol;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
 int             P_TrendEMA;
@@ -188,6 +190,7 @@ void LoadParams()
    P_BreakMinBody = InpBreakMinBody;
    P_BreakConfirm = InpBreakConfirm;
    P_BreakMaxATR = InpBreakMaxATR;
+   P_BreakMinVol = InpBreakMinVol;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
    P_TrendEMA = InpTrendEMA;
@@ -261,6 +264,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpBreakMinBody") { P_BreakMinBody = StringToDouble(v); return true; }
    if(k == "InpBreakConfirm") { P_BreakConfirm = (v == "true" || v == "1"); return true; }
    if(k == "InpBreakMaxATR") { P_BreakMaxATR = StringToDouble(v); return true; }
+   if(k == "InpBreakMinVol") { P_BreakMinVol = StringToDouble(v); return true; }
    if(k == "InpTF") { P_TF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
    if(k == "InpFastEMA") { P_FastEMA = (int)StringToInteger(v); return true; }
    if(k == "InpTrendEMA") { P_TrendEMA = (int)StringToInteger(v); return true; }
