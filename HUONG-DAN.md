@@ -187,7 +187,7 @@ So sánh lãi ròng, R trung bình, tỷ lệ thắng và MFE giữa ba nhóm. C
 ## Vốn nhỏ (1–2 triệu VNĐ) và lướt sóng ngắn
 Chỉ giao dịch BTC. Bot H4 không chạy được với vốn này: lot nhỏ nhất 0,01 BTC với SL 2,5 × ATR H4 (khoảng 3.000 USD) là mất khoảng 30 USD mỗi lần dính SL. Tài khoản Standard Cent của Exness không có BTC.
 
-Nút 1 chạy thêm cùng cấu trúc C trên khung M15 và M5 (`Ngan-M15`, `Ngan-M5`, cả 3 năm gần đây lẫn 3 năm trước), vốn 30.000 để đo lợi thế mà lot tối thiểu không cắt lệnh. Tiêu chí đặt trước: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn. Khung đạt phải chạy lại bằng tick thật rồi demo. Kể cả lướt sóng, với 1 triệu VNĐ, SL khoảng 95 USD đã là khoảng 2,5% tài khoản mỗi lệnh.
+Nút 1 chạy thêm cùng cấu trúc C trên khung M15, M5, M3 và M1 (`Ngan-M15` … `Ngan-M1`, cả 3 năm gần đây lẫn 3 năm trước), vốn 30.000 để đo lợi thế mà lot tối thiểu không cắt lệnh. Tiêu chí đặt trước: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn. Khung đạt phải chạy lại bằng tick thật rồi demo. Với M3 và M1, chế độ nhanh chỉ có 4 giá mỗi phút nên kết quả rất thô, chỉ dùng để loại bớt. Kể cả lướt sóng, với 1 triệu VNĐ, SL khoảng 95 USD đã là khoảng 2,5% tài khoản mỗi lệnh.
 
 ## Khi chuyển sang tiền thật
 - Các nút trong VS Code hỏi trước khi lấy code mới, nhưng vẫn compile thẳng vào MT5 (MT5 tự nạp lại bot đang chạy khi file đổi). Hãy chạy bot thật trên **một bản MT5 cài riêng** (không dùng để backtest) và chỉ cập nhật bản đó bằng tay.
