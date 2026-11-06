@@ -6,8 +6,8 @@
 //| Thong bao push MT5 / Telegram, bang thong tin tren bieu do       |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "3.4"
-#property version   "3.40"
+#define  BOT_VERSION "3.5"
+#property version   "3.50"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -24,6 +24,7 @@ input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchia
 input double          InpBreakMinATR     = 0.0;       // Donchian: gia dong cua phai vuot kenh it nhat x ATR (0 = tat)
 input double          InpBreakMinBody    = 0.0;       // Donchian: than nen pha vo >= % bien do nen, cung chieu (0 = tat)
 input bool            InpBreakConfirm    = false;     // Donchian: cho them 1 nen, gia van giu ngoai kenh moi vao
+input double          InpBreakMaxATR     = 0.0;       // Donchian: bo qua nen pha vo dai hon x ATR (nen thanh ly day chuyen, 0 = tat)
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
@@ -951,6 +952,8 @@ void OnTick()
       double hb = iHigh(_Symbol, InpTF, b),  lb = iLow(_Symbol, InpTF, b);
       double margin = InpBreakMinATR * atr;                         // vuot kenh bao xa
       double range  = hb - lb;
+      // Nen qua dai thuong la thanh ly day chuyen (lenh bi ep dong tren so lenh mong): vao theo la duoi gia
+      if(InpBreakMaxATR > 0 && range > InpBreakMaxATR * atr) { g_status = "Nen pha vo qua dai, bo qua"; return; }
       double body   = MathAbs(cb - ob);
       // Than nen: nen pha vo phai la nen cung chieu, than chiem it nhat X% bien do (khong phai chi rau dai)
       bool   bodyBuy  = InpBreakMinBody <= 0 || (cb > ob && range > 0 && body >= range * InpBreakMinBody / 100.0);
@@ -1093,6 +1096,29 @@ double OnTester()
          if(net > 0) stressGP[s2] += net; else stressGL[s2] -= net;
       }
 
+   // Monte Carlo (bootstrap): rut ngau nhien co hoan lai tu lai/lo cac vi the, 1000 lan, de xem
+   // sut giam co the te toi dau neu thu tu lenh khac di. Mau duoi ~200 lenh thi chi nen xem la tham khao.
+   double dep = TesterStatistics(STAT_INITIAL_DEPOSIT);
+   int    nPos = ArraySize(posNet), sims = 1000, ruin = 0;
+   double mcDD[];
+   ArrayResize(mcDD, sims);
+   MathSrand(12345);                                   // co dinh de chay lai ra cung so
+   for(int m = 0; m < sims; m++)
+   {
+      double eq = dep, pk = dep, dd = 0;
+      for(int j = 0; j < nPos; j++)
+      {
+         eq += posNet[(int)((double)MathRand() / 32768.0 * nPos)];
+         if(eq > pk) pk = eq;
+         if(pk > 0) dd = MathMax(dd, (pk - eq) / pk * 100.0);
+      }
+      mcDD[m] = dd;
+      if(dd >= 20.0) ruin++;
+   }
+   ArraySort(mcDD);
+   double mcMed = nPos > 0 ? mcDD[sims / 2] : 0;
+   double mc95  = nPos > 0 ? mcDD[(int)(sims * 0.95)] : 0;
+
    string byYear = "";
    for(int j = 0; j < ArraySize(years); j++)
       byYear += (j > 0 ? " " : "") + StringFormat("%d=%+.0f", years[j], yearPL[j]);
@@ -1104,7 +1130,8 @@ double OnTester()
       if(FileSize(h) == 0)
          FileWrite(h, "Lan", "LoiNhuan", "ProfitFactor", "SoLenh", "TyLeThang%", "LaiTB", "LoTB",
                    "SutGiamMax%", "RecoveryFactor", "Sharpe", "Buy", "Sell", "BoQuaLot", "LenhDau", "LaiTheoNam",
-                   "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%");
+                   "LoiNhuan_Truot0.05%", "PF_Truot0.05%", "LoiNhuan_Truot0.1%", "PF_Truot0.1%",
+                   "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatSut20%");
       FileSeek(h, 0, SEEK_END);
       FileWrite(h,
                 InpTestLabel == "" ? "khong-ten" : InpTestLabel,
@@ -1123,7 +1150,8 @@ double OnTester()
                 firstDeal > 0 ? TimeToString(firstDeal, TIME_DATE) : "-",
                 byYear,
                 DoubleToString(stressPL[0], 2), DoubleToString(stressGL[0] > 0 ? stressGP[0] / stressGL[0] : 0, 2),
-                DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2));
+                DoubleToString(stressPL[1], 2), DoubleToString(stressGL[1] > 0 ? stressGP[1] / stressGL[1] : 0, 2),
+                DoubleToString(mcMed, 2), DoubleToString(mc95, 2), DoubleToString(100.0 * ruin / sims, 1));
       FileClose(h);
    }
    else

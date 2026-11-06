@@ -56,6 +56,14 @@ $Runs = @(
     @{ Name = "C+xacnhan";              Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }) },
     @{ Name = "C+xacnhan-truoc";        Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }); From = $OOSFrom; To = $FromDate },
     @{ Name = "C+xacnhan-ETH";          Inputs = (Cfg $Brk $Q @{ InpBreakConfirm = "true" }); Symbol = "ETHUSDm" },
+    # Tu tai lieu thanh khoan: cuoi tuan so lenh mong (khoi luong ~1/2 ngay thuong), de bi quet.
+    @{ Name = "C+nghiCuoiTuan";         Inputs = (Cfg $Brk $Q @{ InpSkipWeekend = "true" }) },
+    @{ Name = "C+nghiCuoiTuan-truoc";   Inputs = (Cfg $Brk $Q @{ InpSkipWeekend = "true" }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+nghiCuoiTuan-ETH";     Inputs = (Cfg $Brk $Q @{ InpSkipWeekend = "true" }); Symbol = "ETHUSDm" },
+    # Tu tai lieu thanh ly: nen pha vo > 3 ATR thuong la thanh ly day chuyen, vao theo la duoi gia.
+    @{ Name = "C+boNenDai3ATR";         Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }) },
+    @{ Name = "C+boNenDai3ATR-truoc";   Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }); From = $OOSFrom; To = $FromDate },
+    @{ Name = "C+boNenDai3ATR-ETH";     Inputs = (Cfg $Brk $Q @{ InpBreakMaxATR = 3 }); Symbol = "ETHUSDm" },
     # Dung y mac dinh cua EA nhu se chay that (co dung han 15%, lo ngay 3%), khong ghi de gi
     @{ Name = "MacDinh-nhu-chay-that";  Inputs = @{} }
 )
