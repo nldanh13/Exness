@@ -1,11 +1,7 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay: 3 chien thuat luot song moi (dao chieu, FVG, Wyckoff) va cac ban von 1 trieu VND.
-Ngan-DaoChieu*
-Ngan-FVG*
-Ngan-Spring*
-*-von1tr
-*-von1tr-rr5
+# Hien tai: chot Donchian H4 (C), chi chay lai C o 3 noi de kiem tra moi ban cap nhat khong lam lech ket qua.
 C-Donchian20-H4-ADX
 C-truoc-3nam
 C-ETH
-C+giamTheoDD*
+C-von30000
+MacDinh-nhu-chay-that
