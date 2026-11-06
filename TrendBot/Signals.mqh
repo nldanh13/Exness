@@ -23,6 +23,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
                  bool &buyBase, bool &sellBase)
 {
    buyBase = false; sellBase = false;
+   g_sigSL = 0; g_sigTP = 0;
    if(P_Strategy == STRAT_DONCHIAN)
    {
       // Pha vo: nen "b" dong vuot dinh/day cao nhat/thap nhat cua N nen truoc no.
@@ -80,6 +81,74 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       double c2 = iClose(_Symbol, P_TF, 2);
       buyBase  = c1 > rh && (c2 <= rh || eIdx == 2);
       sellBase = c1 < rl && (c2 >= rl || eIdx == 2);
+   }
+   else if(P_Strategy == STRAT_EXHAUST)
+   {
+      // Gia da chay mot chieu trong ngay >= x ATR(20) D1, dinh/day vua lap trong 6 nen gan day,
+      // va nen vua dong bat dau quay dau (dong qua day/dinh cua nen truoc). Vao nguoc lai, TP o dai Bollinger ben kia.
+      double ad[], up[], lo[];
+      if(CopyBuffer(hATRD1, 0, 1, 1, ad) != 1 || CopyBuffer(hBB, 1, 1, 1, up) != 1 || CopyBuffer(hBB, 2, 1, 1, lo) != 1) return false;
+      double dOpen = iOpen(_Symbol, PERIOD_D1, 0), dHigh = iHigh(_Symbol, PERIOD_D1, 0), dLow = iLow(_Symbol, PERIOD_D1, 0);
+      if(dOpen <= 0 || ad[0] <= 0) return false;
+      int hiI = iHighest(_Symbol, P_TF, MODE_HIGH, 6, 1), loI = iLowest(_Symbol, P_TF, MODE_LOW, 6, 1);
+      double recentHi = iHigh(_Symbol, P_TF, hiI), recentLo = iLow(_Symbol, P_TF, loI);
+      double h2 = iHigh(_Symbol, P_TF, 2), l2 = iLow(_Symbol, P_TF, 2);
+      bool upRun = dHigh - dOpen >= P_ExhaustATR * ad[0] && recentHi >= dHigh;   // cu tang manh, dinh moi gan day
+      bool dnRun = dOpen - dLow  >= P_ExhaustATR * ad[0] && recentLo <= dLow;
+      sellBase = upRun && c1 < l2 && lo[0] < c1;      // bat dau hoi xuong, TP = dai duoi
+      buyBase  = dnRun && c1 > h2 && up[0] > c1;      // bat dau hoi len, TP = dai tren
+      if(sellBase) { g_sigSL = recentHi + 0.3 * atr - c1; g_sigTP = lo[0]; }
+      if(buyBase)  { g_sigSL = c1 - (recentLo - 0.3 * atr); g_sigTP = up[0]; }
+   }
+   else if(P_Strategy == STRAT_FVG)
+   {
+      // FVG tang: nen giua (k) dai >= x ATR, tick >= 1,5 lan TB, va day nen k-1 > dinh nen k+1 (khoang trong).
+      // Lan dau gia quay lai cham khoang trong (nen 1 cham, dong van tren day khoang trong) -> Buy. Giam thi nguoc lai.
+      for(int k = 3; k <= P_FvgLookback + 2 && !buyBase && !sellBase; k++)
+      {
+         datetime tk = iTime(_Symbol, P_TF, k);
+         if(tk <= g_fvgUsed) break;
+         double hk = iHigh(_Symbol, P_TF, k), lk = iLow(_Symbol, P_TF, k);
+         if(hk - lk < P_FvgBigATR * atr) continue;
+         double vs = 0; int vn = 0;
+         for(int q = k + 1; q <= k + 20; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vs += (double)v; vn++; } }
+         if(vn < 10 || (double)iTickVolume(_Symbol, P_TF, k) < 1.5 * vs / vn) continue;
+         double gapBotUp = iHigh(_Symbol, P_TF, k + 1), gapTopUp = iLow(_Symbol, P_TF, k - 1);   // FVG tang
+         double gapTopDn = iLow(_Symbol, P_TF, k + 1),  gapBotDn = iHigh(_Symbol, P_TF, k - 1);  // FVG giam
+         bool isUp = iClose(_Symbol, P_TF, k) > iOpen(_Symbol, P_TF, k) && gapTopUp > gapBotUp;
+         bool isDn = iClose(_Symbol, P_TF, k) < iOpen(_Symbol, P_TF, k) && gapBotDn < gapTopDn;
+         if(!isUp && !isDn) continue;
+         // Chua bi cham lai tu khi hinh thanh (cac nen k-2 .. 2)
+         bool touched = false;
+         for(int q = k - 2; q >= 2; q--)
+            if(isUp ? iLow(_Symbol, P_TF, q) <= gapTopUp : iHigh(_Symbol, P_TF, q) >= gapBotDn) { touched = true; break; }
+         if(touched) continue;
+         if(isUp && l1 <= gapTopUp && c1 > gapBotUp)
+         { buyBase = true;  g_sigSL = c1 - (gapBotUp - 0.5 * atr); g_fvgUsed = tk; }
+         if(isDn && h1 >= gapBotDn && c1 < gapTopDn)
+         { sellBase = true; g_sigSL = (gapTopDn + 0.5 * atr) - c1; g_fvgUsed = tk; }
+      }
+   }
+   else if(P_Strategy == STRAT_SPRING)
+   {
+      // Vung di ngang = N nen truoc nen 1, rong <= x ATR, dinh va day moi phia duoc cham it nhat 2 lan (trong 0,25 ATR).
+      // Spring: nen 1 thung day vung roi dong lai ben trong -> Buy, TP = dinh vung. Upthrust: nguoc lai.
+      int hiI = iHighest(_Symbol, P_TF, MODE_HIGH, P_RangeBars, 2), loI = iLowest(_Symbol, P_TF, MODE_LOW, P_RangeBars, 2);
+      if(hiI < 0 || loI < 0) return false;
+      double rh = iHigh(_Symbol, P_TF, hiI), rl = iLow(_Symbol, P_TF, loI);
+      if(rh - rl > P_RangeMaxATR * atr || rh - rl < atr) return true;
+      int tH = 0, tL = 0;
+      for(int q = 2; q < 2 + P_RangeBars; q++)
+      {
+         if(iHigh(_Symbol, P_TF, q) >= rh - 0.25 * atr && (q == 2 || iHigh(_Symbol, P_TF, q - 1) < rh - 0.25 * atr)) tH++;
+         if(iLow(_Symbol, P_TF, q)  <= rl + 0.25 * atr && (q == 2 || iLow(_Symbol, P_TF, q - 1)  > rl + 0.25 * atr)) tL++;
+      }
+      if(tH < 2 || tL < 2) return true;
+      buyBase  = l1 < rl && c1 > rl;
+      sellBase = h1 > rh && c1 < rh;
+      if(buyBase && sellBase) { buyBase = false; sellBase = false; }
+      if(buyBase)  { g_sigSL = c1 - (l1 - 0.2 * atr); g_sigTP = rh; }
+      if(sellBase) { g_sigSL = (h1 + 0.2 * atr) - c1; g_sigTP = rl; }
    }
    else
    {

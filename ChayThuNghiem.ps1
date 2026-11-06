@@ -114,7 +114,15 @@ $ScalpRuns = @(
     # RSI giu bo loc xu huong D1 (gia D1 dung phia EMA200 D1): EMA200 cua M5 chi ~17 gio du lieu
     @{ N = "RSI-M5";  I = @{ InpStrategy = 2; InpTF = 5;  InpATRMult = 1.5; InpRR = 1; InpUseHTF = "true" } },
     @{ N = "RSI-M15"; I = @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1; InpUseHTF = "true" } },
-    @{ N = "ORB-M5";  I = @{ InpStrategy = 3; InpTF = 5;  InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 } }
+    @{ N = "ORB-M5";  I = @{ InpStrategy = 3; InpTF = 5;  InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 } },
+    # Dao chieu sau cu chay >= 75% ATR(20) ngay, bat dau hoi thi vao nguoc lai; SL qua dinh/day + 0,3 ATR; TP = dai Bollinger(20) ben kia
+    @{ N = "DaoChieu-M5"; I = @{ InpStrategy = 4; InpTF = 5; InpExhaustATR = 0.75 } },
+    # FVG: nen lon (>= 2 ATR, tick >= 1,5 lan TB) de lai khoang trong; lan dau gia quay lai thi vao theo huong nen do; SL qua khoang trong 0,5 ATR; TP 2R
+    @{ N = "FVG-M30"; I = @{ InpStrategy = 5; InpTF = 30;    InpRR = 2 } },
+    @{ N = "FVG-H1";  I = @{ InpStrategy = 5; InpTF = 16385; InpRR = 2 } },
+    # Wyckoff spring/upthrust: vung di ngang 20 nen (<= 4 ATR, moi bien cham >= 2 lan), pha ra roi dong lai ben trong; TP = bien ben kia
+    @{ N = "Spring-M5";  I = @{ InpStrategy = 6; InpTF = 5 } },
+    @{ N = "Spring-M15"; I = @{ InpStrategy = 6; InpTF = 15 } }
 )
 foreach ($sr in $ScalpRuns) {
     $Runs += @{ Name = "Ngan-$($sr.N)";       Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000 }
@@ -124,7 +132,8 @@ foreach ($sr in $ScalpRuns) {
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
 $Von1tr = 38
-foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong")) {
+foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong",
+               "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
     if ($src) {
         $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }

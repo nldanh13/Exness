@@ -6,6 +6,9 @@ int      hFast = INVALID_HANDLE, hTrend = INVALID_HANDLE, hATR = INVALID_HANDLE;
 int      hHTF  = INVALID_HANDLE, hADX   = INVALID_HANDLE;
 int      hMkt  = INVALID_HANDLE;
 int      hRSI  = INVALID_HANDLE;
+int      hATRD1 = INVALID_HANDLE, hBB = INVALID_HANDLE;
+double   g_sigSL = 0, g_sigTP = 0;       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
+datetime g_fvgUsed = 0;                  // FVG da vao lenh (moi khoang trong chi vao 1 lan)
 double   g_rsi = 50;
 string   g_mktSym = "";
 datetime lastBarTime    = 0;

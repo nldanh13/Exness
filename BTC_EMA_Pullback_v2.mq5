@@ -16,7 +16,10 @@ enum ENUM_STRATEGY
    STRAT_EMA_PULLBACK = 0,   // Hoi ve EMA20 theo xu huong
    STRAT_DONCHIAN     = 1,   // Pha vo kenh Donchian (breakout)
    STRAT_RSI_REVERT   = 2,   // Luot song: RSI qua ban/qua mua, vao theo xu huong lon (an hoi)
-   STRAT_ORB          = 3    // Luot song: pha vo vung gia dau phien My (opening range breakout)
+   STRAT_ORB          = 3,   // Luot song: pha vo vung gia dau phien My (opening range breakout)
+   STRAT_EXHAUST      = 4,   // Luot song: dao chieu sau cu chay manh >= x% ATR ngay, TP o dai Bollinger
+   STRAT_FVG          = 5,   // Luot song: gia quay lai khoang trong (FVG) cua nen lon, khoi luong cao
+   STRAT_SPRING       = 6    // Luot song: pha vo gia vung di ngang (Wyckoff spring / upthrust)
 };
 
 input group "=== Tin hieu ==="
@@ -33,6 +36,11 @@ input double          InpRsiHigh         = 90.0;      // RSI: Sell khi RSI > muc
 input bool            InpOrbNewYork      = true;      // ORB: tu tinh gio mo cua New York 9:30 theo mua he/dong (server = UTC)
 input int             InpOrbStartMin     = 810;       // ORB: khi tat dong tren: phut bat dau vung gia tu 00:00 gio server (810 = 13:30)
 input int             InpOrbMinutes      = 30;        // ORB: do dai vung gia (phut)
+input double          InpExhaustATR      = 0.75;      // Dao chieu: cu chay trong ngay >= x ATR(20) D1
+input double          InpFvgBigATR       = 2.0;       // FVG: nen giua dai >= x ATR va tick >= 1,5 lan TB 20 nen
+input int             InpFvgLookback     = 20;        // FVG: tim khoang trong trong N nen gan nhat
+input int             InpRangeBars       = 20;        // Spring: so nen cua vung di ngang
+input double          InpRangeMaxATR     = 4.0;       // Spring: vung di ngang rong toi da x ATR
 input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
 input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
 input int             InpTrendEMA        = 200;       // EMA xu huong
@@ -131,6 +139,11 @@ double          P_RsiLow;
 double          P_RsiHigh;
 int             P_OrbStartMin;
 bool            P_OrbNewYork;
+double          P_ExhaustATR;
+double          P_FvgBigATR;
+int             P_FvgLookback;
+int             P_RangeBars;
+double          P_RangeMaxATR;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -210,6 +223,11 @@ void LoadParams()
    P_RsiHigh = InpRsiHigh;
    P_OrbStartMin = InpOrbStartMin;
    P_OrbNewYork = InpOrbNewYork;
+   P_ExhaustATR = InpExhaustATR;
+   P_FvgBigATR = InpFvgBigATR;
+   P_FvgLookback = InpFvgLookback;
+   P_RangeBars = InpRangeBars;
+   P_RangeMaxATR = InpRangeMaxATR;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -288,6 +306,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpRsiPeriod") { P_RsiPeriod = (int)StringToInteger(v); return true; }
    if(k == "InpRsiLow") { P_RsiLow = StringToDouble(v); return true; }
    if(k == "InpRsiHigh") { P_RsiHigh = StringToDouble(v); return true; }
+   if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
+   if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
+   if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
+   if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpOrbNewYork") { P_OrbNewYork = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbStartMin") { P_OrbStartMin = (int)StringToInteger(v); return true; }
    if(k == "InpOrbMinutes") { P_OrbMinutes = (int)StringToInteger(v); return true; }
@@ -436,6 +459,12 @@ int OnInit()
       hRSI = iRSI(_Symbol, P_TF, P_RsiPeriod, PRICE_CLOSE);
       if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return INIT_FAILED; }
    }
+   if(P_Strategy == STRAT_EXHAUST)
+   {
+      hATRD1 = iATR(_Symbol, PERIOD_D1, 20);
+      hBB    = iBands(_Symbol, P_TF, 20, 0, 2.0, PRICE_CLOSE);
+      if(hATRD1 == INVALID_HANDLE || hBB == INVALID_HANDLE) { Print("Khong tao duoc ATR D1 / Bollinger"); return INIT_FAILED; }
+   }
    if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
       hATR == INVALID_HANDLE || hADX == INVALID_HANDLE)
    {
@@ -497,6 +526,8 @@ void OnDeinit(const int reason)
    IndicatorRelease(hATR);
    IndicatorRelease(hADX);
    if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
+   if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
+   if(hBB != INVALID_HANDLE) IndicatorRelease(hBB);
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    Comment("");
 }
@@ -586,7 +617,8 @@ void OnTick()
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
 
-   double slDist   = atr * P_ATRMult;
+   // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
+   double slDist   = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 
@@ -608,16 +640,20 @@ void OnTick()
    if(buySignal)
    {
       double price = tick.ask;
+      double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price + slDist * P_RR : 0.0);
+      if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
-                     P_RR > 0 ? NormalizeDouble(price + slDist * P_RR, _Digits) : 0.0, "BTC bot BUY");
+                     tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY");
    }
    else
    {
       double price = tick.bid;
+      double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price - slDist * P_RR : 0.0);
+      if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
-                      P_RR > 0 ? NormalizeDouble(price - slDist * P_RR, _Digits) : 0.0, "BTC bot SELL");
+                      tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL");
    }
    // trade.Buy/Sell tra true chi la gui duoc; server van co the tu choi -> xem ma ket qua.
    // Chua khop that thi bo phan rui ro da giu cho ngay, khong de treo 2 phut chan bot khac.
