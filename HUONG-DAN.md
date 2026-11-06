@@ -207,6 +207,8 @@ Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạ
 
 **Kết quả 06/11/2026 (đợt nhanh 1756): không chiến thuật lướt sóng nào đạt.** Ngay cả khi chưa cộng trượt giá, mọi cấu hình đều có PF dưới 1 ở 3 năm trước (Donchian M1–M30, có và không có lọc khối lượng, RSI M5/M15, ORB M5). Cấu hình khá nhất ở 3 năm gần đây là Donchian M30 + khối lượng (PF 1,51), nhưng 3 năm trước chỉ 0,74, và 1,18 sau trượt giá. Với vốn 1 triệu, gần như mọi tín hiệu bị bỏ vì 0,01 BTC đã rủi ro quá 1% (RSI M15: 1.011 tín hiệu bị bỏ, 0 lệnh). Đối chiếu: Donchian H4 (C) vẫn PF 2,09 / 2,82 ở hai giai đoạn, nhưng bỏ 5 lệnh lớn nhất thì PF chỉ còn 1,15 / 1,36. Không thêm cấu hình nào vào `chinh-xac.txt`.
 
+**Kết quả đợt 2357 (06/11/2026):** ba chiến thuật mới (đảo chiều M5, FVG M30/H1, Wyckoff M5/M15) đều không đạt: E[R] âm hoặc gần 0, t-stat từ −9 tới 0,3. Vốn 1 triệu với rủi ro tới 5%/lệnh: các bản có đủ lệnh để đánh giá đều lỗ hoặc gần hòa, sụt giảm 40–76% trong 3 năm (Monte Carlo 95% có bản trên 100%, tức cháy tài khoản); vài bản dương chỉ có 2–11 lệnh, không đủ để tin. Giảm cỡ theo sụt giảm: không đổi gì trên BTC (sụt giảm chưa từng quá 5%), trên ETH lãi giảm 500 → 398, PF 1,39 → 1,33; giữ tắt. Donchian H4: t-stat 2,09 (3 năm gần đây) và 2,48 (3 năm trước), chưa tới mức 3 nên càng cần demo.
+
 **Vốn 1 triệu VNĐ:** các cấu hình lướt sóng ưu tiên (RSI M15, RSI M5, Donchian M15, M30, ORB M5) có thêm bản `-von1tr` với vốn 38 USD (≈ 1 triệu VNĐ). Bản 30.000 trả lời "chiến lược có lợi thế không"; bản `-von1tr` cho thấy kết quả thật với tài khoản của bạn, gồm số tín hiệu bị bỏ (`BoQuaLot`) vì 0,01 BTC đã rủi ro quá 1%.
 
 Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài khoản (`InpMaxRiskRoundUp = 5`), để thấy kết quả thật khi lướt sóng với 1 triệu.
