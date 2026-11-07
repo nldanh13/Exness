@@ -230,6 +230,7 @@ main { gap: 14px; padding-block: 14px 40px; }
         <label><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
         <label><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span>Gửi nhật ký</span></label>
         <label><input type="radio" name="viec" value="backtest" id="viec-backtest"><span>Tự chạy 1 lần</span></label>
+        <label><input type="radio" name="viec" value="thanhly" id="viec-thanhly"><span>Dữ liệu thanh lý</span></label>
       </div></div>
     </div>
     <p class="muted job-desc" id="job-desc"></p>
@@ -351,8 +352,8 @@ function csvHead(text) { var l = text.replace(/^﻿/, '').split(/\r?\n/)[0] || '
    TAB BẢNG ĐIỀU KHIỂN
    ===================================================================== */
 var S = { logLen: 0, follow: true, last: null };
-var VIEC_TEN = { 'sosanh': 'Mô phỏng nhanh', 'sosanh-chinhxac': 'Mô phỏng chi tiết', 'capnhat': 'Cập nhật bản mới', 'backtest': 'Tự chạy 1 lần', 'nhatky': 'Gửi nhật ký' };
-var JOB_DESC = { 'sosanh': 'Chạy mô phỏng các phương án trên dữ liệu cũ, khoảng 30–45 phút.', 'sosanh-chinhxac': 'Chạy lại chi tiết các phương án tốt nhất, khoảng 1,5 giờ.', 'capnhat': 'Lấy bản mới từ GitHub và nạp vào ứng dụng.', 'nhatky': 'Gửi nhật ký cho Claude đối chiếu.', 'backtest': 'Mở ứng dụng với cài đặt mặc định để tự chạy.' };
+var VIEC_TEN = { 'sosanh': 'Mô phỏng nhanh', 'sosanh-chinhxac': 'Mô phỏng chi tiết', 'capnhat': 'Cập nhật bản mới', 'backtest': 'Tự chạy 1 lần', 'nhatky': 'Gửi nhật ký', 'thanhly': 'Dữ liệu thanh lý' };
+var JOB_DESC = { 'sosanh': 'Chạy mô phỏng các phương án trên dữ liệu cũ, khoảng 30–45 phút.', 'sosanh-chinhxac': 'Chạy lại chi tiết các phương án tốt nhất, khoảng 1,5 giờ.', 'capnhat': 'Lấy bản mới từ GitHub và nạp vào ứng dụng.', 'nhatky': 'Gửi nhật ký cho Claude đối chiếu.', 'backtest': 'Mở ứng dụng với cài đặt mặc định để tự chạy.', 'thanhly': 'Tải lịch sử open interest BTC từ Binance (từ 12/2021) và gửi cho Claude thử với chiến lược C. Không cần đóng ứng dụng, lần đầu khoảng 3–10 phút.' };
 function dn(n) { return String(n || '').replace(/-ETH$/, '-B').replace(/Donchian/g, 'Dc'); }
 var NEED_MT5_CLOSED = { 'sosanh': 1, 'sosanh-chinhxac': 1, 'backtest': 1 };
 
@@ -503,6 +504,7 @@ function renderRun(d) {
   else if (isTest && incomplete) { cls = 'bad'; html = '<b>Thiếu kết quả.</b> Có phương án chưa chạy xong nên chưa gửi đi. Chạy lại, hoặc gửi file .zip kết quả cho Claude.'; }
   else if (isTest) { cls = 'ok'; html = '<b>Xong sau ' + dur(j.Seconds) + '.</b> ' + (pushed ? 'Kết quả đã gửi đi, chỉ cần nhắn Claude "xong rồi".' : 'Chưa gửi được: gửi file .zip kết quả cho Claude.') + ' <button class="small primary" id="btn-see">Xem kết quả</button>'; }
   else if (j.Viec === 'nhatky') { cls = 'ok'; html = /==> Da gui/.test(FULL_LOG) ? '<b>Đã gửi nhật ký.</b> Nhắn Claude "đã gửi nhật ký" để đối chiếu.' : /Khong co gi de gui/.test(FULL_LOG) ? '<b>Chưa có nhật ký để gửi.</b>' : '<b>Đã mở thư mục nhật ký.</b> Bạn có thể tự xem rồi gửi cho Claude.'; }
+  else if (j.Viec === 'thanhly') { cls = 'ok'; html = /==> Da day du lieu/.test(FULL_LOG) ? '<b>Đã gửi dữ liệu.</b> Nhắn Claude "xong rồi" để chạy thử.' : '<b>Chưa gửi được.</b> Xem nhật ký kỹ thuật bên dưới.'; }
   else { cls = 'ok'; html = '<b>Xong:</b> ' + esc(VIEC_TEN[j.Viec] || ''); }
   rb.className = 'banner ' + cls; rb.innerHTML = html;
   var bt = $('btn-see'); if (bt) bt.onclick = function () { RES.loaded = false; RES.want = 'newest'; location.hash = '#ket-qua'; };

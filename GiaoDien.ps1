@@ -90,7 +90,7 @@ function Get-JobState {
 function Start-BotJob($body) {
     if ($script:Job -and -not $script:Job.Proc.HasExited) { throw "Dang co viec chay. Dung viec do truoc." }
     $viec = [string]$body.viec
-    if ($viec -notin @('sosanh', 'sosanh-chinhxac', 'capnhat', 'backtest', 'nhatky')) { throw "Viec khong hop le: $viec" }
+    if ($viec -notin @('sosanh', 'sosanh-chinhxac', 'capnhat', 'backtest', 'nhatky', 'thanhly')) { throw "Viec khong hop le: $viec" }
     $nhom = [string]$body.nhom
     if (-not $nhom) { $nhom = 'file' }
     if ($nhom -notin @('file', 'h4', 'luotsong', 'von1tr', 'tatca')) { throw "Nhom khong hop le: $nhom" }
