@@ -40,6 +40,14 @@ Bot kiểm tra lệnh đang mở và giới hạn lỗ ở mọi tick (`InpManag
 - Script sẽ hỏi đóng MT5. Đóng MT5 là **dừng mọi bot đang chạy trên MT5 đó**.
 - Tắt terminal VS Code hay tắt máy giữa chừng thì lượt chạy dừng và không có file zip. Không hỏng gì cả, chỉ cần chạy lại. Dữ liệu giá đã tải vẫn được giữ.
 
+## Giao diện trên trình duyệt (dễ nhìn hơn)
+Bấm đúp **`GiaoDien.cmd`** trong thư mục bot (hoặc VS Code: **Terminal → Run Task… → 0. Mo giao dien**). Trình duyệt mở `http://localhost:8765` với hai tab:
+
+- **Chạy backtest**: xem máy có code mới trên GitHub không, MT5 đang mở hay tắt; chọn việc (giống nút 1, 2, 3), tích ô nếu muốn lấy code mới hoặc cho phép đóng MT5, rồi bấm **Bắt đầu**. Thanh tiến trình đếm theo từng đợt, nhật ký hiện ngay trên trang (dòng đỏ là lỗi). Nút **Dừng** dừng hẳn việc đang chạy, kể cả MT5 tester.
+- **Kết quả**: bảng so sánh các đợt trong `ket-qua/`, sắp xếp theo cột, lọc theo tên, cột *Tiêu chí* đánh dấu cấu hình có PF trượt 0.05% đạt ngưỡng ở cả 3 năm gần đây lẫn 3 năm trước. Bấm một dòng để xem lãi lũy kế, lãi theo năm, theo giờ vào lệnh, Buy/Sell và danh sách lệnh.
+
+Giữ cửa sổ đen của giao diện mở trong lúc dùng; đóng nó là tắt giao diện. Giao diện chỉ mở trên máy này (localhost), máy khác trong mạng không vào được.
+
 ## Bot làm gì (cài đặt mặc định)
 **Vào lệnh (khung H4, chiến lược Donchian breakout):** nến H4 vừa đóng cửa vượt lên trên đỉnh cao nhất của 20 nến trước đó thì Buy. Nếu đóng cửa xuống dưới đáy thấp nhất thì Sell. Lệnh phải qua thêm các bộ lọc:
 - **Xu hướng:** giá nằm đúng phía EMA200 H4, và giá đóng cửa D1 nằm đúng phía EMA200 D1.
