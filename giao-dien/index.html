@@ -76,6 +76,9 @@ h2 { font-size: 15px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 .opt input { margin-top: 3px; accent-color: var(--accent); }
 .field { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 select, input[type="text"], input[type="number"] { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.plist > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); width: max-content; }
+.ptags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 120px; overflow: auto; }
+.ptags span { font: 12px/1.6 var(--font-num); color: var(--ink2); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; }
 .listbox { font-family: var(--font-num); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; max-height: 140px; overflow: auto; white-space: pre; color: var(--ink2); }
 .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 button { font: inherit; font-weight: 600; border-radius: 6px; padding: 8px 16px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
@@ -239,8 +242,8 @@ main { gap: 14px; padding-block: 14px 40px; }
           <option value="von1tr">Nhóm B (quy mô nhỏ)</option>
           <option value="tatca">Tất cả (rất lâu)</option>
         </select>
-        <details class="tech" id="list-row"><summary id="list-title"></summary><div class="listbox" id="list-box"></div></details>
       </div>
+      <details class="plist" id="list-row"><summary id="list-title"></summary><div class="ptags" id="list-box"></div></details>
       <div class="banner warn" id="real-warn" hidden></div>
       <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git" onchange="this.dataset.touched=1"><span>Lấy bản mới (<span id="opt-git-n">0</span> thay đổi)</span></label>
       <label class="opt" id="opt-mt5-row" hidden><input type="checkbox" id="opt-mt5"><span>Cho phép đóng ứng dụng để chạy (mọi phiên đang chạy trên nó sẽ dừng)</span></label>
@@ -371,7 +374,7 @@ function renderOptions() {
   if (v === 'sosanh' && $('nhom').value === 'file') { list = d.ChiChay; title = 'Xem danh sách phương án (' + (list ? list.length : 0) + ')'; }
   if (v === 'sosanh-chinhxac') { list = d.ChinhXac; title = 'Xem danh sách phương án (' + (list ? list.length : 0) + ')'; }
   $('list-row').hidden = !list;
-  if (list) { $('list-title').textContent = title; $('list-box').textContent = list.length ? list.join('\n') : '(trống: chạy toàn bộ)'; }
+  if (list) { $('list-title').textContent = title; $('list-box').innerHTML = list.length ? list.map(function (x) { return '<span>' + esc(dn(x)) + '</span>'; }).join('') : '<em class="muted">Trống: chạy toàn bộ</em>'; }
   var g = d.Git || {};
   $('opt-git-row').hidden = !(g.Behind > 0) || v !== 'capnhat';   // chi nut cap nhat moi lay code moi
   // Da chon 'Lay code moi' thi mac dinh tick san (ban van bo tick duoc)
