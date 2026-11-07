@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.7"
-#property version   "4.90"
+#define  BOT_VERSION "5.8"
+#property version   "5.80"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -484,6 +484,8 @@ bool ApplyPreset(const int id)
    return found;
 }
 
+int      g_pendFilled = 0, g_pendMissed = 0;   // vao lenh cho gia hoi: so lan gia hoi kip / het nen chua hoi (Report.mqh ghi ra)
+
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
 #include "TrendBot/Notify.mqh"
@@ -638,7 +640,6 @@ datetime g_lastManage = 0;
 int      g_pendDir = 0;            // tin hieu dang cho gia hoi ve: 1 buy, -1 sell, 0 khong co
 double   g_pendPrice = 0, g_pendATR = 0, g_pendSigSL = 0, g_pendSigTP = 0;
 datetime g_pendExpire = 0;
-int      g_pendFilled = 0, g_pendMissed = 0;
 void CheckPendingEntry()
 {
    if(g_pendDir == 0) return;

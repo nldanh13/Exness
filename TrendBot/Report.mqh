@@ -181,8 +181,12 @@ double OnTester()
          posNet[k]  += DealNet(d);
          posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * contract * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0;  // = 1% gia
       }
-   // Thoi gian giu lenh TB (gio) va tong swap
+   // Thoi gian giu lenh TB (gio) va tong swap. Ghi lai gio vao / ra / chieu tung vi the de gom dot nhoi lenh.
    double holdSum = 0, swapSum = 0, commSum = 0; int holdN = 0;
+   int nPosAll = ArraySize(posIds);
+   datetime posIn[], posOut[]; bool posBuy[];
+   ArrayResize(posIn, nPosAll); ArrayResize(posOut, nPosAll); ArrayResize(posBuy, nPosAll);
+   for(int j = 0; j < nPosAll; j++) { posIn[j] = 0; posOut[j] = 0; posBuy[j] = true; }
    if(HistorySelect(0, TimeCurrent()))
       for(int j = 0; j < ArraySize(posIds); j++)
       {
@@ -193,11 +197,13 @@ double OnTester()
             ulong d = HistoryDealGetTicket(i);
             long en = HistoryDealGetInteger(d, DEAL_ENTRY);
             datetime tt = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
-            if(en == DEAL_ENTRY_IN && tin == 0) tin = tt;
+            if(en == DEAL_ENTRY_IN && tin == 0)
+            { tin = tt; posBuy[j] = HistoryDealGetInteger(d, DEAL_TYPE) == DEAL_TYPE_BUY; }
             if(en == DEAL_ENTRY_OUT || en == DEAL_ENTRY_OUT_BY) tout = tt;
             swapSum += HistoryDealGetDouble(d, DEAL_SWAP);
             commSum += HistoryDealGetDouble(d, DEAL_COMMISSION) + HistoryDealGetDouble(d, DEAL_FEE);
          }
+         posIn[j] = tin; posOut[j] = tout;
          if(tin > 0 && tout > tin) { holdSum += (double)(tout - tin) / 3600.0; holdN++; }
       }
    for(int s2 = 0; s2 < 2; s2++)
@@ -208,17 +214,36 @@ double OnTester()
          if(net > 0) stressGP[s2] += net; else stressGL[s2] -= net;
       }
 
-   // Thong ke theo R (1R = tien rui ro o SL ban dau): E[R], t-stat, ty le thang kem can duoi Wilson 95%
+   // Gom thanh "dot": lop nhoi vao khi lop truoc cung chieu con mo thuoc cung dot (thang thua cung nhau, khong doc lap).
+   // Moi thong ke ben duoi (E[R], t, ty le thang, bo top 5, Monte Carlo) tinh theo DOT. Khong nhoi lenh thi dot = lenh.
+   // 1R cua dot = rui ro o SL ban dau cua lop dau tien.
    int nP = ArraySize(posIds);
-   double posR[]; ArrayResize(posR, nP);
-   double sumR = 0, sumR2 = 0; int nR = 0, nWin = 0;
+   double campNet[], campRisk[];
+   ArrayResize(campNet, nP); ArrayResize(campRisk, nP);
+   int nC = 0; datetime campEnd = 0; bool campBuy = true;
    for(int j = 0; j < nP; j++)
    {
-      double sd = 0, rm = PosRiskMoney(posIds[j], sd);
-      posR[j] = rm > 0 ? posNet[j] / rm : 0;
-      if(rm <= 0) continue;
-      sumR += posR[j]; sumR2 += posR[j] * posR[j]; nR++;
-      if(posNet[j] > 0) nWin++;
+      bool join = nC > 0 && posIn[j] > 0 && posIn[j] < campEnd && posBuy[j] == campBuy;
+      if(!join)
+      {
+         double sd = 0;
+         campNet[nC] = 0; campRisk[nC] = PosRiskMoney(posIds[j], sd);
+         campBuy = posBuy[j]; campEnd = 0; nC++;
+      }
+      campNet[nC - 1] += posNet[j];
+      datetime e = posOut[j] > 0 ? posOut[j] : D'2999.12.31';   // chua dong (khong xay ra trong tester): coi nhu mo mai
+      if(e > campEnd) campEnd = e;
+   }
+   ArrayResize(campNet, nC); ArrayResize(campRisk, nC);
+
+   // Thong ke theo R (1R = tien rui ro o SL ban dau): E[R], t-stat, ty le thang kem can duoi Wilson 95%
+   double sumR = 0, sumR2 = 0; int nR = 0, nWin = 0;
+   for(int j = 0; j < nC; j++)
+   {
+      if(campRisk[j] <= 0) continue;
+      double r = campNet[j] / campRisk[j];
+      sumR += r; sumR2 += r * r; nR++;
+      if(campNet[j] > 0) nWin++;
    }
    double meanR = nR > 0 ? sumR / nR : 0;
    double sdR   = nR > 1 ? MathSqrt(MathMax(0, (sumR2 - nR * meanR * meanR) / (nR - 1))) : 0;
@@ -233,7 +258,7 @@ double OnTester()
    // Monte Carlo (bootstrap): rut ngau nhien co hoan lai tu lai/lo cac vi the, 1000 lan, de xem
    // sut giam co the te toi dau neu thu tu lenh khac di. Mau duoi ~200 lenh thi chi nen xem la tham khao.
    double dep = TesterStatistics(STAT_INITIAL_DEPOSIT);
-   int    nPos = ArraySize(posNet), sims = 1000, ruin = 0, blk = 5;
+   int    nPos = nC, sims = 1000, ruin = 0, blk = 5;   // rut theo dot, khong theo tung lop
    double stopDD = P_MaxDrawdownPct > 0 ? P_MaxDrawdownPct : 15.0;   // nguong bot tu dung han
    double mcDD[], mcStreak[];
    ArrayResize(mcDD, sims); ArrayResize(mcStreak, sims);
@@ -247,8 +272,8 @@ double OnTester()
          int st = (int)((double)MathRand() / 32768.0 * nPos);
          for(int q = 0; q < blk && j + q < nPos; q++)
          {
-            eq += posNet[(st + q) % nPos];
-            if(posNet[(st + q) % nPos] < 0) { run++; if(run > maxRun) maxRun = run; } else run = 0;
+            eq += campNet[(st + q) % nPos];
+            if(campNet[(st + q) % nPos] < 0) { run++; if(run > maxRun) maxRun = run; } else run = 0;
             if(eq > pk) pk = eq;
             if(pk > 0) dd = MathMax(dd, (pk - eq) / pk * 100.0);
          }
@@ -261,8 +286,8 @@ double OnTester()
    double mcMed = nPos > 0 ? mcDD[sims / 2] : 0;
    double mc95  = nPos > 0 ? mcDD[(int)(sims * 0.95)] : 0;
 
-   // Phu thuoc vao vai lenh thang lon: bo 5 vi the lai nhieu nhat roi tinh lai loi nhuan va PF
-   double srt[]; ArrayCopy(srt, posNet); ArraySort(srt);
+   // Phu thuoc vao vai dot thang lon: bo 5 dot lai nhieu nhat roi tinh lai loi nhuan va PF
+   double srt[]; ArrayCopy(srt, campNet); ArraySort(srt);
    double top5 = 0, rGP = 0, rGL = 0, totNet = 0;
    for(int j = 0; j < nPos; j++)
    {
@@ -288,7 +313,8 @@ double OnTester()
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
                    "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin",
                    "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
-                   "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh");
+                   "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh",
+                   "SoDot", "VaoKhiHoi", "HetNenChuaHoi");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -314,7 +340,8 @@ double OnTester()
                 DoubleToString(plNoTop, 2), DoubleToString(rGL > 0 ? rGP / rGL : 0, 2),
                 DoubleToString(totNet > 0 ? top5 / totNet * 100.0 : 0, 0),
                 DoubleToString(meanR, 3), DoubleToString(tStat, 2), DoubleToString(wilson, 1),
-                DoubleToString(mcStreak95, 0), g_ddScaled, g_pyrAdds);
+                DoubleToString(mcStreak95, 0), g_ddScaled, g_pyrAdds,
+                nC, g_pendFilled, g_pendMissed);
       FileClose(h);
    }
    else

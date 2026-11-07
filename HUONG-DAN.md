@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v4.9
+# Hướng dẫn bot BTC (MT5) v5.8
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -144,6 +144,8 @@ File `ket-qua-so-sanh.csv` trong zip có một dòng cho mỗi lần chạy:
 | `TyLeThang_CanDuoi95%` | Cận dưới Wilson 95% của tỷ lệ thắng: tỷ lệ thắng "thật" gần như chắc chắn không thấp hơn số này |
 | `MC_ChuoiThua95` | Chuỗi thua liên tiếp dài nhất ở trường hợp xấu (95%) trong Monte Carlo. Chuẩn bị tinh thần cho chuỗi dài cỡ này |
 | `GiamCoDD` | Số lệnh bị giảm cỡ vì đang sụt giảm (chỉ khi bật `InpDDScale`) |
+| `SoDot` | Từ v5.8: số **đợt**. Các lớp nhồi vào khi lớp trước cùng chiều còn mở được gộp thành một đợt, vì chúng thắng thua cùng nhau. `E_R`, `tStat`, `TyLeThang_CanDuoi95%`, bỏ top 5 và Monte Carlo đều tính theo đợt (1R = rủi ro của lớp đầu). Không nhồi lệnh thì số đợt = số lệnh, các cột này không đổi so với trước |
+| `VaoKhiHoi`, `HetNenChuaHoi` | Chỉ khi bật `InpEntryPullATR`: số lần giá hồi kịp để vào lệnh, và số lần hết nến mà giá chưa hồi (bị bỏ hoặc vào giá thị trường tùy `InpEntryPullMode`) |
 | `MC_SutGiamTB%`, `MC_SutGiam95%`, `MC_XacSuatDungHan%` | Monte Carlo: rút lại các lệnh 1.000 lần theo khối 5 lệnh liền nhau (giữ các chuỗi thua theo cụm). Cho biết sụt giảm thường gặp, sụt giảm ở trường hợp xấu (chỉ 5% số lần tệ hơn), và xác suất bot chạm mức dừng hẳn `InpMaxDrawdownPct` (15%). Dưới 200 lệnh thì chỉ nên xem là tham khảo |
 
 Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (không lọc ADX), C (có ADX), D (Donchian 55), cùng các lần chạy với vốn 30.000, trên `ETHUSDm`, và trên 3 năm **trước** giai đoạn đã dùng để chọn cấu hình. Các lần này tắt giới hạn sụt giảm để so sánh chiến lược. Lần cuối `MacDinh-nhu-chay-that` dùng nguyên cài đặt mặc định của bot, gồm cả dừng hẳn khi sụt 15% và khóa lỗ ngày 3%, đúng như khi chạy thật. **Bộ lọc chất lượng breakout** (mặc định tắt, đang thử trên cấu hình C):
@@ -390,3 +392,14 @@ Nen M10 (Exness BTCUSDm):
 - Spread ~23,8 USD moi gio nhu nhau (Exness gan nhu co dinh).
 - Sau khi H4 dong cua pha vo kenh 20 nen: trong 4 gio sau, ~75% lan gia hoi lai >= 0,25 ATR, ~45% hoi >= 0,5 ATR (ca 2 giai doan).
   -> v5.7 them InpEntryPullATR / InpEntryPullMode: cho gia hoi ve moi vao (het nen: bo hoac vao gia thi truong). Dang thu.
+
+## Ket qua tick that 7/11/2026 19:24 va cach tinh moi (v5.8)
+Tick that khop che do nhanh (lech vai %): C+nhoi5-buoc0.5 PF truot 0,05% = 2,14 / 2,13, sut giam 17,0% / 10,9%.
+Nhung bang cu dem moi lop nhoi la 1 lenh doc lap. Gom lop chong nhau cung chieu thanh dot (tinh lai tu file lenh):
+- C+nhoi5-buoc0.5: 276 lenh -> 92 dot, t theo dot 1,97 / 1,65 (bang ghi 4,04 / 3,05). Top 5 dot chiem 105% / 116% lai.
+- C+nhoi3: 194 -> 90 dot, t 1,69 / 1,77. C (khong nhoi): t 2,08 / 2,41, top 5 chiem 88% / 82%.
+- Lai chia sut giam gan bang C (216 vs 204 o 3 nam gan day; 184 vs 237 o 3 nam truoc): nhoi5 ~ C voi rui ro ~4 lan.
+- Sut giam 17% vuot muc dung han 15%: chay that voi cai dat mac dinh thi bot da tu dung.
+Ket luan: giu C cho demo. v5.8 tinh t / top 5 / Monte Carlo theo dot, va them lan chay:
+- C+nhoi5-buoc0.5-rr0.3 (von 30000, 0,3%/lop) so voi C-von30000 / C-von30000-truoc: cung muc sut giam thi co hon C khong.
+- C-nhuThat, C+nhoi5-buoc0.5-nhuThat (von 3000, bat dung han 15% + lo ngay 3%).

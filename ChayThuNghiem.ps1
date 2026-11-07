@@ -226,6 +226,17 @@ foreach ($v in @(@{ N = "C+nhoi5-buoc0.5+hoi0.25-bo";  X = @{ InpPyramidMax = 5;
     $Runs += @{ Name = "$($v.N)-truoc"; Inputs = (Cfg $Brk $Q $v.X); From = $OOSFrom; To = $FromDate }
 }
 $Runs += @{ Name = "C+nhoi5-buoc0.5-ETH"; Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5 }); Symbol = "ETHUSDm" }
+# So sanh cong bang (dot 7/11 19:24): nhoi5 tang sut giam ~4 lan so voi C. Ha rui ro moi lop xuong 0,3% de sut giam ngang C,
+# roi xem lai/sut giam va t theo DOT co hon C khong. Von 30000 vi 0,3% cua 3000 = 9 USD < rui ro cua 0,01 lot (bo moi tin hieu).
+$N5 = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5 }
+$Runs += @{ Name = "C-von30000-truoc";              Inputs = (Cfg $Brk $Q);                                  Deposit = 30000; From = $OOSFrom; To = $FromDate }
+$Runs += @{ Name = "C+nhoi5-buoc0.5-rr0.3";         Inputs = (Cfg $Brk $Q $N5 @{ InpRiskPercent = 0.3 });    Deposit = 30000 }
+$Runs += @{ Name = "C+nhoi5-buoc0.5-rr0.3-truoc";   Inputs = (Cfg $Brk $Q $N5 @{ InpRiskPercent = 0.3 });    Deposit = 30000; From = $OOSFrom; To = $FromDate }
+# Nhu chay that: bat lai dung han khi sut 15% (lo ngay 3% von da bat mac dinh). Von 3000.
+$Runs += @{ Name = "C-nhuThat";                     Inputs = (Cfg $Brk $Q @{ InpMaxDrawdownPct = 15 }) }
+$Runs += @{ Name = "C-nhuThat-truoc";               Inputs = (Cfg $Brk $Q @{ InpMaxDrawdownPct = 15 });     From = $OOSFrom; To = $FromDate }
+$Runs += @{ Name = "C+nhoi5-buoc0.5-nhuThat";       Inputs = (Cfg $Brk $Q $N5 @{ InpMaxDrawdownPct = 15 }) }
+$Runs += @{ Name = "C+nhoi5-buoc0.5-nhuThat-truoc"; Inputs = (Cfg $Brk $Q $N5 @{ InpMaxDrawdownPct = 15 }); From = $OOSFrom; To = $FromDate }
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
