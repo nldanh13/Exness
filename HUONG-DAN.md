@@ -353,3 +353,8 @@ de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gia
 - Chi vao 6-12h UTC ("+gio6-12") hoac bo 0-6h UTC ("+bo0-6"): giai doan 3 nam gan day tot hon mot chut, nhung 3 nam truoc van lo
   o moi cau hinh (PF truot 0,05% tu 0,30 den 0,85). Tot nhat: Ngan-Nhoi3-M30+gio6-12 (PF truot 1,32 / 0,85) - van khong dat tieu chi 1,3 ca 2 giai doan.
 - Ket luan: khung gio "thang 90%" trong sao ke la do mau nho / giai doan do, khong phai loi the ben vung. Khong dua vao bot.
+
+## Tach nut lay code va nut chay (7/11)
+- Nut 2 "Lay code moi + cap nhat bot vao MT5": viec DUY NHAT lay code tu GitHub (hoi y truoc), roi compile vao MT5.
+- Nut 1, 3, 4 va backtest 1 lan: KHONG lay code moi, chi chay ban dang co tren may. Neu GitHub co thay doi chua lay, chi in ra 1 dong nhac.
+- Giao dien trinh duyet: o "Lay phien ban bot moi" chi hien khi chon "Lay code moi + cap nhat bot".

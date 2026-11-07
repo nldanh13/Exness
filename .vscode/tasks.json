@@ -20,7 +20,7 @@
       }
     },
     {
-      "label": "1. So sanh cau hinh (nhanh)",
+      "label": "1. Chay so sanh cau hinh (nhanh)",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -37,7 +37,7 @@
       "problemMatcher": []
     },
     {
-      "label": "2. Cap nhat bot vao MT5",
+      "label": "2. Lay code moi + cap nhat bot vao MT5",
       "type": "shell",
       "command": "powershell",
       "args": [
@@ -56,7 +56,7 @@
       }
     },
     {
-      "label": "3. So sanh cau hinh (chinh xac, cham)",
+      "label": "3. Chay so sanh cau hinh (chinh xac, cham)",
       "type": "shell",
       "command": "powershell",
       "args": [

@@ -1,8 +1,9 @@
 # Chay.ps1 - Diem vao duy nhat cho cac nut trong VS Code (Terminal > Run Task).
-# Moi lan bam: kiem tra code moi tren GitHub, hoi ban truoc khi lay ve, roi moi lam viec duoc chon.
+# Nut CHAY (sosanh, sosanh-chinhxac, backtest, nhatky) KHONG lay code moi: chi bao co bao nhieu thay doi chua lay.
+# Nut LAY CODE MOI (capnhat): hoi ban truoc, lay code moi tu GitHub roi compile vao MT5.
 #   -Viec sosanh           : so sanh 7 cau hinh, che do nhanh
 #   -Viec sosanh-chinhxac  : so sanh 7 cau hinh, tick that (cham)
-#   -Viec capnhat          : compile ban moi vao MT5
+#   -Viec capnhat          : lay code moi tu GitHub (hoi truoc) + compile vao MT5
 #   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code, khong git pull)
 #   -Viec backtest         : backtest 1 lan voi cai dat mac dinh
 #   -Viec nhatky           : gui nhat ky tai khoan that (Common\Files) cho Claude doi chieu
@@ -13,7 +14,18 @@ $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # 1) Lay code moi - CHI khi ban dong y. Moi nut deu compile lai bot vao MT5 (MT5 nap lai bot dang chay
 #    tren bieu do khi file .ex5 doi), nen code moi tu GitHub phai duoc ban xem va bam "y" truoc.
 # "theodoi" tu chay khi mo VS Code nen KHONG lay code: chi compile code dang co tren may.
-if ($Viec -eq 'theodoi' -or $Viec -eq 'nhatky') { }
+$hasGit = (Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))
+if ($Viec -eq 'theodoi') { }
+elseif ($Viec -ne 'capnhat') {
+    # Chi bao, khong lay ve
+    if ($hasGit) {
+        $null = & git -C $ProjectDir fetch -q origin 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $new = @(& git -C $ProjectDir log --oneline "HEAD..@{u}" 2>$null)
+            if ($new.Count -gt 0) { Write-Host "Co $($new.Count) thay doi moi tren GitHub CHUA lay. Lan nay chay ban dang co tren may; muon lay thi bam nut 2 (Lay code moi)." -ForegroundColor Yellow }
+        }
+    }
+}
 elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
     Write-Host "Dang kiem tra code moi tren GitHub..." -ForegroundColor Cyan
     $null = & git -C $ProjectDir fetch -q origin 2>&1
