@@ -43,6 +43,6 @@ void Notify(const string msg)
 {
    Print(msg);
    if(MQLInfoInteger(MQL_TESTER)) return;          // khong gui khi backtest
-   if(P_PushNotify) SendNotification(msg);
+   if(P_PushNotify) SendNotification(StringLen(msg) > 255 ? StringSubstr(msg, 0, 252) + "..." : msg);   // push toi da 255 ky tu
    if(P_Telegram)   SendTelegram(msg);
 }

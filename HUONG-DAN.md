@@ -318,3 +318,20 @@ Moi lan can thiep deu gui thong bao. Keo preset 7 vao 1 chart BTCUSDm (bot khong
 
 Khung gio: lenh tay vao 6-12h UTC thang 90%, vao 0-6h UTC thang 41%. Mau nho, nen da them lan chay "+gio6-12" va "+bo0-6"
 cho cac cau hinh luot song de kiem tra tren 6 nam truoc khi tin.
+
+## Nhat ky va canh bao ky luat (v5.2, tai khoan that / demo)
+
+Bot (1 chart moi tai khoan, mac dinh bat InpJournal) tu ghi vao MT5 Common\Files:
+- TrendBot_nhatky.csv: MOI giao dich cua tai khoan (bot va lenh tay, moi ma), nap, rut, SL luc vao, thoi gian giu,
+  va moi canh bao. Lan dau bat se ghi lai toan bo lich su cu.
+- TrendBot_tongket.csv: moi ngay 1 dong (lai/lo bot, lai/lo tay, so lenh, nap, rut, so canh bao) + thong bao ve dien thoai.
+
+Canh bao (gui ve dien thoai, ghi vao nhat ky), rut ra tu sao ke giao dich tay:
+- Nap tien trong 7 ngay sau khi rut ("da rut thi khong nap lai de go").
+- Tong nap trong thang vuot InpMonthDepositCap (ban tu dat, vd 2000000).
+- Lenh tay co lot > 2 lan lot thuong dung; lenh tay khong co SL.
+- Qua 10 lenh tay trong ngay; thua tay 3 lenh lien tiep.
+- 1 lenh lai > 10% so du, hoac tai khoan lai moi 20% trong thang: nhac RUT tien goc + mot nua lai, nghi 1-2 ngay, khong tang lot.
+
+Nut 4 "Gui nhat ky tai khoan that": chep 3 file (nhatky, tongket, truotgia) vao ket-qua\thuc-te\, hoi y roi day len GitHub
+de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gian giu).

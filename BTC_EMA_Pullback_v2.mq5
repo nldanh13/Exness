@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.1"
+#define  BOT_VERSION "5.2"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -124,6 +124,15 @@ input double          InpGuardMaxRiskPct = 3.0;       // Lenh tay cham SL lo hon
 input bool            InpGuardNoAverage  = true;      // Dong ngay lenh tay moi neu nhoi vao lenh cung chieu dang lo
 input int             InpGuardMaxHoldH   = 24;        // Dong lenh tay dang lo sau x gio (0 = tat)
 input double          InpGuardDayLossPct = 5.0;       // Lenh tay lo qua x% trong ngay: dong het, khoa lenh tay toi het ngay (0 = tat)
+input group "=== Nhat ky & canh bao ky luat (tai khoan that) ==="
+input bool            InpJournal         = true;      // Ghi moi giao dich cua tai khoan (bot, lenh tay, nap/rut) vao Common\Files\TrendBot_nhatky.csv
+input double          InpWarnProfitPct   = 20.0;      // Lai trong thang dat moi x% thi nhac rut tien (0 = tat)
+input double          InpWarnBigWinPct   = 10.0;      // 1 lenh lai > x% so du: nhac rut tien, nghi 1-2 ngay, khong tang lot (0 = tat)
+input int             InpWarnRedepositDays = 7;       // Nap tien trong x ngay sau khi rut: canh bao (0 = tat)
+input double          InpMonthDepositCap = 0;         // Tong nap trong thang vuot muc nay (tien tai khoan, vd 2000000 VND) thi canh bao (0 = tat)
+input double          InpWarnLotJump     = 2.0;       // Lenh tay co lot > x lan lot thuong dung (trung vi 20 lenh gan nhat): canh bao (0 = tat)
+input int             InpWarnMaxTradesDay = 10;       // Vao qua x lenh tay trong ngay: canh bao (0 = tat)
+input int             InpWarnLossStreak  = 3;         // Thua tay x lenh lien tiep: nhac nghi (0 = tat)
 
 input group "=== Thong bao ==="
 input bool            InpPushNotify      = true;      // Push ve app MT5 tren dien thoai
@@ -463,6 +472,7 @@ bool ApplyPreset(const int id)
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Guard.mqh"
+#include "TrendBot/Journal.mqh"
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
 
@@ -567,7 +577,7 @@ bool TryInitState()
 
 void OnDeinit(const int reason)
 {
-   if(!MQLInfoInteger(MQL_TESTER)) ReleaseMagic();
+   if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); }
    IndicatorRelease(hFast);
    IndicatorRelease(hTrend);
    IndicatorRelease(hHTF);
@@ -587,6 +597,7 @@ void OnTick()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
+   JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);

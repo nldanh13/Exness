@@ -71,6 +71,21 @@
       "problemMatcher": []
     },
     {
+      "label": "4. Gui nhat ky tai khoan that",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\Chay.ps1",
+        "-Viec",
+        "nhatky"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "Bot: tu cap nhat khi mo VS Code",
       "type": "shell",
       "command": "powershell",

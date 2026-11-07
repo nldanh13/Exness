@@ -5,14 +5,15 @@
 #   -Viec capnhat          : compile ban moi vao MT5
 #   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code, khong git pull)
 #   -Viec backtest         : backtest 1 lan voi cai dat mac dinh
-param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest')][string]$Viec = 'sosanh',
+#   -Viec nhatky           : gui nhat ky tai khoan that (Common\Files) cho Claude doi chieu
+param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest', 'nhatky')][string]$Viec = 'sosanh',
       [string]$Nhom = 'file')
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # 1) Lay code moi - CHI khi ban dong y. Moi nut deu compile lai bot vao MT5 (MT5 nap lai bot dang chay
 #    tren bieu do khi file .ex5 doi), nen code moi tu GitHub phai duoc ban xem va bam "y" truoc.
 # "theodoi" tu chay khi mo VS Code nen KHONG lay code: chi compile code dang co tren may.
-if ($Viec -eq 'theodoi') { }
+if ($Viec -eq 'theodoi' -or $Viec -eq 'nhatky') { }
 elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
     Write-Host "Dang kiem tra code moi tren GitHub..." -ForegroundColor Cyan
     $null = & git -C $ProjectDir fetch -q origin 2>&1
@@ -50,6 +51,7 @@ $job = @(switch ($Viec) {
     'capnhat'         { @('DongBo.ps1') }
     'theodoi'         { @('DongBo.ps1', '-Watch') }
     'backtest'        { @('CaiDatBot.ps1') }
+    'nhatky'          { @('GuiNhatKy.ps1') }
 })
 $script = Join-Path $ProjectDir $job[0]
 $rest   = @($job | Select-Object -Skip 1)
