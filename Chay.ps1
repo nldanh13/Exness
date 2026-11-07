@@ -7,7 +7,8 @@
 #   -Viec theodoi          : compile + tu compile lai moi khi luu file (chay khi mo VS Code, khong git pull)
 #   -Viec backtest         : backtest 1 lan voi cai dat mac dinh
 #   -Viec nhatky           : gui nhat ky tai khoan that (Common\Files) cho Claude doi chieu
-param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest', 'nhatky')][string]$Viec = 'sosanh',
+#   -Viec thanhly          : tai lich su open interest BTC (Binance) va day len de Claude thu voi chien luoc C
+param([ValidateSet('sosanh', 'sosanh-chinhxac', 'capnhat', 'theodoi', 'backtest', 'nhatky', 'thanhly')][string]$Viec = 'sosanh',
       [string]$Nhom = 'file')
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -64,6 +65,7 @@ $job = @(switch ($Viec) {
     'theodoi'         { @('DongBo.ps1', '-Watch') }
     'backtest'        { @('CaiDatBot.ps1') }
     'nhatky'          { @('GuiNhatKy.ps1') }
+    'thanhly'         { @('TaiThanhLy.ps1') }
 })
 $script = Join-Path $ProjectDir $job[0]
 $rest   = @($job | Select-Object -Skip 1)
