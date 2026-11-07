@@ -371,9 +371,15 @@ foreach ($ld in $logDirs) {
 }
 $zip = Join-Path $outDir ("ket-qua-backtest-" + (Get-Date -Format "yyyyMMdd-HHmm") + ".zip")
 Compress-Archive -Path (Join-Path $pack "*") -DestinationPath $zip -Force
-# Chi giu 3 file zip moi nhat trong thu muc bot (ket qua da nam tren GitHub, thu muc ket-qua/)
-Get-ChildItem $outDir -Filter "ket-qua-backtest-*.zip" -File | Sort-Object LastWriteTime -Descending |
-    Select-Object -Skip 3 | Remove-Item -Force -ErrorAction SilentlyContinue
+# Chi giu file zip vua tao trong thu muc bot, xoa cac zip cu (ket qua da nam tren GitHub, thu muc ket-qua/)
+if (Test-Path $zip) {
+    Get-ChildItem $outDir -Filter "ket-qua-backtest-*.zip" -File | Where-Object { $_.FullName -ne $zip } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    # Bao cao htm/png/ini/xml cua MT5 da nam trong zip: xoa luon, khong de lai trong thu muc du lieu MT5
+    Get-ChildItem $dataDir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "$BotName-*" -and $_.Extension -in ".htm", ".html", ".png", ".ini", ".xml" } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+}
 Write-Host ""
 Write-Host "==> GUI FILE NAY CHO CLAUDE: $zip" -ForegroundColor Yellow
 # Luu bang ket qua vao thu muc ket-qua/ va day len GitHub, de Claude doc thang (khong can gui zip).
