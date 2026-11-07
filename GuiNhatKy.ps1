@@ -24,8 +24,13 @@ foreach ($n in $names) {
 if ($copied.Count -eq 0) { Write-Host "Khong co gi de gui." -ForegroundColor Yellow; exit 0 }
 
 Write-Host ""
-Write-Host "Cac file nay co so du, lai/lo va nap/rut cua tai khoan (KHONG co mat khau)." -ForegroundColor Yellow
-Write-Host "Chung se duoc day len repo GitHub RIENG TU cua ban de Claude doc." -ForegroundColor Yellow
+Write-Host "LUU Y QUYEN RIENG TU. Cac file nay chua thong tin tai chinh cua CA TAI KHOAN, khong chi cua bot:" -ForegroundColor Yellow
+Write-Host "  - moi lenh (ca lenh ban vao tay, moi ma), lot, gia, lai/lo" -ForegroundColor Yellow
+Write-Host "  - moi lan NAP / RUT tien va so tien" -ForegroundColor Yellow
+Write-Host "  - SO DU tai khoan sau moi giao dich, tong ket lai/lo moi ngay" -ForegroundColor Yellow
+Write-Host "  (KHONG co mat khau, so tai khoan hay ten dang nhap.)" -ForegroundColor Yellow
+Write-Host "Neu bam y, chung se nam trong lich su repo GitHub cua ban (repo phai de RIENG TU - Private)." -ForegroundColor Yellow
+Write-Host "Muon xem truoc: mo thu muc $dst" -ForegroundColor Yellow
 $ans = Read-Host "Day len GitHub? (y = co, phim khac = chi mo thu muc de ban tu gui zip)"
 if ($ans -notmatch '^(y|yes|c|co)$') { Invoke-Item $dst; exit 0 }
 

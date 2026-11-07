@@ -182,7 +182,7 @@ void JournalScan()
       if(x.type == DEAL_TYPE_BALANCE)
       {
          bool dep = x.pl > 0;
-         JRow(x.t, dep ? "NAP" : "RUT", "", -1, "", 0, 0, 0, x.pl, -1, 0, x.cmt);
+         JRow(x.t, dep ? "NAP" : "RUT", "", -1, "", 0, 0, 0, x.pl, -1, 0, "");   // bo ghi chu: co ma giao dich ngan hang
          if(!first && JMonKey(x.t) == mk) JSet("monDep", JGet("monDep") + x.pl);
          if(dep && warn)
          {

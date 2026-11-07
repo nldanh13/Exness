@@ -335,3 +335,11 @@ Canh bao (gui ve dien thoai, ghi vao nhat ky), rut ra tu sao ke giao dich tay:
 
 Nut 4 "Gui nhat ky tai khoan that": chep 3 file (nhatky, tongket, truotgia) vao ket-qua\thuc-te\, hoi y roi day len GitHub
 de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gian giu).
+
+### Sua theo review (v5.3)
+- Nhoi lenh: sau khi gui lenh doi SL lop cu ve hoa von, bot DOC LAI tung vi the; lop nao chua co SL >= hoa von thi khong nhoi (thu lai nen sau).
+- Bao ve lenh tay, lo ngay: chi tinh lo PHAT SINH trong ngay (tru phan lai/lo da co truoc 0:00 theo gia mo cua D1). Khoa lo ngay luu
+  qua khoi dong lai (Global Variable), tu het sang ngay moi.
+- Lenh tay da mo TRUOC lan dau bat bao ve: mac dinh chi canh bao, khong tu dat SL / giam lot / dong. Muon ap dung: InpGuardOldTrades = true.
+  Van nen thu bao ve lenh tay tren demo truoc khi bat o tai khoan that.
+- Nhat ky: nut 4 ghi ro file chua MOI giao dich, nap/rut va so du cua ca tai khoan. Dong nap/rut khong ghi ma giao dich ngan hang.

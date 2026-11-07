@@ -308,6 +308,23 @@ void PyramidStep()
       bool better = buy ? (sl < op) : (sl <= 0 || sl > op);
       if(better) TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(op, _Digits), tp), "Sua SL", "#" + (string)tk);
    }
+   // Chi nhoi khi DOC LAI trang thai vi the thay moi lop cu da co SL >= hoa von. Server tu choi sua SL
+   // (gan gia, thi truong dong...) thi lop cu van chiu rui ro day du, ma GroupOpenRisk khong tinh lenh cua chinh bot
+   // -> bo qua lan nhoi nay, thu lai o nen sau.
+   double tol = _Point * 2;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong tk = PositionGetTicket(i);
+      if(tk == 0 || !IsOwnSelected()) continue;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL);
+      bool safe = buy ? (sl > 0 && sl >= op - tol) : (sl > 0 && sl <= op + tol);
+      if(!safe)
+      {
+         g_status = "Chua doi duoc SL lop cu ve hoa von, chua nhoi";
+         if(ShouldNotify("pyrsl", 3600)) Print("Nhoi lenh: lenh #", tk, " chua co SL hoa von (SL=", sl, ", gia vao=", op, "), bo qua lan nhoi nay.");
+         return;
+      }
+   }
    double slDist = atr * P_ATRMult;
    if(!GroupLock()) { lastBarTime = 0; return; }
    double lots = CalcLots(slDist);

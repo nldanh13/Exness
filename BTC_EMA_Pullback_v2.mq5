@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.2"
+#define  BOT_VERSION "5.3"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -123,7 +123,8 @@ input double          InpGuardSLPct      = 1.5;       // Lenh tay chua co SL: tu
 input double          InpGuardMaxRiskPct = 3.0;       // Lenh tay cham SL lo hon x% von thi giam lot / dong (0 = tat)
 input bool            InpGuardNoAverage  = true;      // Dong ngay lenh tay moi neu nhoi vao lenh cung chieu dang lo
 input int             InpGuardMaxHoldH   = 24;        // Dong lenh tay dang lo sau x gio (0 = tat)
-input double          InpGuardDayLossPct = 5.0;       // Lenh tay lo qua x% trong ngay: dong het, khoa lenh tay toi het ngay (0 = tat)
+input double          InpGuardDayLossPct = 5.0;       // Lenh tay lo phat sinh qua x% trong ngay: dong het, khoa lenh tay toi het ngay (0 = tat)
+input bool            InpGuardOldTrades  = false;     // Ap dung ca cho lenh tay da mo TRUOC khi bat bao ve (mac dinh: chi canh bao)
 input group "=== Nhat ky & canh bao ky luat (tai khoan that) ==="
 input bool            InpJournal         = true;      // Ghi moi giao dich cua tai khoan (bot, lenh tay, nap/rut) vao Common\Files\TrendBot_nhatky.csv
 input double          InpWarnProfitPct   = 20.0;      // Lai trong thang dat moi x% thi nhac rut tien (0 = tat)

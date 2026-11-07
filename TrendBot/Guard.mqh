@@ -9,9 +9,20 @@
 //+------------------------------------------------------------------+
 ulong    g_gSeen[];            // lenh tay da xem (de chi xu ly "lenh moi" 1 lan)
 bool     g_gInit      = false;
-int      g_gDay       = -1;
-bool     g_gDayLocked = false;
 datetime g_gLast      = 0;
+
+// Trang thai luu qua lan khoi dong lai (Global Variables cua terminal)
+string GKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_" + k; }
+int    GDayKey(const datetime t) { MqlDateTime d; TimeToStruct(t, d); return d.year * 10000 + d.mon * 100 + d.day; }
+bool   GuardDayLocked() { string n = GKey("lock"); return GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent()); }
+void   GuardSetDayLock() { GlobalVariableSet(GKey("lock"), GDayKey(TimeCurrent())); }
+// Lenh mo truoc luc bat bao ve lan dau = "lenh cu": chi canh bao, khong sua / dong (tru khi InpGuardOldTrades)
+datetime GuardSince()
+{
+   string n = GKey("since");
+   if(!GlobalVariableCheck(n)) GlobalVariableSet(n, (double)TimeCurrent());
+   return (datetime)GlobalVariableGet(n);
+}
 
 bool GuardSeen(const ulong t)
 {
@@ -34,7 +45,9 @@ void GuardClose(const ulong ticket, const string reason)
       Notify(StringFormat("[%s] BAO VE LENH TAY: da dong lenh #%I64u. Ly do: %s", _Symbol, ticket, reason));
 }
 
-// Lai/lo lenh tay tren ma nay trong ngay: da dong + dang mo (tien tai khoan)
+// Lai/lo lenh tay tren ma nay PHAT SINH trong ngay:
+//   da dong hom nay + tha noi bay gio - tha noi luc 0:00 (cua cac lenh da mo tu truoc 0:00, tinh theo gia mo cua nen D1)
+// Lenh am 200 tu hom qua, hom nay van am 200 -> lo trong ngay = 0.
 double GuardManualDayPL(const datetime dayStart)
 {
    double pl = 0;
@@ -46,9 +59,42 @@ double GuardManualDayPL(const datetime dayStart)
          if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) { pl += HistoryDealGetDouble(d, DEAL_COMMISSION); continue; }
          pl += HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION);
       }
+   double dayOpen = iOpen(_Symbol, PERIOD_D1, 0);
    for(int i = PositionsTotal() - 1; i >= 0; i--)
-      if(PositionGetTicket(i) != 0 && IsManualSelected())
-         pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+   {
+      if(PositionGetTicket(i) == 0 || !IsManualSelected()) continue;
+      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      if((datetime)PositionGetInteger(POSITION_TIME) < dayStart && dayOpen > 0)
+      {
+         // tru phan lai/lo da co tu truoc 0:00 (gia vao -> gia mo cua ngay)
+         bool b = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+         double p0 = 0;
+         if(OrderCalcProfit(b ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, PositionGetDouble(POSITION_VOLUME),
+                            PositionGetDouble(POSITION_PRICE_OPEN), dayOpen, p0)) pl -= p0;
+      }
+   }
+   // Lenh mo tu truoc 0:00 va da dong hom nay: phan lai/lo truoc 0:00 nam trong deal dong -> tru ra
+   if(HistorySelect(dayStart, TimeCurrent() + 60))
+      for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
+      {
+         ulong d = HistoryDealGetTicket(i);
+         if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
+         if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) continue;
+         ulong pos = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
+         double vol = HistoryDealGetDouble(d, DEAL_VOLUME);
+         long   dt  = HistoryDealGetInteger(d, DEAL_TYPE);            // deal dong Sell = vi the Buy
+         if(!HistorySelectByPosition(pos)) break;
+         double op = 0; datetime ot = 0;
+         for(int j = 0; j < HistoryDealsTotal(); j++)
+         {
+            ulong e = HistoryDealGetTicket(j);
+            if(HistoryDealGetInteger(e, DEAL_ENTRY) == DEAL_ENTRY_IN) { op = HistoryDealGetDouble(e, DEAL_PRICE); ot = (datetime)HistoryDealGetInteger(e, DEAL_TIME); break; }
+         }
+         double p0 = 0;
+         if(ot > 0 && ot < dayStart && dayOpen > 0 &&
+            OrderCalcProfit(dt == DEAL_TYPE_SELL ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, vol, op, dayOpen, p0)) pl -= p0;
+         if(!HistorySelect(dayStart, TimeCurrent() + 60)) break;    // chon lai lich su ngay de lap tiep
+      }
    return pl;
 }
 
@@ -60,9 +106,9 @@ void GuardManual()
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
    datetime dayStart = TimeCurrent() - (dt.hour * 3600 + dt.min * 60 + dt.sec);
-   if(dt.day_of_year != g_gDay) { g_gDay = dt.day_of_year; g_gDayLocked = false; }
+   datetime since = GuardSince();
 
-   // Lan dau: chi ghi nho lenh dang co, khong dong lenh cu
+   // Lan dau trong phien nay: ghi nho lenh dang co de khong coi chung la "lenh moi" (luat chan nhoi lenh chi xet lenh moi)
    if(!g_gInit)
    {
       for(int i = PositionsTotal() - 1; i >= 0; i--)
@@ -75,13 +121,14 @@ void GuardManual()
 
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
    // 1) Lo trong ngay cua lenh tay vuot gioi han: dong het, khoa toi het ngay
-   if(InpGuardDayLossPct > 0 && !g_gDayLocked)
+   bool locked = GuardDayLocked();
+   if(InpGuardDayLossPct > 0 && !locked)
    {
       double pl = GuardManualDayPL(dayStart);
       double base = eq - pl;                                  // uoc tinh von dau ngay
       if(base > 0 && pl <= -base * InpGuardDayLossPct / 100.0)
       {
-         g_gDayLocked = true;
+         locked = true; GuardSetDayLock();                    // luu qua khoi dong lai, het hieu luc sang ngay moi
          Notify(StringFormat("[%s] BAO VE LENH TAY: lenh tay lo %.1f%% trong ngay (gioi han %.1f%%). Dong het va khong cho lenh tay moi toi 0:00 (gio server).",
                              _Symbol, -pl / base * 100.0, InpGuardDayLossPct));
       }
@@ -101,7 +148,15 @@ void GuardManual()
       double vol  = PositionGetDouble(POSITION_VOLUME);
       datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
 
-      if(g_gDayLocked) { GuardClose(t, "da cham gioi han lo ngay cua lenh tay"); continue; }
+      // Lenh mo truoc khi bat bao ve lan dau: chi canh bao 1 lan, khong tu sua / dong
+      if(ot < since && !InpGuardOldTrades)
+      {
+         if((sl == 0 || locked) && ShouldNotify("gold" + IntegerToString((long)t), 24 * 3600))
+            Notify(StringFormat("[%s] BAO VE LENH TAY: lenh cu #%I64u (mo truoc khi bat bao ve)%s. Bot KHONG tu sua lenh nay; dat InpGuardOldTrades = true neu muon.",
+                                _Symbol, t, sl == 0 ? " chua co SL" : " dang trong ngay da cham gioi han lo"));
+         continue;
+      }
+      if(locked) { GuardClose(t, "da cham gioi han lo ngay cua lenh tay"); continue; }
 
       // 2) Nhoi them khi lenh cung chieu dang lo: dong lenh moi
       if(isNew && InpGuardNoAverage)
