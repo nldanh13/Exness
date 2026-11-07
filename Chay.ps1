@@ -68,4 +68,7 @@ $job = @(switch ($Viec) {
 $script = Join-Path $ProjectDir $job[0]
 $rest   = @($job | Select-Object -Skip 1)
 & powershell -NoProfile -ExecutionPolicy Bypass -File $script @rest
-exit $LASTEXITCODE
+$code = $LASTEXITCODE
+# Giao dien (GiaoDien.ps1) doc ma thoat tu dong nay: Windows PowerShell doi khi khong tra ma thoat cua tien trinh chay an
+if ($env:TRENDBOT_GIAODIEN) { Write-Host "[giao-dien] ma-thoat=$code" }
+exit $code

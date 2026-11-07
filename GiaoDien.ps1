@@ -77,6 +77,9 @@ function Get-JobState {
     $running = -not $j.Proc.HasExited
     if (-not $running -and -not $j.End) {
         $j.End = Get-Date; try { $j.ExitCode = $j.Proc.ExitCode } catch { $j.ExitCode = -1 }
+        # Du phong: ma thoat Chay.ps1 tu ghi vao nhat ky (dong "[giao-dien] ma-thoat=N")
+        $m = [regex]::Match((Read-Shared $LogFile), '\[giao-dien\] ma-thoat=(-?\d+)')
+        if ($m.Success) { $j.ExitCode = [int]$m.Groups[1].Value } elseif ($null -eq $j.ExitCode) { $j.ExitCode = -1 }
         $script:Git = Get-GitStatus   # viec vua xong co the da lay code moi: cap nhat lai "Phien ban bot"
     }
     $endT = if ($j.End) { $j.End } else { Get-Date }
@@ -95,6 +98,7 @@ function Start-BotJob($body) {
     $env:TRENDBOT_LAYCODE = if ($body.layCodeMoi) { "y" } else { "n" }
     $env:TRENDBOT_DONGMT5 = if ($body.dongMT5) { "y" } else { "n" }
     $env:TRENDBOT_GUINHATKY = if ($body.guiNhatKy) { "y" } else { "n" }
+    $env:TRENDBOT_GIAODIEN = "1"
     foreach ($f in @($LogFile, $ErrFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $ProjectDir 'Chay.ps1')`"", '-Viec', $viec, '-Nhom', $nhom)
     $sp = @{ FilePath = "powershell"; ArgumentList = $argList; WorkingDirectory = $ProjectDir; PassThru = $true
@@ -103,7 +107,7 @@ function Start-BotJob($body) {
     $p = Start-Process @sp
     # Giu handle ngay: Windows PowerShell chi doc duoc ExitCode khi da lay Handle truoc luc tien trinh ket thuc
     $null = $p.Handle
-    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY -ErrorAction SilentlyContinue
+    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY, Env:\TRENDBOT_GIAODIEN -ErrorAction SilentlyContinue
     $script:Job = @{ Proc = $p; Viec = $viec; Nhom = $nhom; Start = Get-Date; End = $null; ExitCode = $null; Stopped = $false }
 }
 
