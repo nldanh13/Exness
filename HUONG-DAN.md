@@ -418,3 +418,19 @@ Ket luan: giu C cho demo. v5.8 tinh t / top 5 / Monte Carlo theo dot, va them la
   them cua ca chuoi xem o cot RuiRoMoMax% va SutGiamMax% (sut giam that, tinh ca lai/lo tha noi).
 - Monte Carlo chi tron thu tu lai/lo cua cac dot da dong, khong tai tao lai/lo tha noi hay viec bot dung han giua chung.
   Muon biet bot that co bi dung khong, xem cac lan "-nhuThat" (bat dung han 15% + lo ngay 3%, chay bang gia that).
+
+## Ket qua dot 7/11/2026 20:42 (v5.9, che do nhanh) - KET THUC thu nhoi lenh va cho gia hoi
+Ban v5.9 compile va chay binh thuong; t / top 5 theo dot khop voi tinh tay (nhoi5: t 1,96 so voi 1,97).
+So sanh cong bang, cung muc sut giam (von 30000; nhoi5 rui ro 0,3%/lop, C 1%):
+- 3 nam gan day: nhoi5-rr0.3 +10.484, sut giam 6,8% | C +9.842, sut giam 6,4%. Lai/sut giam bang nhau (~1.540).
+- 3 nam truoc:   nhoi5-rr0.3 +6.309, sut giam 4,9%  | C +11.481, sut giam 5,2%. C hon han (2.230 so voi 1.300).
+- Moi ban nhoi: top 5 dot chiem 104-125% lai, PF bo top 5 < 1. C: 81-96%, PF bo top 5 > 1.
+=> Nhoi lenh khong co loi the rieng, chi doi rui ro. Khong dung.
+Cho gia hoi (so voi C+nhoi5 cung von): -bo kem ro (bo lo 33-44 lan pha vo chay thang, dung nhom lai lon);
+-vao 0,25 / 0,5 kem nhe ca 2 giai doan. C+nhoi3+hoi0.25-vao: PF +0,22 / +0,04 so voi C+nhoi3, khong dat tieu chi (+0,2 o ca 2).
+=> Khong dung. ChoHoi_BiHuy = 0 vi backtest khong bat bo loc nao.
+Dung han 15% (C-nhuThat, C+nhoi5-nhuThat): ra GIONG HET ban tat dung han, du nhoi5 co SutGiamMax 16,9%. Khong phai loi:
+bot tinh sut giam theo lai da chot + lo dang chay, KHONG tinh lai dang chay bi tra lai (xem "Bao ve tai khoan").
+Sut giam theo lai da chot cua nhoi5 chi 10,9% (C 2,8%). Phan con lai cua 16,9% la lai tha noi bi tra lai, muc dung han khong chan.
+ETH nhoi5: PF truot 1,46, top 5 chiem 154%, Monte Carlo 54% cham dung han. Loai.
+Ket luan: giu C (Donchian 20 H4 + ADX, 1 lenh, khong nhoi, vao ngay) cho demo.
