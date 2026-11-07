@@ -1,18 +1,7 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay (v5.8, t / top 5 / Monte Carlo tinh theo DOT nhoi lenh):
-#  - nhoi5 rui ro 0,3%/lop (von 30000) so voi C von 30000: lai/sut giam va t theo dot co hon C khong
-#  - nhu chay that (dung han 15%, lo ngay 3%): C va nhoi5 von 3000
-#  - vao lenh khi gia hoi ve (chua chay o dot truoc)
-C-Donchian20-H4-ADX
-C-truoc-3nam
+# Dot nay (danh muc nhieu thi truong): cung cau hinh C (khong chinh tham so) tren ETH, vang, bac, Nasdaq, Dow, dau,
+# EURUSD, GBPUSD, USDJPY; 3 nam gan day va 3 nam truoc, von 30000. Doi chieu voi C-von30000 (BTC).
+# Claude se gop -lenh.csv thanh danh muc (chia rui ro cho cac ma) de xem sut giam co giam so voi chi BTC khong.
 C-von30000
 C-von30000-truoc
-C+nhoi3
-C+nhoi3-truoc
-C+nhoi5-buoc0.5
-C+nhoi5-buoc0.5-truoc
-C+nhoi5-buoc0.5-ETH
-C+nhoi5-buoc0.5-rr0.3*
-C-nhuThat*
-C+nhoi5-buoc0.5-nhuThat*
-*+hoi0.*
+DM-*
