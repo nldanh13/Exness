@@ -160,12 +160,15 @@ foreach ($c in @(@{ N = "M30"; V = 30; H = "H4"; HV = 16388 }, @{ N = "M15"; V =
 $Von1tr = 38
 foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong",
                "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15",
-               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5")) {
+               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5", "Ngan-Nhoi3-M15+huongH4", "Ngan-Nhoi3-M15+huongH1", "Ngan-Nhoi3-M5+huongH1")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
     if ($src) {
         $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }
         $i5 = $src.Inputs.Clone(); $i5["InpMaxRiskRoundUp"] = 5
         $Runs += @{ Name = "$n-von1tr-rr5"; Inputs = $i5; Deposit = $Von1tr }
+        # Luon vao 0,01 lot du rui ro bao nhieu (chi bo khi 1 lenh thua lon hon ca tai khoan): de thay ket qua that
+        $i100 = $src.Inputs.Clone(); $i100["InpMaxRiskRoundUp"] = 100
+        $Runs += @{ Name = "$n-von1tr-luonVao"; Inputs = $i100; Deposit = $Von1tr }
     }
 }
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
