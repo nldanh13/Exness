@@ -254,6 +254,18 @@ foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-OR
         $Runs += @{ Name = "$n-von1tr-luonVao"; Inputs = $i100; Deposit = $Von1tr }
     }
 }
+# Danh muc nhieu thi truong (dot 7/11 toi): thu "hoi dong chien thuat" (doi loi danh theo thanh tich gan day) bang
+# Python tren BTC 2021-2026 thua giu nguyen C o ca 2 nua giai doan. Huong khac: chay CUNG MOT cau hinh C tren nhieu
+# thi truong cung luc de co them co hoi doc lap. Tham so C giu nguyen, KHONG chinh rieng cho tung ma (tranh hoc vet).
+# Von 30000 de lot toi thieu khong bo lenh (vang 0,01 lot voi SL 2,5 ATR H4 ~ 50 USD > 1% cua 3000).
+# Ten ma theo tai khoan Exness Standard (duoi "m"). Optional: ma nao tai khoan khong co thi chi canh bao vang,
+# khong tinh la dot chay CHUA DU (van day ket qua cac ma con lai len GitHub).
+# So sanh voi C-von30000 / C-von30000-truoc (BTC). Ket qua tung lenh (-lenh.csv) duoc gop thanh danh muc sau.
+foreach ($dm in @("ETHUSDm", "XAUUSDm", "XAGUSDm", "USTECm", "US30m", "USOILm", "EURUSDm", "GBPUSDm", "USDJPYm")) {
+    $n = "DM-" + $dm.TrimEnd('m')
+    $Runs += @{ Name = $n;            Inputs = (Cfg $Brk $Q); Deposit = 30000; Symbol = $dm; Optional = $true }
+    $Runs += @{ Name = "$n-truoc";    Inputs = (Cfg $Brk $Q); Deposit = 30000; Symbol = $dm; From = $OOSFrom; To = $FromDate; Optional = $true }
+}
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
 # Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / file (theo chi-chay.txt, mac dinh)
 $nhomPats = switch ($Nhom) {
@@ -386,10 +398,15 @@ foreach ($g in $groups.Values) {
 
 # Gom file ket qua tung lan (TrendBotRes\001.csv ...) theo dung thu tu trong $Runs
 $rows = New-Object System.Collections.ArrayList
-$missing = @()
+$missing = @(); $missingOpt = @()
 foreach ($run in $Runs) {
     $f = Join-Path $resDirMT5 ("{0:D3}.csv" -f $run.Id)
-    if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$rows.Add($r) } } else { $missing += $run.Name }
+    if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$rows.Add($r) } }
+    elseif ($run.Optional) { $missingOpt += "$($run.Name) ($($run.Sym))" } else { $missing += $run.Name }
+}
+# Cau hinh Optional (ma co the khong co tren tai khoan): thieu thi chi canh bao, khong chan day ket qua
+if ($missingOpt.Count -gt 0) {
+    Write-Host "CANH BAO: khong co ket qua cho $($missingOpt.Count) cau hinh tuy chon (tai khoan co the khong co ma nay): $($missingOpt -join ', ')" -ForegroundColor Yellow
 }
 # Thieu bat ky cau hinh nao = dot chay CHUA HOAN THANH: van luu de xem, nhung khong day len GitHub, khong dung de chon.
 $incomplete = $missing.Count -gt 0
