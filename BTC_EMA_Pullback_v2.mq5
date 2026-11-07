@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.9"
-#property version   "5.90"
+#define  BOT_VERSION "5.9.1"
+#property version   "5.91"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
