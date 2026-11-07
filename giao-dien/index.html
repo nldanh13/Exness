@@ -475,7 +475,7 @@ function renderRun(d) {
   var html, cls;
   if (j.Stopped) { cls = 'warn'; html = '<b>Đã dừng.</b> Kết quả lần này không đầy đủ, đừng dùng để chọn chiến lược.'; }
   else if (noMT5) { cls = 'warn'; html = '<b>Chưa chạy vì MT5 đang mở.</b> Tích ô "Cho phép đóng MT5" rồi bấm Bắt đầu lại, hoặc tự đóng MT5 trước.'; }
-  else if (j.ExitCode !== 0) { cls = 'bad'; html = '<b>Có lỗi, việc chưa xong.</b> Mở "Nhật ký chi tiết" bên dưới, chụp màn hình gửi Claude.'; $('log-wrap').open = true; }
+  else if (j.ExitCode !== 0 && !(pushed && j.ExitCode == null)) { cls = 'bad'; html = '<b>Có lỗi, việc chưa xong.</b> Mở "Nhật ký chi tiết" bên dưới, chụp màn hình gửi Claude.'; $('log-wrap').open = true; }
   else if (isTest && incomplete) { cls = 'bad'; html = '<b>Thiếu kết quả.</b> Có chiến lược thử chưa xong, nên kết quả không được gửi lên GitHub. Chạy lại, hoặc gửi file ket-qua-backtest-….zip cho Claude.'; }
   else if (isTest) { cls = 'ok'; html = '<b>Xong sau ' + dur(j.Seconds) + '.</b> ' + (pushed ? 'Kết quả đã gửi lên GitHub, chỉ cần nhắn Claude "xong rồi".' : 'Không gửi được lên GitHub: gửi file ket-qua-backtest-….zip cho Claude.') + ' <button class="small primary" id="btn-see">Xem kết quả</button>'; }
   else if (j.Viec === 'nhatky') { cls = 'ok'; html = /==> Da gui/.test(FULL_LOG) ? '<b>Đã gửi nhật ký.</b> Nhắn Claude "đã gửi nhật ký" để đối chiếu.' : /Khong co gi de gui/.test(FULL_LOG) ? '<b>Chưa có nhật ký để gửi.</b> Bot chưa chạy trên tài khoản thật hoặc demo.' : '<b>Đã mở thư mục nhật ký.</b> Bạn có thể tự xem rồi gửi cho Claude.'; }
