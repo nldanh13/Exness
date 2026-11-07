@@ -31,7 +31,8 @@ Write-Host "  - SO DU tai khoan sau moi giao dich, tong ket lai/lo moi ngay" -Fo
 Write-Host "  (KHONG co mat khau, so tai khoan hay ten dang nhap.)" -ForegroundColor Yellow
 Write-Host "Neu bam y, chung se nam trong lich su repo GitHub cua ban (repo phai de RIENG TU - Private)." -ForegroundColor Yellow
 Write-Host "Muon xem truoc: mo thu muc $dst" -ForegroundColor Yellow
-$ans = Read-Host "Day len GitHub? (y = co, phim khac = chi mo thu muc de ban tu gui zip)"
+if ($env:TRENDBOT_GUINHATKY) { $ans = $env:TRENDBOT_GUINHATKY; Write-Host "Tra loi tu giao dien (day len GitHub): $ans" }
+else { $ans = Read-Host "Day len GitHub? (y = co, phim khac = chi mo thu muc de ban tu gui zip)" }
 if ($ans -notmatch '^(y|yes|c|co)$') { Invoke-Item $dst; exit 0 }
 
 & git -C $ProjectDir fetch -q 2>&1 | Out-Null
