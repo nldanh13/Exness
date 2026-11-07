@@ -132,12 +132,27 @@ foreach ($sr in $ScalpRuns) {
     $Runs += @{ Name = "Ngan-$($sr.N)";       Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($sr.N)-truoc"; Inputs = (Cfg $Brk $Scalp $sr.I); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Nhoi lenh theo da (y tuong cua ban 07/11): vao khi pha vo Donchian 20, gia di them 1 ATR thi vao them (toi da 3 lenh,
+# lenh cu doi SL ve hoa von), nen dong cat EMA20 nguoc chieu thi dong het. Tham so dat truoc, khong do tim.
+$Nhoi = @{ InpPyramidMax = 3; InpPyramidStepATR = 1.0; InpExitOnEMA = "true"; InpUseTrailing = "false" }
+$Runs += @{ Name = "C+nhoi3";            Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 1.0 }) }
+$Runs += @{ Name = "C+nhoi3-truoc";      Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 1.0 }); From = $OOSFrom; To = $FromDate }
+$Runs += @{ Name = "C+nhoi3-ETH";        Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 1.0 }); Symbol = "ETHUSDm" }
+$Runs += @{ Name = "Nhoi3-H4";           Inputs = (Cfg $Brk $Q $Nhoi) }
+$Runs += @{ Name = "Nhoi3-H4-truoc";     Inputs = (Cfg $Brk $Q $Nhoi); From = $OOSFrom; To = $FromDate }
+$Runs += @{ Name = "Nhoi3-H4-ETH";       Inputs = (Cfg $Brk $Q $Nhoi); Symbol = "ETHUSDm" }
+foreach ($tf in @(@{ N = "H1"; V = 16385 }, @{ N = "M30"; V = 30 }, @{ N = "M15"; V = 15 }, @{ N = "M5"; V = 5 })) {
+    $i = Cfg $Brk $Q $Nhoi @{ InpTF = $tf.V; InpMaxSpreadPoints = 1500 }
+    $Runs += @{ Name = "Ngan-Nhoi3-$($tf.N)";       Inputs = $i; Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-Nhoi3-$($tf.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
 $Von1tr = 38
 foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong",
-               "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15")) {
+               "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15",
+               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
     if ($src) {
         $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }

@@ -288,7 +288,7 @@ double OnTester()
                    "MC_SutGiamTB%", "MC_SutGiam95%", "MC_XacSuatDungHan%", "ChanFunding", "ChanFearGreed", "ChanChuY", "ChanNasdaq",
                    "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin",
                    "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
-                   "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD");
+                   "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -314,7 +314,7 @@ double OnTester()
                 DoubleToString(plNoTop, 2), DoubleToString(rGL > 0 ? rGP / rGL : 0, 2),
                 DoubleToString(totNet > 0 ? top5 / totNet * 100.0 : 0, 0),
                 DoubleToString(meanR, 3), DoubleToString(tStat, 2), DoubleToString(wilson, 1),
-                DoubleToString(mcStreak95, 0), g_ddScaled);
+                DoubleToString(mcStreak95, 0), g_ddScaled, g_pyrAdds);
       FileClose(h);
    }
    else

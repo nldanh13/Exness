@@ -253,3 +253,62 @@ void ManagePositions()
          TradeDone(PrepSend() && trade.PositionModify(ticket, newSL, tp), "Sua SL", "#" + (string)ticket);
    }
 }
+
+//--- Nhoi lenh theo da (pyramiding) va thoat khi het da. Goi moi nen moi khi dang co lenh.
+// Gia di thuan them InpPyramidStepATR x ATR tu lenh gan nhat va van dung phia EMA nhanh -> vao them 1 lenh
+// cung chieu (toi da InpPyramidMax). Truoc khi vao them, cac lenh cu doi SL ve hoa von, nen rui ro mo
+// cua ca chuoi chi con khoang 1 lenh. Khong bao gio nhoi khi dang lo.
+// InpExitOnEMA: nen dong cat EMA nhanh nguoc chieu -> dong het (chot loi khi co dau hieu dao chieu).
+int g_pyrAdds = 0;
+void PyramidStep()
+{
+   double fast, atr;
+   if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr) || atr <= 0) return;
+   double c1 = iClose(_Symbol, P_TF, 1);
+   int cnt = 0; bool buy = true; double lastOpen = 0; datetime lastT = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) == 0 || !IsOwnSelected()) continue;
+      cnt++;
+      buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      datetime t = (datetime)PositionGetInteger(POSITION_TIME);
+      if(t >= lastT) { lastT = t; lastOpen = PositionGetDouble(POSITION_PRICE_OPEN); }
+   }
+   if(cnt == 0) return;
+   if(P_ExitOnEMA && (buy ? c1 < fast : c1 > fast))
+   {
+      g_status = "Het da (cat EMA), dong het";
+      CloseAll();
+      return;
+   }
+   if(cnt >= P_PyramidMax || IsHalted() || DailyLossHit()) return;
+   if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
+
+   // Doi SL cac lenh cu ve it nhat hoa von
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong tk = PositionGetTicket(i);
+      if(tk == 0 || !IsOwnSelected()) continue;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP);
+      bool better = buy ? (sl < op) : (sl <= 0 || sl > op);
+      if(better) TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(op, _Digits), tp), "Sua SL", "#" + (string)tk);
+   }
+   double slDist = atr * P_ATRMult;
+   if(!GroupLock()) { lastBarTime = 0; return; }
+   double lots = CalcLots(slDist);
+   MqlTick tick;
+   if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return; }
+   GroupReserve(g_lastRisk);
+   double price = buy ? tick.ask : tick.bid;
+   g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   double sl = buy ? price - slDist : price + slDist;
+   double tp = P_RR > 0 ? (buy ? price + slDist * P_RR : price - slDist * P_RR) : 0.0;
+   bool ok = PrepSend() && (buy ? trade.Buy(lots, _Symbol, price, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY+")
+                                : trade.Sell(lots, _Symbol, price, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL+"));
+   uint rc = trade.ResultRetcode();
+   bool filled = ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
+   if(!filled) GroupClear(); else g_pyrAdds++;
+   GroupUnlock();
+   TradeDone(ok, "Nhoi lenh", buy ? "BUY" : "SELL");
+}

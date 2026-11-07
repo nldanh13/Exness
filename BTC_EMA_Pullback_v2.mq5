@@ -71,6 +71,9 @@ input group "=== SL / TP / Khoi luong ==="
 input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
+input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
+input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
+input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
 input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
 input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
@@ -141,6 +144,9 @@ double          P_RsiHigh;
 int             P_OrbStartMin;
 bool            P_OrbNewYork;
 bool            P_DDScale;
+int             P_PyramidMax;
+double          P_PyramidStepATR;
+bool            P_ExitOnEMA;
 double          P_ExhaustATR;
 double          P_FvgBigATR;
 int             P_FvgLookback;
@@ -226,6 +232,9 @@ void LoadParams()
    P_OrbStartMin = InpOrbStartMin;
    P_OrbNewYork = InpOrbNewYork;
    P_DDScale = InpDDScale;
+   P_PyramidMax = InpPyramidMax;
+   P_PyramidStepATR = InpPyramidStepATR;
+   P_ExitOnEMA = InpExitOnEMA;
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback;
@@ -314,6 +323,9 @@ bool SetParam(const string k, const string v)
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
+   if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
+   if(k == "InpExitOnEMA") { P_ExitOnEMA = (v == "true" || v == "1"); return true; }
    if(k == "InpDDScale") { P_DDScale = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbNewYork") { P_OrbNewYork = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbStartMin") { P_OrbStartMin = (int)StringToInteger(v); return true; }
@@ -562,7 +574,12 @@ void OnTick()
    lastBarTime = barTime;
 
    if(IsHalted())       { g_status = "DUNG HAN (sut giam)"; return; }
-   if(HasOwnPosition()) { g_status = "Dang giu lenh";       return; }
+   if(HasOwnPosition())
+   {
+      g_status = "Dang giu lenh";
+      if(P_PyramidMax > 1 || P_ExitOnEMA) PyramidStep();
+      return;
+   }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return; }
    string why = "";
    if(!TimeAllowed(why)) { g_status = "Tam nghi: " + why; return; }
