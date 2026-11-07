@@ -1,7 +1,8 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay (danh muc nhieu thi truong): cung cau hinh C (khong chinh tham so) tren ETH, vang, bac, Nasdaq, Dow, dau,
-# EURUSD, GBPUSD, USDJPY; 3 nam gan day va 3 nam truoc, von 30000. Doi chieu voi C-von30000 (BTC).
-# Claude se gop -lenh.csv thanh danh muc (chia rui ro cho cac ma) de xem sut giam co giam so voi chi BTC khong.
+# Dot nay:
+#  - 1tr-*: von 1 trieu VND (~38 USD), tai khoan Standard. Tim ma nao C vao duoc lenh voi rui ro that <= 3% von.
+#  - DM-*: cung cau hinh C tren nhieu thi truong, von 30000 (danh muc). Doi chieu voi C-von30000 (BTC).
+1tr-*
 C-von30000
 C-von30000-truoc
 DM-*
