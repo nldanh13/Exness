@@ -280,3 +280,14 @@ Ket qua trong bai (chua tru phi): ket hop 16,7%/nam, Sharpe 1,72, dung 58%; chi 
 Can than: moi ngay chi 1 lenh 30 phut, bien do trung binh rat nho (~0,07%, ~50 USD) so voi spread Exness (~6-20 USD);
 du lieu cua bai dung o 2020, hieu ung co the da yeu di sau khi cong bo. Chi tin khi backtest dat tieu chi da dat truoc.
 Lan chay: Ngan-IMOM-M5 (ket hop), -dau30, -dao; moi cai co ban 3 nam gan day va 3 nam truoc; ban ket hop co them -von1tr.
+
+## Ket qua dot 7/11/2026 13:42 (61 lan)
+
+- C+nhoi3 (Donchian H4 + nhoi toi 3 lop): loi nhuan gan gap doi C o ca 2 giai doan (1740 vs 962; 1926 vs 1014), t = 2,66 / 3,10,
+  PF truot 0,05% = 1,73 / 2,43, it phu thuoc top 5 hon (PF bo top 5: 1,38 / 1,68). Nhung sut giam tang 2-3 lan (12% / 9%),
+  loi nhuan chia sut giam thap hon C mot chut: nhoi lenh giong tang rui ro, khong phai "an mien phi". Ung vien duy nhat dang xem them; da them vao chinh-xac.txt.
+- C+nhoi3-buoc2R: gan nhu bang C. Nhoi3-H4 khong ADX: kem hon C+nhoi3.
+- Luot song nhoi lenh M5-H1, co/khong loc huong H1/H4: deu lo o 3 nam truoc; M5 lo nang (sut giam 62-98%).
+- MACD da khung (Quantpedia): lo ca 2 giai doan.
+- Quan tinh trong ngay (Shen 2022): truoc phi PF ~1,06-1,09, sau truot 0,05% PF ~0,2. Phi giet chien luoc, nhu du doan.
+- Tat ca ban von 1 trieu: lo hoac khong vao duoc lenh.
