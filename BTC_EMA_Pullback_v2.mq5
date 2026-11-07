@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.3"
+#define  BOT_VERSION "5.4"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -474,6 +474,7 @@ bool ApplyPreset(const int id)
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
+#include "TrendBot/Status.mqh"
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
 
@@ -578,7 +579,7 @@ bool TryInitState()
 
 void OnDeinit(const int reason)
 {
-   if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); }
+   if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); }
    IndicatorRelease(hFast);
    IndicatorRelease(hTrend);
    IndicatorRelease(hHTF);
@@ -599,6 +600,7 @@ void OnTick()
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
+   WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);

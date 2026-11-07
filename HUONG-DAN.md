@@ -40,13 +40,18 @@ Bot kiểm tra lệnh đang mở và giới hạn lỗ ở mọi tick (`InpManag
 - Script sẽ hỏi đóng MT5. Đóng MT5 là **dừng mọi bot đang chạy trên MT5 đó**.
 - Tắt terminal VS Code hay tắt máy giữa chừng thì lượt chạy dừng và không có file zip. Không hỏng gì cả, chỉ cần chạy lại. Dữ liệu giá đã tải vẫn được giữ.
 
-## Giao diện trên trình duyệt (dễ nhìn hơn)
-Bấm đúp **`GiaoDien.cmd`** trong thư mục bot (hoặc VS Code: **Terminal → Run Task… → 0. Mo giao dien**). Trình duyệt mở `http://localhost:8765` với hai tab:
+## Giao diện trên trình duyệt (không cần VS Code)
+Bấm đúp **`GiaoDien.cmd`** trong thư mục bot. Trình duyệt mở `http://localhost:8765` với hai trang:
 
-- **Chạy backtest**: xem máy có code mới trên GitHub không, MT5 đang mở hay tắt; chọn việc (giống nút 1, 2, 3), tích ô nếu muốn lấy code mới hoặc cho phép đóng MT5, rồi bấm **Bắt đầu**. Thanh tiến trình đếm theo từng đợt, nhật ký hiện ngay trên trang (dòng đỏ là lỗi). Nút **Dừng** dừng hẳn việc đang chạy, kể cả MT5 tester.
-- **Kết quả**: bảng so sánh các đợt trong `ket-qua/`, sắp xếp theo cột, lọc theo tên, cột *Tiêu chí* đánh dấu cấu hình có PF trượt 0.05% đạt ngưỡng ở cả 3 năm gần đây lẫn 3 năm trước. Bấm một dòng để xem lãi lũy kế, lãi theo năm, theo giờ vào lệnh, Buy/Sell và danh sách lệnh.
+- **Bảng điều khiển**:
+  - *Tình trạng hiện tại* nói bằng một câu: MT5 đang mở hay tắt, bot đang chạy tài khoản **thật hay demo**, bot đang **giữ bao nhiêu lệnh**, có phiên bản bot mới không. Bot từ v5.4 mới báo được tài khoản và số lệnh (ghi file `TrendBot_trangthai_*.txt` trong Common\Files mỗi 10 giây, không ghi số tài khoản).
+  - *Chiến lược đã vượt qua kiểm thử chưa?* tóm tắt lần thử mới nhất: mấy chiến lược đạt, chiến lược nào chắc chắn nhất, bước tiếp theo.
+  - *Bạn muốn làm gì?*: Thử các chiến lược (nút 1), Kiểm tra kỹ (nút 3), Xem kết quả, Cập nhật phiên bản bot (nút 2), Gửi nhật ký tài khoản (nút 4), Tự thử 1 lần trong MT5. Các câu hỏi y/n trước đây thành ô tích. Nếu tài khoản thật đang có lệnh mở, giao diện cảnh báo trước khi đóng MT5.
+- **Kết quả thử nghiệm**: mỗi chiến lược có kết luận *Đạt tiêu chí kiểm thử*, *Kết quả chưa đạt yêu cầu*, hoặc *Chưa đủ dữ liệu để kết luận*. Bấm một dòng để xem giải thích bằng lời, tiền lời cộng dồn, lời/lỗ theo năm và theo giờ. Bấm "Chỉ số kỹ thuật" để hiện PF, Recovery, t-stat…
 
-Giữ cửa sổ đen của giao diện mở trong lúc dùng; đóng nó là tắt giao diện. Giao diện chỉ mở trên máy này (localhost), máy khác trong mạng không vào được.
+Tiêu chí "đạt": PF sau trượt giá 0,05% từ 1,3 trở lên ở **cả** 3 năm gần đây và 3 năm trước đó, mỗi giai đoạn ít nhất 30 lệnh.
+
+Giữ cửa sổ đen của giao diện mở trong lúc dùng; đóng nó là tắt giao diện. Giao diện chỉ mở trên máy này (localhost).
 
 ## Bot làm gì (cài đặt mặc định)
 **Vào lệnh (khung H4, chiến lược Donchian breakout):** nến H4 vừa đóng cửa vượt lên trên đỉnh cao nhất của 20 nến trước đó thì Buy. Nếu đóng cửa xuống dưới đáy thấp nhất thì Sell. Lệnh phải qua thêm các bộ lọc:

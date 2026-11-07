@@ -39,6 +39,23 @@ function Test-MT5Running {
     return [bool](Get-Process terminal64 -ErrorAction SilentlyContinue)
 }
 
+# Trang thai bot dang chay that / demo: moi chart co bot ghi Common\Files\TrendBot_trangthai_<chart>.txt moi 10 giay
+# (TrendBot/Status.mqh, tu v5.4). File cu hon 2 phut = bot da tat hoac MT5 da dong.
+function Get-BotStatus {
+    $dir = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files"
+    if (-not (Test-Path $dir)) { return @() }
+    $now = Get-Date
+    return @(Get-ChildItem $dir -File -Filter "TrendBot_trangthai_*.txt" -ErrorAction SilentlyContinue |
+        Where-Object { ($now - $_.LastWriteTime).TotalSeconds -lt 120 } | ForEach-Object {
+            $o = @{ CapNhat = [int]($now - $_.LastWriteTime).TotalSeconds }
+            foreach ($line in @(Get-Content $_.FullName -ErrorAction SilentlyContinue)) {
+                $i = $line.IndexOf('=')
+                if ($i -gt 0) { $o[$line.Substring(0, $i)] = $line.Substring($i + 1) }
+            }
+            $o
+        })
+}
+
 function Read-Shared([string]$path) {
     # Doc file dang duoc tien trinh khac ghi (FileShare.ReadWrite)
     if (-not (Test-Path $path)) { return "" }
@@ -67,20 +84,21 @@ function Get-JobState {
 function Start-BotJob($body) {
     if ($script:Job -and -not $script:Job.Proc.HasExited) { throw "Dang co viec chay. Dung viec do truoc." }
     $viec = [string]$body.viec
-    if ($viec -notin @('sosanh', 'sosanh-chinhxac', 'capnhat', 'backtest')) { throw "Viec khong hop le: $viec" }
+    if ($viec -notin @('sosanh', 'sosanh-chinhxac', 'capnhat', 'backtest', 'nhatky')) { throw "Viec khong hop le: $viec" }
     $nhom = [string]$body.nhom
     if (-not $nhom) { $nhom = 'file' }
     if ($nhom -notin @('file', 'h4', 'luotsong', 'von1tr', 'tatca')) { throw "Nhom khong hop le: $nhom" }
     # Tra loi san cho cac cau hoi y/n cua script (Chay.ps1 va Stop-MT5 doc 2 bien nay thay vi Read-Host)
     $env:TRENDBOT_LAYCODE = if ($body.layCodeMoi) { "y" } else { "n" }
     $env:TRENDBOT_DONGMT5 = if ($body.dongMT5) { "y" } else { "n" }
+    $env:TRENDBOT_GUINHATKY = if ($body.guiNhatKy) { "y" } else { "n" }
     foreach ($f in @($LogFile, $ErrFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $ProjectDir 'Chay.ps1')`"", '-Viec', $viec, '-Nhom', $nhom)
     $sp = @{ FilePath = "powershell"; ArgumentList = $argList; WorkingDirectory = $ProjectDir; PassThru = $true
              RedirectStandardOutput = $LogFile; RedirectStandardError = $ErrFile }
     if ($IsWindows -ne $false) { $sp.WindowStyle = "Hidden" }   # PowerShell 5.1 khong co $IsWindows (= $null)
     $p = Start-Process @sp
-    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5 -ErrorAction SilentlyContinue
+    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY -ErrorAction SilentlyContinue
     $script:Job = @{ Proc = $p; Viec = $viec; Nhom = $nhom; Start = Get-Date; End = $null; ExitCode = $null; Stopped = $false }
 }
 
@@ -150,7 +168,7 @@ try {
                 if ($offset -gt $log.Length) { $offset = 0 }
                 Send-Json $ctx @{
                     Viec = (Get-JobState); Log = $log.Substring($offset); LogLen = $log.Length; Loi = $err;
-                    Git = $script:Git; MT5Mo = (Test-MT5Running);
+                    Git = $script:Git; MT5Mo = (Test-MT5Running); Bot = @(Get-BotStatus);
                     ChiChay = @(Read-ListFile "chi-chay.txt"); ChinhXac = @(Read-ListFile "chinh-xac.txt");
                     KetQua = @(Get-ResultFiles)
                 }
