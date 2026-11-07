@@ -367,7 +367,8 @@ foreach ($g in $groups.Values) {
         if ($a -eq $b) { $ov = @{ InpPreset = $a } } else { $ov = @{}; $opt.OptKey = "InpPreset"; $opt.OptFrom = $a; $opt.OptTo = $b }
         New-TesterIni $mt5 $Inputs $ov $ini $opt
         $sw = [Diagnostics.Stopwatch]::StartNew()
-        Start-Process -FilePath $mt5.Terminal -ArgumentList "/config:`"$ini`"" -Wait
+        # Mo MT5 thu nho xuong taskbar (khong dung Hidden: MT5 hoi gi do thi khong thay de bam, script treo vi -Wait)
+        Start-Process -FilePath $mt5.Terminal -ArgumentList "/config:`"$ini`"" -WindowStyle Minimized -Wait
         Write-Host " xong ($([int]$sw.Elapsed.TotalSeconds)s)" -ForegroundColor Green
     }
 }
