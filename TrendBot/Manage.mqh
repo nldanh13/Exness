@@ -275,6 +275,11 @@ void PyramidStep()
       if(t >= lastT) { lastT = t; lastOpen = PositionGetDouble(POSITION_PRICE_OPEN); }
    }
    if(cnt == 0) return;
+   if(P_ExitOnBar)
+   {
+      double o1 = iOpen(_Symbol, P_TF, 1);
+      if(buy ? c1 < o1 : c1 > o1) { g_status = "Nen nguoc chieu, dong het"; CloseAll(); return; }
+   }
    if(P_ExitOnEMA && (buy ? c1 < fast : c1 > fast))
    {
       g_status = "Het da (cat EMA), dong het";

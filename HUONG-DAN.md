@@ -211,6 +211,10 @@ Cùng tiêu chí: `PF_Truot0.05%` ≥ 1,3 ở cả hai giai đoạn, rồi chạ
 
 **Nhồi lệnh theo đà** (`InpPyramidMax`, `InpPyramidStepATR`, `InpExitOnEMA`; thêm 07/11): vào lệnh khi phá vỡ Donchian 20; giá đi thuận thêm 1 ATR từ lệnh gần nhất và vẫn ở đúng phía EMA20 thì vào thêm một lệnh cùng chiều (tối đa 3). Trước khi vào thêm, các lệnh cũ dời SL về hòa vốn, nên rủi ro cả chuỗi chỉ khoảng 1 lệnh. Không bao giờ nhồi khi đang lỗ. Có dấu hiệu hết đà (nến đóng cắt EMA20 ngược chiều) thì đóng hết. Thử trên H4 (`C+nhoi3` giữ trailing như C; `Nhoi3-H4` thoát theo EMA20) và H1, M30, M15, M5 (`Ngan-Nhoi3-*`). Cột `NhoiLenh` là số lệnh vào thêm. Bản `+huongH4` / `+huongH1`: khung nhỏ chỉ dùng để vào lệnh, còn hướng do khung lớn quyết định (giá H4 hoặc H1 đóng trên EMA50 thì chỉ mua, dưới thì chỉ bán).
 
+**Từ nghiên cứu (07/11):**
+- *Nhồi lệnh bước 2R* (`C+nhoi3-buoc2R`): theo Concretum Group (40 thị trường futures từ 1980), thêm một lớp mỗi khi giá đi thêm 2 lần khoảng rủi ro ban đầu. Lãi tăng mạnh nhưng sụt giảm tối đa gần gấp đôi (48,7% so với 25,7%), tỷ lệ thắng thấp hơn, lãi dồn vào vài sóng rất lớn. Bước 1 ATR (0,4R) của `Nhoi3` dày hơn nhiều, nên lệnh thêm dễ bị cắt hơn.
+- *MACD đa khung* (`InpStrategy = 7`, `Ngan-MACD-H1+D1`): chép đúng luật đã công bố của Quantpedia trên BTC 2018–2025: MACD(12,26,9) khung H1 cắt lên thì mua, chỉ khi MACD khung ngày đang tăng; chỉ mua; thoát ở nến H1 đầu tiên đóng đỏ (`InpExitOnBar`). Họ báo Sharpe từ 0,33 (chỉ H1) lên 0,80 (thêm lọc ngày) và 1,07 (thêm thoát nến đỏ). Bot thêm SL 2,5 ATR để an toàn. Lưu ý: giai đoạn của họ trùng dữ liệu của ta, và họ dùng sàn Gemini không có spread CFD.
+
 **Vốn 1 triệu VNĐ:** các cấu hình lướt sóng ưu tiên (RSI M15, RSI M5, Donchian M15, M30, ORB M5) có thêm bản `-von1tr` với vốn 38 USD (≈ 1 triệu VNĐ). Bản 30.000 trả lời "chiến lược có lợi thế không"; bản `-von1tr` cho thấy kết quả thật với tài khoản của bạn, gồm số tín hiệu bị bỏ (`BoQuaLot`) vì 0,01 BTC đã rủi ro quá 1%.
 
 Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài khoản (`InpMaxRiskRoundUp = 5`), để thấy kết quả thật khi lướt sóng với 1 triệu.

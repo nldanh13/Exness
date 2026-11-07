@@ -82,6 +82,15 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       buyBase  = c1 > rh && (c2 <= rh || eIdx == 2);
       sellBase = c1 < rl && (c2 >= rl || eIdx == 2);
    }
+   else if(P_Strategy == STRAT_MACD)
+   {
+      // Dong MACD vua cat len duong tin hieu o nen vua dong -> Buy; cat xuong -> Sell
+      double m[2], g[2];
+      if(CopyBuffer(hMACD, 0, 1, 2, m) != 2 || CopyBuffer(hMACD, 1, 1, 2, g) != 2) return false;
+      // m[0] = nen 2, m[1] = nen 1 (CopyBuffer tra theo thu tu thoi gian)
+      buyBase  = m[1] > g[1] && m[0] <= g[0];
+      sellBase = m[1] < g[1] && m[0] >= g[0];
+   }
    else if(P_Strategy == STRAT_EXHAUST)
    {
       // Gia da chay mot chieu trong ngay >= x ATR(20) D1, dinh/day vua lap trong 6 nen gan day,

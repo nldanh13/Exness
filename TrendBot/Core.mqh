@@ -7,6 +7,7 @@ int      hHTF  = INVALID_HANDLE, hADX   = INVALID_HANDLE;
 int      hMkt  = INVALID_HANDLE;
 int      hRSI  = INVALID_HANDLE;
 int      hATRD1 = INVALID_HANDLE, hBB = INVALID_HANDLE;
+int      hMACD = INVALID_HANDLE, hMACDH = INVALID_HANDLE;
 double   g_sigSL = 0, g_sigTP = 0;       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
 datetime g_fvgUsed = 0;
 double   g_reqPrice = 0;                 // gia luc gui lenh vao (de do truot gia that)

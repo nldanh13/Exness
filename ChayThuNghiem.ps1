@@ -154,13 +154,27 @@ foreach ($c in @(@{ N = "M30"; V = 30; H = "H4"; HV = 16388 }, @{ N = "M15"; V =
     $Runs += @{ Name = "Ngan-Nhoi3-$($c.N)+huong$($c.H)";       Inputs = $i; Deposit = 30000 }
     $Runs += @{ Name = "Ngan-Nhoi3-$($c.N)+huong$($c.H)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Nhoi lenh buoc 2R (theo nghien cuu Concretum: them 1 lop moi khi gia di them 2 lan khoang rui ro ban dau = 5 ATR)
+$Runs += @{ Name = "C+nhoi3-buoc2R";       Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 5.0 }) }
+$Runs += @{ Name = "C+nhoi3-buoc2R-truoc"; Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 5.0 }); From = $OOSFrom; To = $FromDate }
+$Runs += @{ Name = "C+nhoi3-buoc2R-ETH";   Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 3; InpPyramidStepATR = 5.0 }); Symbol = "ETHUSDm" }
+# Da khung theo Quantpedia (BTC 2018-2025): MACD(12,26,9) H1 cat len thi mua, chi khi MACD D1 dang tang; chi mua (long-only);
+# thoat o nen H1 dau tien dong do. Them SL 2,5 ATR de an toan. Ban "-haiChieu" cho ca Sell, ban "-khongLoc" bo loc D1.
+$Qp = @{ InpStrategy = 7; InpTF = 16385; InpUseADX = "false"; InpUseHTF = "true"; InpHTF = 16408; InpHTFMacd = "true";
+         InpAllowSell = "false"; InpExitOnBar = "true"; InpUseTrailing = "false"; InpTrailStartR = 0; InpRR = 0; InpMaxSpreadPoints = 1500 }
+foreach ($v in @(@{ N = "Ngan-MACD-H1+D1"; X = @{} }, @{ N = "Ngan-MACD-H1+D1-haiChieu"; X = @{ InpAllowSell = "true" } },
+                 @{ N = "Ngan-MACD-H1-khongLoc"; X = @{ InpUseHTF = "false" } })) {
+    $i = Cfg $Brk $Qp $v.X
+    $Runs += @{ Name = $v.N;            Inputs = $i;         Deposit = 30000 }
+    $Runs += @{ Name = "$($v.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
 $Von1tr = 38
 foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong",
                "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15",
-               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5", "Ngan-Nhoi3-M15+huongH4", "Ngan-Nhoi3-M15+huongH1", "Ngan-Nhoi3-M5+huongH1")) {
+               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5", "Ngan-Nhoi3-M15+huongH4", "Ngan-Nhoi3-M15+huongH1", "Ngan-Nhoi3-M5+huongH1", "Ngan-MACD-H1+D1")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
     if ($src) {
         $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }

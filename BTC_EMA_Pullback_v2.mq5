@@ -19,7 +19,8 @@ enum ENUM_STRATEGY
    STRAT_ORB          = 3,   // Luot song: pha vo vung gia dau phien My (opening range breakout)
    STRAT_EXHAUST      = 4,   // Luot song: dao chieu sau cu chay manh >= x% ATR ngay, TP o dai Bollinger
    STRAT_FVG          = 5,   // Luot song: gia quay lai khoang trong (FVG) cua nen lon, khoi luong cao
-   STRAT_SPRING       = 6    // Luot song: pha vo gia vung di ngang (Wyckoff spring / upthrust)
+   STRAT_SPRING       = 6,   // Luot song: pha vo gia vung di ngang (Wyckoff spring / upthrust)
+   STRAT_MACD         = 7    // MACD(12,26,9) cat len/xuong (da khung theo Quantpedia: D1 loc huong, H1 vao lenh)
 };
 
 input group "=== Tin hieu ==="
@@ -73,7 +74,9 @@ input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
 input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
-input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
+input bool            InpExitOnEMA       = false;
+input bool            InpExitOnBar       = false;     // Dong het o nen dau tien dong nguoc chieu (Buy: nen do; Sell: nen xanh)
+input bool            InpHTFMacd         = false;     // Loc huong khung lon bang MACD (dong > tin hieu = tang) thay vi EMA     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
 input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
 input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
@@ -147,6 +150,8 @@ bool            P_DDScale;
 int             P_PyramidMax;
 double          P_PyramidStepATR;
 bool            P_ExitOnEMA;
+bool            P_ExitOnBar;
+bool            P_HTFMacd;
 double          P_ExhaustATR;
 double          P_FvgBigATR;
 int             P_FvgLookback;
@@ -235,6 +240,8 @@ void LoadParams()
    P_PyramidMax = InpPyramidMax;
    P_PyramidStepATR = InpPyramidStepATR;
    P_ExitOnEMA = InpExitOnEMA;
+   P_ExitOnBar = InpExitOnBar;
+   P_HTFMacd = InpHTFMacd;
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback;
@@ -325,6 +332,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
+   if(k == "InpExitOnBar") { P_ExitOnBar = (v == "true" || v == "1"); return true; }
+   if(k == "InpHTFMacd") { P_HTFMacd = (v == "true" || v == "1"); return true; }
    if(k == "InpExitOnEMA") { P_ExitOnEMA = (v == "true" || v == "1"); return true; }
    if(k == "InpDDScale") { P_DDScale = (v == "true" || v == "1"); return true; }
    if(k == "InpOrbNewYork") { P_OrbNewYork = (v == "true" || v == "1"); return true; }
@@ -475,6 +484,16 @@ int OnInit()
       hRSI = iRSI(_Symbol, P_TF, P_RsiPeriod, PRICE_CLOSE);
       if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return INIT_FAILED; }
    }
+   if(P_Strategy == STRAT_MACD)
+   {
+      hMACD = iMACD(_Symbol, P_TF, 12, 26, 9, PRICE_CLOSE);
+      if(hMACD == INVALID_HANDLE) { Print("Khong tao duoc MACD"); return INIT_FAILED; }
+   }
+   if(P_HTFMacd)
+   {
+      hMACDH = iMACD(_Symbol, P_HTF, 12, 26, 9, PRICE_CLOSE);
+      if(hMACDH == INVALID_HANDLE) { Print("Khong tao duoc MACD khung lon"); return INIT_FAILED; }
+   }
    if(P_Strategy == STRAT_EXHAUST)
    {
       hATRD1 = iATR(_Symbol, PERIOD_D1, 20);
@@ -544,6 +563,8 @@ void OnDeinit(const int reason)
    if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
    if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
    if(hBB != INVALID_HANDLE) IndicatorRelease(hBB);
+   if(hMACD != INVALID_HANDLE) IndicatorRelease(hMACD);
+   if(hMACDH != INVALID_HANDLE) IndicatorRelease(hMACDH);
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    Comment("");
 }
@@ -577,7 +598,7 @@ void OnTick()
    if(HasOwnPosition())
    {
       g_status = "Dang giu lenh";
-      if(P_PyramidMax > 1 || P_ExitOnEMA) PyramidStep();
+      if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar) PyramidStep();
       return;
    }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return; }
@@ -604,6 +625,14 @@ void OnTick()
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hTrend, 0, 1, trend) || !GetValue(hATR, 0, 1, atr)) return;
    if(P_UseADX && !GetValue(hADX, 0, 1, adx)) return;          // buffer 0 = ADX chinh
    if(P_UseHTF && !GetValue(hHTF, 0, 1, htfEma)) return;
+   bool htfUp = true, htfDn = true;
+   if(P_UseHTF && P_HTFMacd)
+   {
+      // MACD khung lon cua nen DA DONG (shift 1): dong MACD tren duong tin hieu = xu huong tang
+      double hm, hs;
+      if(!GetValue(hMACDH, 0, 1, hm) || !GetValue(hMACDH, 1, 1, hs)) return;
+      htfUp = hm > hs; htfDn = hm < hs;
+   }
    if(P_Strategy == STRAT_RSI_REVERT && !GetValue(hRSI, 0, 1, g_rsi)) return;
    double htfClose = iClose(_Symbol, P_HTF, 1);
 
@@ -615,10 +644,10 @@ void OnTick()
    bool buyBase, sellBase;
    if(!BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase)) return;
    bool buySignal  = P_AllowBuy && buyBase
-                     && (!P_UseHTF || htfClose > htfEma) && adxOk
+                     && (!P_UseHTF || (P_HTFMacd ? htfUp : htfClose > htfEma)) && adxOk
                      && (!P_UseCandle || BullCandle());
    bool sellSignal = P_AllowSell && sellBase
-                     && (!P_UseHTF || htfClose < htfEma) && adxOk
+                     && (!P_UseHTF || (P_HTFMacd ? htfDn : htfClose < htfEma)) && adxOk
                      && (!P_UseCandle || BearCandle());
    if(P_UseFunding && (buySignal || sellSignal))
    {
