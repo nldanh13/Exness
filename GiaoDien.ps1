@@ -75,7 +75,10 @@ function Get-JobState {
     $j = $script:Job
     if (-not $j) { return @{ Running = $false } }
     $running = -not $j.Proc.HasExited
-    if (-not $running -and -not $j.End) { $j.End = Get-Date; try { $j.ExitCode = $j.Proc.ExitCode } catch { $j.ExitCode = -1 } }
+    if (-not $running -and -not $j.End) {
+        $j.End = Get-Date; try { $j.ExitCode = $j.Proc.ExitCode } catch { $j.ExitCode = -1 }
+        $script:Git = Get-GitStatus   # viec vua xong co the da lay code moi: cap nhat lai "Phien ban bot"
+    }
     $endT = if ($j.End) { $j.End } else { Get-Date }
     return @{ Running = $running; Viec = $j.Viec; Nhom = $j.Nhom; Start = $j.Start.ToString("yyyy-MM-dd HH:mm:ss");
               Seconds = [int]($endT - $j.Start).TotalSeconds; ExitCode = $j.ExitCode; Stopped = [bool]$j.Stopped }
@@ -98,6 +101,8 @@ function Start-BotJob($body) {
              RedirectStandardOutput = $LogFile; RedirectStandardError = $ErrFile }
     if ($IsWindows -ne $false) { $sp.WindowStyle = "Hidden" }   # PowerShell 5.1 khong co $IsWindows (= $null)
     $p = Start-Process @sp
+    # Giu handle ngay: Windows PowerShell chi doc duoc ExitCode khi da lay Handle truoc luc tien trinh ket thuc
+    $null = $p.Handle
     Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY -ErrorAction SilentlyContinue
     $script:Job = @{ Proc = $p; Viec = $viec; Nhom = $nhom; Start = Get-Date; End = $null; ExitCode = $null; Stopped = $false }
 }
