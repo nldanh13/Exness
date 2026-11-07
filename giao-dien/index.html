@@ -155,8 +155,13 @@ details.tech > summary { cursor: pointer; font-size: 13px; font-weight: 600; col
 details.tech[open] > summary { margin-bottom: 8px; }
 .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 720px) { .strip { grid-template-columns: 1fr; } }
-.strip .st { padding: 10px 12px; gap: 2px; }
-.strip .st button { justify-self: start; margin-top: 4px; }
+.strip .st { padding: 10px 12px; gap: 4px; align-content: start; }
+.jobgroups { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.jg { display: grid; gap: 6px; }
+.jg-l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
+.verdict-a { font-size: 14px; max-width: 80ch; }
+.sec-head .hint, .sec-head > button { margin-left: auto; }
+.sec-head a.hint { color: var(--accent); font-weight: 600; font-size: 13px; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg label { position: relative; cursor: pointer; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -182,23 +187,47 @@ main { gap: 14px; padding-block: 14px 40px; }
 <main id="view-chay">
   <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy của bạn.</div>
 
-  <section class="sec now">
-    <p class="now-text" id="now-text">Đang đọc tình trạng…</p>
+  <section class="sec" id="sec-status">
+    <div class="sec-head"><h2>Tình trạng</h2><button class="small ghost" id="git-check">Kiểm tra lại</button></div>
+    <p class="now-text banner bad" id="now-text" hidden></p>
     <div class="strip" aria-label="Chi tiết tình trạng">
-      <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
       <div class="st"><span class="lbl">Ứng dụng</span><span class="val"><i class="dot" id="mt5-dot"></i><span id="mt5-val">…</span></span><span class="sub" id="mt5-sub"></span></div>
-      <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul><button class="small ghost" id="git-check">Kiểm tra lại</button></div>
+      <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
+      <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul></div>
     </div>
-    <div class="verdict"><span class="q">Kết luận gần nhất</span><div class="a" id="verdict-text">Đang đọc…</div></div>
+  </section>
+
+  <section class="sec" id="sec-run" hidden>
+    <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
+    <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
+    <div class="muted" id="prog-txt" style="font-size:12px" hidden></div>
+    <div class="banner" id="run-result" hidden></div>
+    <details class="tech" id="log-wrap"><summary>Nhật ký kỹ thuật</summary>
+      <div class="log" id="log" aria-live="polite"><span class="muted">Chưa có việc nào chạy.</span></div>
+      <div class="actions" style="margin-top:8px"><button class="ghost small" id="btn-follow" aria-pressed="true">Tự cuộn: bật</button></div>
+    </details>
+    <div class="actions">
+      <button class="danger" id="btn-stop" hidden>Dừng</button>
+      <span id="stop-confirm" hidden>Dừng hẳn việc đang chạy? <button class="small danger" id="btn-stop-yes">Dừng ngay</button> <button class="small ghost" id="btn-stop-no">Thôi</button></span>
+    </div>
+  </section>
+  <section class="sec" id="sec-verdict">
+    <div class="sec-head"><h2>Kết luận gần nhất</h2><a class="hint" href="#ket-qua">Xem bảng kết quả</a></div>
+    <div class="verdict-a" id="verdict-text">Đang đọc…</div>
   </section>
 
   <section class="sec" id="sec-start">
-    <div class="seg" role="radiogroup" aria-label="Việc">
-      <label><input type="radio" name="viec" value="sosanh" id="viec-sosanh" checked><span>Mô phỏng nhanh</span></label>
-      <label><input type="radio" name="viec" value="sosanh-chinhxac" id="viec-chinhxac"><span>Mô phỏng chi tiết</span></label>
-      <label><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
-      <label><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span>Gửi nhật ký</span></label>
-      <label><input type="radio" name="viec" value="backtest" id="viec-backtest"><span>Tự chạy 1 lần</span></label>
+    <h2>Chạy việc mới</h2>
+    <div class="jobgroups" role="radiogroup" aria-label="Việc">
+      <div class="jg"><span class="jg-l">Mô phỏng</span><div class="seg">
+        <label><input type="radio" name="viec" value="sosanh" id="viec-sosanh" checked><span>1. Nhanh</span></label>
+        <label><input type="radio" name="viec" value="sosanh-chinhxac" id="viec-chinhxac"><span>2. Chi tiết</span></label>
+      </div></div>
+      <div class="jg"><span class="jg-l">Khác</span><div class="seg">
+        <label><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
+        <label><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span>Gửi nhật ký</span></label>
+        <label><input type="radio" name="viec" value="backtest" id="viec-backtest"><span>Tự chạy 1 lần</span></label>
+      </div></div>
     </div>
     <p class="muted job-desc" id="job-desc"></p>
     <div class="opts">
@@ -223,20 +252,6 @@ main { gap: 14px; padding-block: 14px 40px; }
     </div>
   </section>
 
-  <section class="sec" id="sec-run" hidden>
-    <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
-    <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
-    <div class="muted" id="prog-txt" style="font-size:12px" hidden></div>
-    <div class="banner" id="run-result" hidden></div>
-    <details class="tech" id="log-wrap"><summary>Nhật ký kỹ thuật</summary>
-      <div class="log" id="log" aria-live="polite"><span class="muted">Chưa có việc nào chạy.</span></div>
-      <div class="actions" style="margin-top:8px"><button class="ghost small" id="btn-follow" aria-pressed="true">Tự cuộn: bật</button></div>
-    </details>
-    <div class="actions">
-      <button class="danger" id="btn-stop" hidden>Dừng</button>
-      <span id="stop-confirm" hidden>Dừng hẳn việc đang chạy? <button class="small danger" id="btn-stop-yes">Dừng ngay</button> <button class="small ghost" id="btn-stop-no">Thôi</button></span>
-    </div>
-  </section>
 </main>
 
 <main id="view-ket-qua" hidden>
@@ -381,7 +396,8 @@ function renderStatus(d) {
   if (g.Error) { $('git-dot').className = 'dot bad'; $('git-val').textContent = /ket noi/.test(g.Error) ? 'Không kết nối được GitHub' : /git/.test(g.Error) ? 'Không thấy git trên máy' : g.Error; }
   else if (g.Behind > 0) { $('git-dot').className = 'dot warn'; $('git-val').textContent = 'Có bản mới chưa cập nhật'; }
   else { $('git-dot').className = 'dot ok'; $('git-val').textContent = 'Đang là bản mới nhất'; }
-  $('git-sub').textContent = g.Behind > 0 ? g.Behind + ' thay đổi mới' : (g.Checked ? 'Kiểm tra lúc ' + g.Checked : '');
+  var ver = b.map(function (x) { return x.phienban; }).filter(Boolean)[0];
+  $('git-sub').textContent = [g.Behind > 0 ? g.Behind + ' thay đổi mới' : (g.Checked ? 'Kiểm tra lúc ' + g.Checked : ''), ver ? 'đang chạy v' + ver : ''].filter(Boolean).join(' · ');
   $('git-commits').hidden = true;
   // Ứng dụng
   $('mt5-dot').className = 'dot ' + (d.MT5Mo ? 'warn' : 'ok');
@@ -391,22 +407,13 @@ function renderStatus(d) {
   if (b.length) {
     $('acct').innerHTML = b.map(function (x) {
       var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
-      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span>Có <b class="num">' + esc(x.lenhbot) + '</b> mục mở <span class="muted">· v' + esc(x.phienban || '') + '</span></div>' +
-        '<div class="acct-row muted">' + esc(trangThai(x.trangthai)) + (x.choGD === '0' ? ' · <span style="color:var(--loss)">chế độ tự động đang tắt</span>' : '') + '</div>';
-    }).join('<hr style="border:0;border-top:1px solid var(--line);margin:4px 0">');
+      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span><span><b class="num">' + esc(x.lenhbot) + '</b> mục mở</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span>' +
+        (x.choGD === '0' ? '<span style="color:var(--loss)">· tự động đang tắt</span>' : '') + '</div>';
+    }).join('');
   } else {
     $('acct').innerHTML = '<span class="muted">' + (d.MT5Mo ? 'Chưa thấy phiên nào báo tình trạng (cần bản 5.4 trở lên).' : 'Ứng dụng đang tắt.') + '</span>';
   }
-  // Câu tóm tắt
-  var parts = [];
-  parts.push(d.MT5Mo ? 'Ứng dụng đang mở.' : 'Ứng dụng đang tắt.');
-  b.forEach(function (x) {
-    parts.push('Môi trường <b class="' + (x.taikhoan === 'that' ? 'real' : 'demo') + '">' + (x.taikhoan === 'that' ? 'chính' : 'thử') + '</b>' +
-      (+x.lenhbot > 0 ? ' có ' + x.lenhbot + ' mục mở.' : ' không có mục mở.'));
-  });
-  if (g.Behind > 0) parts.push('Có bản mới chưa cập nhật.');
-  if (j.Running) parts.push('Đang làm: <b>' + esc(VIEC_TEN[j.Viec] || j.Viec) + '</b> (' + dur(j.Seconds) + ').');
-  $('now-text').innerHTML = parts.join(' ');
+  $('now-text').hidden = true;
   $('btn-start').disabled = !!j.Running;
   $('start-msg').textContent = j.Running ? 'Đang có việc chạy. Đợi xong hoặc bấm Dừng.' : '';
   $('btn-stop').hidden = !j.Running; if (!j.Running) $('stop-confirm').hidden = true;
@@ -507,7 +514,7 @@ function poll() {
     if (n !== lastResCount) { lastResCount = n; loadVerdict(); }
     pollTimer = setTimeout(poll, d.Viec && d.Viec.Running ? 1500 : 5000);
   }).catch(function () {
-    $('now-text').innerHTML = '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
+    $('now-text').hidden = false; $('now-text').innerHTML = '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
     pollTimer = setTimeout(poll, 5000);
   });
 }
@@ -521,7 +528,6 @@ function initRun() {
     $('static-note').hidden = false;
     renderStatus({ Git: {}, MT5Mo: false, Viec: {}, Bot: [], ChiChay: NHUNG.chiChay || [], ChinhXac: NHUNG.chinhXac || [], KetQua: NHUNG.files });
     $('btn-start').disabled = true; $('git-check').disabled = true;
-    $('now-text').textContent = 'Bản xem trước không đọc được máy của bạn. Mở bằng GiaoDien.cmd để thấy tình trạng thật.';
     $('acct').innerHTML = '<span class="muted">Chỉ xem được trên máy.</span>';
     $('git-val').textContent = 'Chỉ xem được trên máy'; $('git-dot').className = 'dot'; $('git-sub').textContent = '';
     $('mt5-val').textContent = 'Chỉ xem được trên máy'; $('mt5-dot').className = 'dot'; $('mt5-sub').textContent = '';
@@ -563,7 +569,6 @@ function loadVerdict() {
         html += '<b>' + ok.length + '/' + main.length + ' phương án đạt.</b> Tốt nhất: <b>' + esc(dn(b.Lan)) + '</b> (kết quả ' + money(num(b.LoiNhuan)) + ', sụt giảm ' + fmt(num(b['SutGiamMax%']), 1) + '%).';
         if (quick) html += ' Nên chạy <b>Mô phỏng chi tiết</b>.';
       }
-      html += ' <a href="#ket-qua">Xem chi tiết</a>';
       $('verdict-text').innerHTML = html;
     });
   }).catch(function () { $('verdict-text').textContent = 'Không đọc được kết quả.'; });

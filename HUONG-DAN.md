@@ -58,7 +58,7 @@ Giao diện dùng từ ngữ trung tính (phương án, mô phỏng, môi trư�
 | Giai đoạn gần / trước, Bộ dữ liệu B | 3 năm gần đây / 3 năm trước, ETH |
 | Chiều + / − | Mua / Bán |
 
-- **Điều khiển**: một câu tóm tắt tình trạng, ba ô nhỏ (Môi trường, Ứng dụng, Phiên bản; bot từ v5.4 mới báo được, qua file `TrendBot_trangthai_*.txt` trong Common\Files, không ghi số tài khoản), kết luận lần chạy gần nhất, rồi chọn việc và bấm Bắt đầu. Tiến trình chỉ hiện khi đang có việc.
+- **Điều khiển**, từ trên xuống: *Tình trạng* (ba ô Ứng dụng, Môi trường, Phiên bản; bot từ v5.4 mới báo được, qua file `TrendBot_trangthai_*.txt` trong Common\Files, không ghi số tài khoản), *Tiến trình* (chỉ hiện khi có việc), *Kết luận gần nhất*, rồi *Chạy việc mới*: nhóm Mô phỏng (1. Nhanh, 2. Chi tiết) và nhóm Khác (Cập nhật, Gửi nhật ký, Tự chạy 1 lần).
 - **Kết quả**: mỗi phương án có kết luận *Đạt*, *Chưa đạt* hoặc *Chưa đủ dữ liệu*. Bấm một dòng để xem giải thích và kết quả cộng dồn; "Chỉ số chi tiết" hiện PF, Recovery, t-stat…
 
 Tiêu chí "đạt": PF sau trượt giá 0,05% từ 1,3 trở lên ở **cả** 3 năm gần đây và 3 năm trước đó, mỗi giai đoạn ít nhất 30 lệnh.
