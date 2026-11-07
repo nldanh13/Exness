@@ -25,7 +25,9 @@ elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Pa
             Write-Host "  Co $($new.Count) thay doi moi:" -ForegroundColor Yellow
             $new | Select-Object -First 15 | ForEach-Object { Write-Host "    $_" }
             Write-Host "  Neu MT5 nay dang chay bot tren TAI KHOAN THAT, hay go 'n' (hoac tat bot truoc)." -ForegroundColor Yellow
-            $ans = Read-Host "  Lay ban moi va compile? (y = co, phim khac = giu ban cu)"
+            # Giao dien (GiaoDien.ps1) tra loi san qua bien TRENDBOT_LAYCODE, khong hoi lai
+            if ($env:TRENDBOT_LAYCODE) { $ans = $env:TRENDBOT_LAYCODE; Write-Host "  Tra loi tu giao dien: $ans" }
+            else { $ans = Read-Host "  Lay ban moi va compile? (y = co, phim khac = giu ban cu)" }
             if ($ans -match '^(y|yes|c|co)$') {
                 $out = & git -C $ProjectDir pull --ff-only 2>&1
                 if ($LASTEXITCODE -eq 0) { Write-Host "  $($out | Select-Object -Last 1)" -ForegroundColor Green }

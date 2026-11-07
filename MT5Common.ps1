@@ -222,7 +222,9 @@ function Stop-MT5($mt5) {
     if (-not $running) { return $true }
     Write-Host "CANH BAO: MT5 dang mo. Dong MT5 se DUNG moi bot dang chay tren no (ke ca tai khoan that)." -ForegroundColor Yellow
     Write-Host "Neu dang chay bot tren tai khoan that, nen backtest bang mot ban MT5 cai rieng." -ForegroundColor Yellow
-    $ans = Read-Host "Dong MT5 ngay de chay backtest? (y/n)"
+    if ($env:TRENDBOT_DONGMT5) { $ans = $env:TRENDBOT_DONGMT5; Write-Host "Tra loi tu giao dien (dong MT5): $ans" }
+    else { $ans = Read-Host "Dong MT5 ngay de chay backtest? (y/n)" }
+    if ($ans -ne "y") { Write-Host "Khong dong MT5 (chua cho phep dong)." -ForegroundColor Yellow }
     if ($ans -ne "y") { return $false }
     $running | ForEach-Object { $_.CloseMainWindow() | Out-Null }
     Start-Sleep -Seconds 5
