@@ -146,6 +146,14 @@ foreach ($tf in @(@{ N = "H1"; V = 16385 }, @{ N = "M30"; V = 30 }, @{ N = "M15"
     $Runs += @{ Name = "Ngan-Nhoi3-$($tf.N)";       Inputs = $i; Deposit = 30000 }
     $Runs += @{ Name = "Ngan-Nhoi3-$($tf.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Da khung: khung lon quyet dinh huong, khung nho chi de vao lenh. Khung nho M30/M15/M5 chi danh theo huong cua
+# khung lon (gia H1 hoac H4 dong cua tren/duoi EMA50 cua chinh khung do), thay vi EMA200 D1.
+foreach ($c in @(@{ N = "M30"; V = 30; H = "H4"; HV = 16388 }, @{ N = "M15"; V = 15; H = "H4"; HV = 16388 },
+                 @{ N = "M15"; V = 15; H = "H1"; HV = 16385 }, @{ N = "M5";  V = 5;  H = "H1"; HV = 16385 })) {
+    $i = Cfg $Brk $Q $Nhoi @{ InpTF = $c.V; InpMaxSpreadPoints = 1500; InpUseHTF = "true"; InpHTF = $c.HV; InpHTFEMA = 50 }
+    $Runs += @{ Name = "Ngan-Nhoi3-$($c.N)+huong$($c.H)";       Inputs = $i; Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-Nhoi3-$($c.N)+huong$($c.H)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
