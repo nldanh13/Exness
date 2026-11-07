@@ -348,3 +348,8 @@ de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gia
 - Lenh tay da mo TRUOC lan dau bat bao ve: mac dinh chi canh bao, khong tu dat SL / giam lot / dong. Muon ap dung: InpGuardOldTrades = true.
   Van nen thu bao ve lenh tay tren demo truoc khi bat o tai khoan that.
 - Nhat ky: nut 4 ghi ro file chua MOI giao dich, nap/rut va so du cua ca tai khoan. Dong nap/rut khong ghi ma giao dich ngan hang.
+
+## Ket qua dot 7/11/2026 15:46 (khung gio tu sao ke)
+- Chi vao 6-12h UTC ("+gio6-12") hoac bo 0-6h UTC ("+bo0-6"): giai doan 3 nam gan day tot hon mot chut, nhung 3 nam truoc van lo
+  o moi cau hinh (PF truot 0,05% tu 0,30 den 0,85). Tot nhat: Ngan-Nhoi3-M30+gio6-12 (PF truot 1,32 / 0,85) - van khong dat tieu chi 1,3 ca 2 giai doan.
+- Ket luan: khung gio "thang 90%" trong sao ke la do mau nho / giai doan do, khong phai loi the ben vung. Khong dua vao bot.
