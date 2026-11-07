@@ -434,3 +434,16 @@ bot tinh sut giam theo lai da chot + lo dang chay, KHONG tinh lai dang chay bi t
 Sut giam theo lai da chot cua nhoi5 chi 10,9% (C 2,8%). Phan con lai cua 16,9% la lai tha noi bi tra lai, muc dung han khong chan.
 ETH nhoi5: PF truot 1,46, top 5 chiem 154%, Monte Carlo 54% cham dung han. Loai.
 Ket luan: giu C (Donchian 20 H4 + ADX, 1 lenh, khong nhoi, vao ngay) cho demo.
+
+## Ket qua dot 7/11/2026 21:09 - C tren 10 thi truong (von 30000, cung tham so, khong chinh)
+PF truot 0,05% (3 nam gan day / 3 nam truoc):
+- BTC 1,61 / 2,34 (DAT). ETH 1,30 / 0,93. Vang 1,57 / 0,74. Bac 1,53 / 0,82. Nasdaq 0,88 / 0,82. Dow 0,78 / 0,56. Dau 0,91 / 1,01.
+- Ngoai hoi (PF tho, chua truot): EURUSD 0,94 / 0,96, GBPUSD 1,06 / 0,96, USDJPY 0,89 / 1,76.
+  (PF truot cua ngoai hoi trong bang sai: USDJPY ra 0 vi chi phi tinh bang JPY. Da sua v5.9.1 - quy ra USD qua tick value;
+  ngoai ra 0,05% gia la qua nang voi ngoai hoi, spread that ~0,01%.)
+- Chi BTC dat o ca 2 giai doan. Vang / bac / ETH chi tot o 2024-2026 (dot tang manh cua kim loai), lo o 2020-2023.
+Gop danh muc (chia deu rui ro, lai da chot):
+- Ca 10 ma: lai/sut giam 3,4 / 1,3 so voi chi BTC 6,2 / 12,7. BTC + ETH + vang + bac: 8,5 / 2,2.
+- Tuong quan lai thang voi BTC thap (tru ETH +0,62), nhung cac ma khac khong co loi the nen chi pha loang.
+Ket luan: khong mo rong sang ma khac. Loi the cua C (Donchian 20 H4 + ADX) chi thay o BTC: co the do BTC co xu huong manh
+dac thu, hoac mot phan may man. BTC da qua 3 nam ngoai mau, nhung chi 63-71 lenh -> demo la phep thu tiep theo.

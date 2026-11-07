@@ -165,7 +165,8 @@ double OnTester()
    double stressPct[2] = {0.05, 0.10};
    ArrayInitialize(stressPL, 0); ArrayInitialize(stressGP, 0); ArrayInitialize(stressGL, 0);
    ulong  posIds[]; double posNet[]; double posCost[];
-   double contract = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_CONTRACT_SIZE);
+   // 1% gia quy ra tien tai khoan qua tick value (dung ca khi ma dinh gia khac USD, vd USDJPY dinh gia bang JPY)
+   double stTs = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), stTv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    if(HistorySelect(0, TimeCurrent()))
       for(int i = 0; i < HistoryDealsTotal(); i++)
       {
@@ -179,7 +180,7 @@ double OnTester()
          if(k < 0) { k = ArraySize(posIds); ArrayResize(posIds, k + 1); ArrayResize(posNet, k + 1); ArrayResize(posCost, k + 1);
                      posIds[k] = pid; posNet[k] = 0; posCost[k] = 0; }
          posNet[k]  += DealNet(d);
-         posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * contract * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0;  // = 1% gia
+         if(stTs > 0) posCost[k] += HistoryDealGetDouble(d, DEAL_VOLUME) * HistoryDealGetDouble(d, DEAL_PRICE) / 100.0 / stTs * stTv;  // = 1% gia
       }
    // Thoi gian giu lenh TB (gio) va tong swap. Ghi lai gio vao / ra / chieu tung vi the de gom dot nhoi lenh.
    double holdSum = 0, swapSum = 0, commSum = 0; int holdN = 0;
