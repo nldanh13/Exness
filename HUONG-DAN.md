@@ -291,3 +291,22 @@ Lan chay: Ngan-IMOM-M5 (ket hop), -dau30, -dao; moi cai co ban 3 nam gan day va 
 - MACD da khung (Quantpedia): lo ca 2 giai doan.
 - Quan tinh trong ngay (Shen 2022): truoc phi PF ~1,06-1,09, sau truot 0,05% PF ~0,2. Phi giet chien luoc, nhu du doan.
 - Tat ca ban von 1 trieu: lo hoac khong vao duoc lenh.
+
+## Bao ve lenh vao tay (v5.1) - rut ra tu sao ke giao dich tay
+
+Sao ke 9/2025-3/2026 (210 lenh BTC): thang 66% so lenh nhung lo rong, vi lenh lo trung binh gap doi lenh lai.
+- Lenh giu > 1 ngay: thang 29%, lo nang nhat. Lenh giu 4-24 gio: thang 88%.
+- 44% so lenh la nhoi them khi lenh cung chieu dang lo: nhom nay lo. Nhoi khi dang lai: hoa.
+- Lenh <= 0,5 lot: lai. Lenh > 0,5 lot: lo nang. Vai ngay lo lon (16/9, 30/9, 19-20/1) xoa het lai.
+- Tinh theo % gia (bo qua co lot), diem vao cua ban trung binh -0,06%/lenh: khong co loi the an de bot copy.
+
+Vi vay bot co che do bao ve lenh tay (InpGuardManual, preset 7-Bao-ve-lenh-tay, chi chay that / demo):
+- Lenh tay chua co SL: tu dat SL cach gia vao 1,5%.
+- Neu cham SL ma lo hon 3% von: tu dong bot lot (lot nho nhat van qua rui ro thi dong lenh).
+- Mo lenh moi cung chieu voi lenh tay dang lo (trung binh gia): dong lenh moi ngay.
+- Lenh tay dang lo giu qua 24 gio: dong.
+- Lenh tay lo qua 5% trong ngay: dong het va dong moi lenh tay moi toi 0:00 gio server.
+Moi lan can thiep deu gui thong bao. Keo preset 7 vao 1 chart BTCUSDm (bot khong tu vao lenh).
+
+Khung gio: lenh tay vao 6-12h UTC thang 90%, vao 0-6h UTC thang 41%. Mau nho, nen da them lan chay "+gio6-12" va "+bo0-6"
+cho cac cau hinh luot song de kiem tra tren 6 nam truoc khi tin.

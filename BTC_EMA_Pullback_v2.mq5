@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.0"
+#define  BOT_VERSION "5.1"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -117,6 +117,13 @@ input double          InpMaxDrawdownPct  = 15.0;      // Sut giam tu dinh toi da
 input bool            InpCloseOnHalt     = true;      // Dong het lenh khi cham sut giam toi da
 input bool            InpResetHalt       = false;     // Dat true 1 lan de mo khoa bot va dat lai moc von
 input double          InpCapital         = 0;         // Von danh cho bot (0 = toan bo balance luc dat moc). Dung khi chia von cho nhieu EA
+input group "=== Bao ve lenh vao tay (rut ra tu sao ke giao dich tay) ==="
+input bool            InpGuardManual     = false;     // Bat bao ve lenh tay (magic 0) tren ma cua chart nay
+input double          InpGuardSLPct      = 1.5;       // Lenh tay chua co SL: tu dat SL cach gia vao x% (0 = tat)
+input double          InpGuardMaxRiskPct = 3.0;       // Lenh tay cham SL lo hon x% von thi giam lot / dong (0 = tat)
+input bool            InpGuardNoAverage  = true;      // Dong ngay lenh tay moi neu nhoi vao lenh cung chieu dang lo
+input int             InpGuardMaxHoldH   = 24;        // Dong lenh tay dang lo sau x gio (0 = tat)
+input double          InpGuardDayLossPct = 5.0;       // Lenh tay lo qua x% trong ngay: dong het, khoa lenh tay toi het ngay (0 = tat)
 
 input group "=== Thong bao ==="
 input bool            InpPushNotify      = true;      // Push ve app MT5 tren dien thoai
@@ -455,6 +462,7 @@ bool ApplyPreset(const int id)
 #include "TrendBot/Signals.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
+#include "TrendBot/Guard.mqh"
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
 
@@ -578,6 +586,7 @@ datetime g_lastManage = 0;
 void OnTick()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
+   GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);

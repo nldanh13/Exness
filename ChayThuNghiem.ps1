@@ -179,6 +179,17 @@ foreach ($v in @(@{ N = "Ngan-IMOM-M5"; X = @{} }, @{ N = "Ngan-IMOM-M5-dau30"; 
     $Runs += @{ Name = $v.N;            Inputs = $i;         Deposit = 30000 }
     $Runs += @{ Name = "$($v.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Tu sao ke giao dich tay (9/2025-3/2026): lenh vao 6-12h UTC (13-19h VN) thang 90%, lenh vao 0-6h UTC thang 41%.
+# Mau nho (210 lenh, 6 thang) nen kiem tra lai tren 6 nam: "+gio6-12" chi vao lenh 6-12h UTC, "+bo0-6" bo 0-6h UTC.
+foreach ($n in @("Ngan-M15", "Ngan-M30", "Ngan-Nhoi3-M30", "Ngan-Nhoi3-H1")) {
+    foreach ($w in @(@{ N = "+gio6-12"; X = @{ InpBlock1Start = 12; InpBlock1End = 6 } }, @{ N = "+bo0-6"; X = @{ InpBlock1Start = 0; InpBlock1End = 6 } })) {
+        foreach ($src in @($Runs | Where-Object { $_.Name -eq $n -or $_.Name -eq "$n-truoc" })) {
+            $i = $src.Inputs.Clone(); foreach ($k in $w.X.Keys) { $i[$k] = $w.X[$k] }
+            $r = $src.Clone(); $r.Inputs = $i; $r.Name = $src.Name.Replace($n, "$n$($w.N)")
+            $Runs += $r
+        }
+    }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.

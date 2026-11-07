@@ -1,11 +1,12 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay (07/11): nhoi lenh theo da, thoat khi cat EMA20; doi chieu voi C.
-C-Donchian20-H4-ADX
-C-truoc-3nam
-C-ETH
-C+nhoi3*
-Nhoi3-H4*
-Ngan-Nhoi3-*
-Ngan-MACD-*
-C+nhoi3-buoc2R*
-Ngan-IMOM-*
+# Dot nay (07/11 chieu): kiem tra khung gio tot nhat rut ra tu sao ke giao dich tay, doi chieu voi ban goc.
+Ngan-M15
+Ngan-M15-truoc
+Ngan-M30
+Ngan-M30-truoc
+Ngan-Nhoi3-M30
+Ngan-Nhoi3-M30-truoc
+Ngan-Nhoi3-H1
+Ngan-Nhoi3-H1-truoc
+*+gio6-12*
+*+bo0-6*
