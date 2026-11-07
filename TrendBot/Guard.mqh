@@ -115,7 +115,7 @@ void GuardManual()
                PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP) < 0) { losingSame = true; break; }
          }
          if(losingSame) { GuardClose(t, "nhoi them vao lenh cung chieu dang lo (trung binh gia xuong)"); continue; }
-         PositionSelectByTicket(t);
+         if(!PositionSelectByTicket(t)) continue;
       }
 
       // 3) Chua co SL: tu dat SL cach gia vao x%
