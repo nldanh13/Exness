@@ -86,6 +86,7 @@ void ManagePositions()
 {
    double atr = 0;
    bool haveAtr = GetValue(hATR, 0, 1, atr);
+   if(haveAtr) atr = SLAtr(atr);           // InpSLTFmin: trailing / uoc luong 1R theo ATR khung SL
    double minL  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double minDist = (double)MathMax(SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL),
                                     SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * _Point;
@@ -274,6 +275,7 @@ void PyramidStep(const bool addOnly = false)
 {
    double fast, atr;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr) || atr <= 0) return;
+   atr = SLAtr(atr);                       // InpSLTFmin: buoc nhoi va SL lop moi theo ATR khung SL
    double c1 = iClose(_Symbol, addOnly ? PyrTF() : P_TF, 1);
    int cnt = 0; bool buy = true; double lastOpen = 0; datetime lastT = 0;
    for(int i = PositionsTotal() - 1; i >= 0; i--)

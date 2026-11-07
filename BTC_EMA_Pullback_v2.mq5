@@ -6,7 +6,7 @@
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
 #define  BOT_VERSION "5.9.1"
-#property version   "5.91"
+#property version   "5.92"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -78,6 +78,9 @@ input double          InpEntryPullATR    = 0;         // Vao lenh: cho gia hoi v
 input int             InpEntryPullMode   = 0;         // Het nen ma gia chua hoi: 0 = bo tin hieu, 1 = vao gia thi truong
 input int             InpPyramidTFmin    = 0;         // Kiem tra nhoi moi x phut (vd 15) thay vi moi nen khung chinh; buoc van tinh theo ATR khung chinh (0 = khung chinh)
 input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
+input int             InpSLTFmin         = 0;         // SL / buoc nhoi / trailing tinh theo ATR khung x phut (vd 5 = M5) thay vi khung chinh (0 = khung chinh)
+input int             InpReEntryMax      = 0;         // Bi cat lo thi vao lai toi da x lan cho cung 1 tin hieu, khi gia vuot lai muc vao dau (0 = tat)
+input int             InpReEntryBars     = 6;         // Chi vao lai trong x nen khung chinh tinh tu tin hieu
 input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
 input int             InpImomMode        = 0;         // Quan tinh trong ngay: 0 = ket hop 2 tin hieu, 1 = nua gio dau, 2 = nua gio ke cuoi (dao chieu)
 input bool            InpExitOnBar       = false;     // Dong het o nen dau tien dong nguoc chieu (Buy: nen do; Sell: nen xanh)
@@ -174,6 +177,9 @@ bool            P_DDScale;
 int             P_PyramidMax;
 double          P_PyramidStepATR;
 int             P_PyramidTFmin;
+int             P_SLTFmin;
+int             P_ReEntryMax;
+int             P_ReEntryBars;
 int             P_MTFAlign;
 int             P_ExportTFmin;
 double          P_EntryPullATR;
@@ -270,6 +276,9 @@ void LoadParams()
    P_PyramidMax = InpPyramidMax;
    P_PyramidStepATR = InpPyramidStepATR;
    P_PyramidTFmin = InpPyramidTFmin;
+   P_SLTFmin = InpSLTFmin;
+   P_ReEntryMax = InpReEntryMax;
+   P_ReEntryBars = InpReEntryBars;
    P_MTFAlign = InpMTFAlign;
    P_ExportTFmin = InpExportTFmin;
    P_EntryPullATR = InpEntryPullATR;
@@ -371,6 +380,9 @@ bool SetParam(const string k, const string v)
    if(k == "InpEntryPullMode") { P_EntryPullMode = (int)StringToInteger(v); return true; }
    if(k == "InpExportTFmin") { P_ExportTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpMTFAlign") { P_MTFAlign = (int)StringToInteger(v); return true; }
+   if(k == "InpSLTFmin") { P_SLTFmin = (int)StringToInteger(v); return true; }
+   if(k == "InpReEntryMax") { P_ReEntryMax = (int)StringToInteger(v); return true; }
+   if(k == "InpReEntryBars") { P_ReEntryBars = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
    if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
@@ -526,6 +538,7 @@ int OnInit()
    hTrend = iMA(_Symbol, P_TF,  P_TrendEMA, 0, MODE_EMA, PRICE_CLOSE);
    hHTF   = iMA(_Symbol, P_HTF, P_HTFEMA,   0, MODE_EMA, PRICE_CLOSE);
    hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
+   hATRSL = P_SLTFmin > 0 ? iATR(_Symbol, TFFromMin(P_SLTFmin), P_ATRPeriod) : hATR;
    hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
    if(P_Strategy == STRAT_RSI_REVERT)
    {
@@ -550,7 +563,7 @@ int OnInit()
       if(hATRD1 == INVALID_HANDLE || hBB == INVALID_HANDLE) { Print("Khong tao duoc ATR D1 / Bollinger"); return INIT_FAILED; }
    }
    if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
-      hATR == INVALID_HANDLE || hADX == INVALID_HANDLE)
+      hATR == INVALID_HANDLE || hATRSL == INVALID_HANDLE || hADX == INVALID_HANDLE)
    {
       Print("Khong tao duoc chi bao");
       return INIT_FAILED;
@@ -626,6 +639,7 @@ void OnDeinit(const int reason)
    IndicatorRelease(hTrend);
    IndicatorRelease(hHTF);
    IndicatorRelease(hATR);
+   if(hATRSL != hATR && hATRSL != INVALID_HANDLE) IndicatorRelease(hATRSL);
    IndicatorRelease(hADX);
    if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
    if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
@@ -731,6 +745,7 @@ void OnTick()
    ManagePositions();
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
+   CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
    UpdatePanel();
 
    datetime barTime = iTime(_Symbol, P_TF, 0);
@@ -802,7 +817,58 @@ void OnTick()
       g_status = StringFormat("Cho gia hoi ve %s de %s", DoubleToString(g_pendPrice, _Digits), buySignal ? "BUY" : "SELL");
       return;
    }
-   SendEntry(buySignal, atr, false);
+   if(SendEntry(buySignal, atr, false) > 0) ReEntryArm(buySignal, barTime);
+}
+
+// Vao lai sau khi bi cat lo (InpReEntryMax): nho huong + gia dong cua nen tin hieu trong InpReEntryBars nen khung chinh.
+// Moi nen moi cua khung SL (InpSLTFmin), neu bot dang dung ngoai, lenh truoc dong lo, va gia dong cua vuot lai muc
+// tin hieu (cung phia EMA nhanh khung chinh) thi vao lai, sau khi kiem tra lai moi dieu kien bat buoc.
+int      g_reDir = 0, g_reCount = 0;
+double   g_reLevel = 0;
+datetime g_reExpire = 0;
+void ReEntryArm(const bool buy, const datetime barTime)
+{
+   if(P_ReEntryMax <= 0) return;
+   g_reDir = buy ? 1 : -1; g_reCount = 0;
+   g_reLevel = iClose(_Symbol, P_TF, 1);
+   int nb = P_ReEntryBars > 0 ? P_ReEntryBars : 1;
+   g_reExpire = barTime + nb * PeriodSeconds(P_TF);
+}
+// Lai/lo cua deal dong gan nhat cua bot (0 neu chua co)
+double LastOwnDealProfit()
+{
+   if(!HistorySelect(TimeCurrent() - 30 * 86400, TimeCurrent() + 60)) return 0;
+   for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
+   {
+      ulong d = HistoryDealGetTicket(i);
+      if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != (long)P_Magic || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
+      long e = HistoryDealGetInteger(d, DEAL_ENTRY);
+      if(e != DEAL_ENTRY_OUT && e != DEAL_ENTRY_INOUT) continue;
+      return HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION);
+   }
+   return 0;
+}
+void CheckReEntry()
+{
+   if(g_reDir == 0) return;
+   if(TimeCurrent() >= g_reExpire || g_reCount >= P_ReEntryMax || IsHalted()) { g_reDir = 0; return; }
+   if(HasOwnPosition() || g_pendDir != 0) return;
+   static datetime lastReBar = 0;
+   ENUM_TIMEFRAMES tf = P_SLTFmin > 0 ? TFFromMin(P_SLTFmin) : P_TF;
+   datetime bt = iTime(_Symbol, tf, 0);
+   if(bt == 0 || bt == lastReBar) return;
+   lastReBar = bt;
+   if(LastOwnDealProfit() >= 0) { g_reDir = 0; return; }   // lenh truoc dong co lai (trailing): xong tin hieu, khong vao lai
+   bool buy = g_reDir > 0;
+   double c = iClose(_Symbol, tf, 1), fast, atr;
+   if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr)) return;
+   if(buy ? (c <= g_reLevel || c <= fast) : (c >= g_reLevel || c >= fast)) return;
+   if(!MTFOk(buy) || !EntryGatesOk() || !FundingOk(buy) || !MarketFiltersOk(buy)) return;
+   g_sigSL = 0; g_sigTP = 0;
+   int r = SendEntry(buy, atr, true);
+   if(r == 0) { lastReBar = 0; return; }   // chua lay duoc khoa chung: thu lai o tick sau
+   g_reCount++;
+   if(r > 0) g_reEntries++;
 }
 
 // Gui lenh vao (dung chung cho vao ngay va vao khi gia hoi ve).
@@ -810,7 +876,7 @@ void OnTick()
 int SendEntry(const bool buySignal, const double atr, const bool fromPending)
 {
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
-   double slDist   = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
+   double slDist   = g_sigSL > 0 ? g_sigSL : SLAtr(atr) * P_ATRMult;
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 

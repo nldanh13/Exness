@@ -460,3 +460,14 @@ Mo phong Python (H4, chi phi 0,06%/vong). Tong R, GD1 = 12/2021-02/2024, GD2 = 0
 - Chot loi truoc cum thanh ly: 35,6 / 0,5 (kem rat ro: cat mat cac lenh lai lon).
 - Ne SL khoi cum thanh ly: 59,5 / 17,9 (+0,4 / +2,6 R, ~0,03 R/lenh) - qua nho, trong muc nhieu.
 Ket luan: khong them bo loc OI / thanh ly. Giu C.
+
+## SL nho, nhoi lenh va vao lai (v5.92)
+- InpSLTFmin = x: SL, trailing va buoc nhoi tinh theo ATR khung x phut (vd 5 = M5) thay vi khung chinh. Tin hieu vao van theo
+  khung chinh (InpTF). SL M5 ~ 1/7 SL H4, nen 0,01 BTC thua chi ~3-5 USD thay vi ~20-39 USD.
+- InpReEntryMax = x: lenh bi cat lo thi vao lai toi da x lan cho cung tin hieu, trong InpReEntryBars nen khung chinh (mac dinh 6),
+  khi nen khung SL dong cua vuot lai gia dong cua cua nen tin hieu va cung phia EMA nhanh. Kiem tra lai moi dieu kien bat buoc
+  (lo ngay, khung gio, spread, ...) truoc khi vao. Lenh truoc dong co lai thi khong vao lai. Cot VaoLai dem so lan vao lai da khop.
+- Lan chay SLnho-*: tin hieu H4 voi SL M30/M15/M5/M3; SL M5 + nhoi 5 lop (kiem tra moi 5 phut, buoc 1 ATR M5) va/hoac vao lai
+  3 lan; tin hieu M30 voi SL M5. Moi cau hinh co ban von 30000 va von 1 trieu (-1tr, InpMaxRiskRoundUp = 20), ca 2 giai doan.
+- Du doan truoc khi chay (de doi chieu): SL cang nho thi spread (~24 USD) chiem phan lon hon va bi quet nhieu hon,
+  nen nhieu kha nang PF duoi 1,3. Che do nhanh chi co gia M1 nen ket qua SL M3/M5 con tho; cau hinh nao dat phai chay tick that.

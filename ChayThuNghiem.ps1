@@ -276,6 +276,30 @@ foreach ($sm in @("BTCUSDm", "ETHUSDm", "LTCUSDm", "XRPUSDm", "BCHUSDm", "SOLUSD
     $Runs += @{ Name = $n;         Inputs = (Cfg $Brk $Q @{ InpMaxRiskRoundUp = 3 }); Deposit = $Von1tr; Symbol = $sm; Optional = $true }
     $Runs += @{ Name = "$n-truoc"; Inputs = (Cfg $Brk $Q @{ InpMaxRiskRoundUp = 3 }); Deposit = $Von1tr; Symbol = $sm; From = $OOSFrom; To = $FromDate; Optional = $true }
 }
+# SL nho (v5.92, y tuong cua ban 7/11): vao theo tin hieu H4 (C) hoac M30, nhung SL / trailing / buoc nhoi tinh theo ATR
+# khung nho (InpSLTFmin), de 0,01 lot thua it hon. Them nhoi lenh khi dang lai (kiem tra moi 5 phut) va vao lai sau khi bi
+# cat lo (toi da 3 lan trong 6 nen khung chinh, khi gia dong cua vuot lai muc tin hieu).
+# Ban von 30000: chien luoc co loi the khong. Ban "-1tr" (38 USD): ket qua that voi tai khoan 1 trieu, cho vao 0,01 lot
+# neu 1 lan thua mat toi da 20% (InpMaxRiskRoundUp = 20). Tieu chi nhu cu: PF truot 0,05% >= 1,3 ca 2 giai doan.
+$SLn = @(
+    @{ N = "SLnho-H4-slM30";             X = @{ InpSLTFmin = 30 } },
+    @{ N = "SLnho-H4-slM15";             X = @{ InpSLTFmin = 15 } },
+    @{ N = "SLnho-H4-slM5";              X = @{ InpSLTFmin = 5 } },
+    @{ N = "SLnho-H4-slM3";              X = @{ InpSLTFmin = 3 } },
+    @{ N = "SLnho-H4-slM5+nhoi5";        X = @{ InpSLTFmin = 5; InpPyramidMax = 5; InpPyramidStepATR = 1.0; InpPyramidTFmin = 5 } },
+    @{ N = "SLnho-H4-slM5+vaoLai3";      X = @{ InpSLTFmin = 5; InpReEntryMax = 3 } },
+    @{ N = "SLnho-H4-slM5+nhoi5+vaoLai3"; X = @{ InpSLTFmin = 5; InpPyramidMax = 5; InpPyramidStepATR = 1.0; InpPyramidTFmin = 5; InpReEntryMax = 3 } },
+    @{ N = "SLnho-M30-slM5";             X = @{ InpTF = 30; InpMaxSpreadPoints = 1500; InpSLTFmin = 5 } },
+    @{ N = "SLnho-M30-slM5+nhoi5+vaoLai3"; X = @{ InpTF = 30; InpMaxSpreadPoints = 1500; InpSLTFmin = 5; InpPyramidMax = 5; InpPyramidStepATR = 1.0; InpPyramidTFmin = 5; InpReEntryMax = 3 } }
+)
+foreach ($v in $SLn) {
+    $i = Cfg $Brk $Q $v.X
+    $Runs += @{ Name = $v.N;              Inputs = $i;         Deposit = 30000 }
+    $Runs += @{ Name = "$($v.N)-truoc";   Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+    $i1 = $i.Clone(); $i1["InpMaxRiskRoundUp"] = 20
+    $Runs += @{ Name = "$($v.N)-1tr";       Inputs = $i1;         Deposit = $Von1tr }
+    $Runs += @{ Name = "$($v.N)-1tr-truoc"; Inputs = $i1.Clone(); Deposit = $Von1tr; From = $OOSFrom; To = $FromDate }
+}
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
 # Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / file (theo chi-chay.txt, mac dinh)
 $nhomPats = switch ($Nhom) {
