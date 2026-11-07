@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.9.1"
+#define  BOT_VERSION "5.9.2"
 #property version   "5.92"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -515,6 +515,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 
 int OnInit()
 {
+   ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
    // Moi chien luoc / khung co Magic rieng, de nhieu bot tren CUNG ma khong quan ly nham lenh cua nhau.
@@ -579,6 +580,16 @@ int OnInit()
 // Khoi tao trang thai (moc von, thoi gian nghi...) CHI KHI da dang nhap va ket noi server.
 // Tranh truong hop VPS khoi dong lai: OnInit chay luc login = 0, moc von bi luu sai ten.
 bool g_stateReady = false;
+// Goi dau OnInit. Khi doi thong so (hoac doi khung chart), MT5 chi goi lai OnDeinit/OnInit ma giu nguyen bien toan cuc:
+// neu khong xoa, TryInitState bo qua (g_stateReady van true) nen doi "Von danh cho bot" khong dat lai moc, va moc dau ngay
+// cu (vd 50 trieu) bi so voi von moi (1 trieu) -> bot tuong lo 98%, dung han va khoa lo ngay.
+void ResetRuntimeState()
+{
+   g_stateReady   = false;
+   currentDay     = -1;
+   dayStartEquity = 0;
+   g_plDirty      = true;
+}
 bool TryInitState()
 {
    if(g_stateReady) return true;
