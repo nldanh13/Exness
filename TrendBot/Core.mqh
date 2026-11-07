@@ -3,6 +3,19 @@
 //+------------------------------------------------------------------+
 CTrade   trade;
 int      hFast = INVALID_HANDLE, hTrend = INVALID_HANDLE, hATR = INVALID_HANDLE;
+int      hATRSL = INVALID_HANDLE;          // ATR cho SL / buoc nhoi / trailing (InpSLTFmin); = hATR khi dung khung chinh
+int      g_reEntries = 0;                  // So lan vao lai sau khi bi cat lo (da khop)
+ENUM_TIMEFRAMES TFFromMin(const int m)
+{
+   switch(m)
+   {
+      case 1: return PERIOD_M1;   case 2: return PERIOD_M2;   case 3: return PERIOD_M3;   case 4: return PERIOD_M4;
+      case 5: return PERIOD_M5;   case 6: return PERIOD_M6;   case 10: return PERIOD_M10; case 12: return PERIOD_M12;
+      case 15: return PERIOD_M15; case 20: return PERIOD_M20; case 30: return PERIOD_M30; case 60: return PERIOD_H1;
+      case 120: return PERIOD_H2; case 240: return PERIOD_H4;
+   }
+   return PERIOD_CURRENT;
+}
 int      hHTF  = INVALID_HANDLE, hADX   = INVALID_HANDLE;
 int      hMkt  = INVALID_HANDLE;
 int      hRSI  = INVALID_HANDLE;
@@ -152,6 +165,13 @@ bool GetValue(const int handle, const int buffer, const int shift, double &value
    if(CopyBuffer(handle, buffer, shift, 1, buf) != 1) return false;
    value = buf[0];
    return true;
+}
+// ATR dung cho SL / buoc nhoi / trailing: khung InpSLTFmin neu co, khong thi giu ATR khung chinh (fallback)
+double SLAtr(const double fallback)
+{
+   if(hATRSL == INVALID_HANDLE || hATRSL == hATR) return fallback;
+   double v;
+   return GetValue(hATRSL, 0, 1, v) && v > 0 ? v : fallback;
 }
 
 double NormalizeVolume(double lots)

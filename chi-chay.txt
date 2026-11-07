@@ -1,8 +1,12 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
 # Dot nay:
 #  - 1tr-*: von 1 trieu VND (~38 USD), tai khoan Standard. Tim ma nao C vao duoc lenh voi rui ro that <= 3% von.
-#  - DM-*: cung cau hinh C tren nhieu thi truong, von 30000 (danh muc). Doi chieu voi C-von30000 (BTC).
+#  - SLnho-*: (v5.92) vao theo tin hieu H4 hoac M30, SL theo ATR M30/M15/M5/M3, them nhoi lenh 5 phut va vao lai sau khi
+#    bi cat lo. Von 30000 (co loi the khong) va von 1 trieu (-1tr, cho phep 1 lan thua mat toi da 20%).
+#  - C-Donchian20-H4-ADX / C-truoc-3nam / C-von30000(-truoc): de doi chieu.
 1tr-*
+SLnho-*
+C-Donchian20-H4-ADX
+C-truoc-3nam
 C-von30000
 C-von30000-truoc
-DM-*
