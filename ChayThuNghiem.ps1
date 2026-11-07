@@ -266,6 +266,16 @@ foreach ($dm in @("ETHUSDm", "XAUUSDm", "XAGUSDm", "USTECm", "US30m", "USOILm", 
     $Runs += @{ Name = $n;            Inputs = (Cfg $Brk $Q); Deposit = 30000; Symbol = $dm; Optional = $true }
     $Runs += @{ Name = "$n-truoc";    Inputs = (Cfg $Brk $Q); Deposit = 30000; Symbol = $dm; From = $OOSFrom; To = $FromDate; Optional = $true }
 }
+# Von 1 trieu VND (~38 USD) tren tai khoan Standard (ban khong dung tai khoan Cent): voi BTC, 0,01 lot cham SL cua C
+# (2,5 ATR H4 ~ 2.200-2.700 USD) mat 60-70% von, nen bot bo moi lenh. Tim ma nao co 0,01 lot du nho de C vao lenh
+# voi rui ro that <= 3% von (InpMaxRiskRoundUp = 3). Cot BoQuaLot / LamTronLot cho biet bao nhieu tin hieu bi bo / phai lam tron.
+# Giu nguyen tham so C, chi doi ma. Ma nao tai khoan khong co thi chi canh bao (Optional).
+foreach ($sm in @("BTCUSDm", "ETHUSDm", "LTCUSDm", "XRPUSDm", "BCHUSDm", "SOLUSDm", "ADAUSDm", "DOGEUSDm", "DOTUSDm", "LINKUSDm",
+                  "BNBUSDm", "AVAXUSDm", "XAUUSDm", "EURUSDm", "USDJPYm")) {
+    $n = "1tr-" + $sm.TrimEnd('m')
+    $Runs += @{ Name = $n;         Inputs = (Cfg $Brk $Q @{ InpMaxRiskRoundUp = 3 }); Deposit = $Von1tr; Symbol = $sm; Optional = $true }
+    $Runs += @{ Name = "$n-truoc"; Inputs = (Cfg $Brk $Q @{ InpMaxRiskRoundUp = 3 }); Deposit = $Von1tr; Symbol = $sm; From = $OOSFrom; To = $FromDate; Optional = $true }
+}
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
 # Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / file (theo chi-chay.txt, mac dinh)
 $nhomPats = switch ($Nhom) {
