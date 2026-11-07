@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.8"
-#property version   "5.80"
+#define  BOT_VERSION "5.9"
+#property version   "5.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
 #include <Trade\Trade.mqh>
@@ -484,7 +484,8 @@ bool ApplyPreset(const int id)
    return found;
 }
 
-int      g_pendFilled = 0, g_pendMissed = 0;   // vao lenh cho gia hoi: so lan gia hoi kip / het nen chua hoi (Report.mqh ghi ra)
+// Vao lenh cho gia hoi (Report.mqh ghi ra): gia cham muc cho / het nen chua hoi / bi huy khi kiem tra lai / lenh khop that
+int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
@@ -643,7 +644,7 @@ datetime g_pendExpire = 0;
 void CheckPendingEntry()
 {
    if(g_pendDir == 0) return;
-   if(HasOwnPosition() || IsHalted() || DailyLossHit()) { g_pendDir = 0; return; }
+   if(HasOwnPosition() || IsHalted()) { g_pendDir = 0; return; }
    MqlTick tk;
    if(!SymbolInfoTick(_Symbol, tk)) return;
    bool buy = g_pendDir > 0;
@@ -651,17 +652,68 @@ void CheckPendingEntry()
    bool expired = TimeCurrent() >= g_pendExpire;
    if(!hit && !expired) return;
    if(!hit && P_EntryPullMode == 0) { g_pendDir = 0; g_pendMissed++; g_status = "Gia khong hoi ve, bo tin hieu"; return; }
+   // Kiem tra LAI moi dieu kien bat buoc ngay truoc khi gui: tu luc co tin hieu toi gio co the da het khung gio,
+   // spread gian rong, du so lenh trong ngay, cham lo ngay, gan tin My, hoac cac khung nho het dong thuan.
+   bool mtf = MTFOk(buy);
+   if(!mtf) g_status = "cac khung nho het dong thuan";
+   if(!mtf || !EntryGatesOk() || !FundingOk(buy) || !MarketFiltersOk(buy))
+   {
+      g_pendDir = 0;
+      if(hit) g_pendHit++; else g_pendMissed++;
+      g_pendBlocked++;
+      g_status = "Huy lenh cho: " + g_status;
+      return;
+   }
    g_sigSL = g_pendSigSL; g_sigTP = g_pendSigTP;
+   int r = SendEntry(buy, g_pendATR, true);
+   if(r == 0) return;               // chua lay duoc khoa rui ro chung: giu lenh cho, thu lai o tick sau
    g_pendDir = 0;
-   if(hit) g_pendFilled++; else g_pendMissed++;
-   SendEntry(buy, g_pendATR);
+   if(hit) g_pendHit++; else g_pendMissed++;
+   if(r > 0) g_pendFilled++;        // chi dem khi server da khop that
+}
+// Dieu kien bat buoc truoc moi lan vao lenh moi (dung chung cho vao ngay va vao khi gia hoi ve)
+bool EntryGatesOk()
+{
+   if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
+   string why = "";
+   if(!TimeAllowed(why)) { g_status = "Tam nghi: " + why; return false; }
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints)
+   {
+      g_status = "Spread qua rong";
+      return false;
+   }
+   if(P_MaxTradesPerDay > 0 && TradesToday() >= P_MaxTradesPerDay)
+   {
+      g_status = "Du so lenh trong ngay";
+      return false;
+   }
+   if(P_CooldownBars > 0 && lastLossTime > 0 &&
+      TimeCurrent() - lastLossTime < (long)P_CooldownBars * PeriodSeconds(P_TF))
+   {
+      g_status = "Nghi sau lenh thua";
+      return false;
+   }
+   return true;
+}
+// Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.
+// Funding qua am: nguoc lai voi Sell.
+bool FundingOk(const bool buy)
+{
+   if(!P_UseFunding) return true;
+   double f = FundingNow();
+   if(f != EMPTY_VALUE && ((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax)))
+   {
+      g_fundBlocked++;
+      g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);
+      return false;
+   }
+   return true;
 }
 void OnTick()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
-   CheckPendingEntry();             // tin hieu dang cho gia hoi ve (moi tick)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
@@ -678,6 +730,7 @@ void OnTick()
    if(ready) CheckDailyLoss();
    ManagePositions();
    ReconcileClosed();
+   CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
    UpdatePanel();
 
    datetime barTime = iTime(_Symbol, P_TF, 0);
@@ -703,25 +756,7 @@ void OnTick()
       if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar || P_Strategy == STRAT_IMOM) PyramidStep();
       return;
    }
-   if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return; }
-   string why = "";
-   if(!TimeAllowed(why)) { g_status = "Tam nghi: " + why; return; }
-   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints)
-   {
-      g_status = "Spread qua rong";
-      return;
-   }
-   if(P_MaxTradesPerDay > 0 && TradesToday() >= P_MaxTradesPerDay)
-   {
-      g_status = "Du so lenh trong ngay";
-      return;
-   }
-   if(P_CooldownBars > 0 && lastLossTime > 0 &&
-      TimeCurrent() - lastLossTime < (long)P_CooldownBars * PeriodSeconds(P_TF))
-   {
-      g_status = "Nghi sau lenh thua";
-      return;
-   }
+   if(!EntryGatesOk()) return;
 
    double fast, trend, atr, adx = 0, htfEma = 0;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hTrend, 0, 1, trend) || !GetValue(hATR, 0, 1, atr)) return;
@@ -751,18 +786,7 @@ void OnTick()
    bool sellSignal = P_AllowSell && sellBase
                      && (!P_UseHTF || (P_HTFMacd ? htfDn : htfClose < htfEma)) && adxOk
                      && (!P_UseCandle || BearCandle()) && MTFOk(false);
-   if(P_UseFunding && (buySignal || sellSignal))
-   {
-      // Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.
-      // Funding qua am: nguoc lai voi Sell.
-      double f = FundingNow();
-      if(f != EMPTY_VALUE && ((buySignal && f > P_FundingMax) || (sellSignal && f < -P_FundingMax)))
-      {
-         g_fundBlocked++;
-         g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);
-         return;
-      }
-   }
+   if((buySignal || sellSignal) && !FundingOk(buySignal)) return;
 
    if((buySignal || sellSignal) && !MarketFiltersOk(buySignal)) return;
 
@@ -778,11 +802,12 @@ void OnTick()
       g_status = StringFormat("Cho gia hoi ve %s de %s", DoubleToString(g_pendPrice, _Digits), buySignal ? "BUY" : "SELL");
       return;
    }
-   SendEntry(buySignal, atr);
+   SendEntry(buySignal, atr, false);
 }
 
-// Gui lenh vao (dung chung cho vao ngay va vao khi gia hoi ve)
-void SendEntry(const bool buySignal, const double atr)
+// Gui lenh vao (dung chung cho vao ngay va vao khi gia hoi ve).
+// Tra ve 1 = server da khop, 0 = chua lay duoc khoa chung (thu lai o tick sau), -1 = khong vao (lot, TP, server tu choi...).
+int SendEntry(const bool buySignal, const double atr, const bool fromPending)
 {
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
    double slDist   = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
@@ -795,12 +820,12 @@ void SendEntry(const bool buySignal, const double atr)
    {
       g_status = "Cho khoa rui ro chung voi bot cung nhom, chua vao lenh";
       if(ShouldNotify("grplock", 3600)) Print("Khong lay duoc khoa chung cua nhom sau 5 giay: bo qua lan nay, thu lai o tick sau.");
-      lastBarTime = 0;
-      return;
+      if(!fromPending) lastBarTime = 0;   // lenh cho gia hoi tu thu lai (CheckPendingEntry giu lenh cho)
+      return 0;
    }
    double lots = CalcLots(slDist);
    MqlTick tick;
-   if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return; }
+   if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return -1; }
    GroupReserve(g_lastRisk);
 
    bool ok;
@@ -809,7 +834,7 @@ void SendEntry(const bool buySignal, const double atr)
       double price = tick.ask;
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price + slDist * P_RR : 0.0);
-      if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
+      if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
                      tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY");
@@ -819,7 +844,7 @@ void SendEntry(const bool buySignal, const double atr)
       double price = tick.bid;
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price - slDist * P_RR : 0.0);
-      if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return; }
+      if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
                       tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL");
@@ -831,6 +856,7 @@ void SendEntry(const bool buySignal, const double atr)
    if(!filled) GroupClear();
    GroupUnlock();                                    // mo khoa truoc khi gui thong bao (Telegram co the cham)
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");
+   return filled ? 1 : -1;
 }
 
 //--- Thong bao vao / thoat lenh ------------------------------------

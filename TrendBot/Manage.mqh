@@ -320,8 +320,8 @@ void PyramidStep(const bool addOnly = false)
       if(better) TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(op, _Digits), tp), "Sua SL", "#" + (string)tk);
    }
    // Chi nhoi khi DOC LAI trang thai vi the thay moi lop cu da co SL >= hoa von. Server tu choi sua SL
-   // (gan gia, thi truong dong...) thi lop cu van chiu rui ro day du, ma GroupOpenRisk khong tinh lenh cua chinh bot
-   // -> bo qua lan nhoi nay, thu lai o nen sau.
+   // (gan gia, thi truong dong...) thi lop cu van chiu rui ro day du -> bo qua lan nhoi nay, thu lai o nen sau.
+   // Them mot lop bao ve trong CalcLots (v5.9): rui ro con mo cua lop cu + lop moi khong vuot 1 lenh chuan.
    double tol = _Point * 2;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {

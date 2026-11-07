@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.8
+# Hướng dẫn bot BTC (MT5) v5.9
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -145,7 +145,9 @@ File `ket-qua-so-sanh.csv` trong zip có một dòng cho mỗi lần chạy:
 | `MC_ChuoiThua95` | Chuỗi thua liên tiếp dài nhất ở trường hợp xấu (95%) trong Monte Carlo. Chuẩn bị tinh thần cho chuỗi dài cỡ này |
 | `GiamCoDD` | Số lệnh bị giảm cỡ vì đang sụt giảm (chỉ khi bật `InpDDScale`) |
 | `SoDot` | Từ v5.8: số **đợt**. Các lớp nhồi vào khi lớp trước cùng chiều còn mở được gộp thành một đợt, vì chúng thắng thua cùng nhau. `E_R`, `tStat`, `TyLeThang_CanDuoi95%`, bỏ top 5 và Monte Carlo đều tính theo đợt (1R = rủi ro của lớp đầu). Không nhồi lệnh thì số đợt = số lệnh, các cột này không đổi so với trước |
-| `VaoKhiHoi`, `HetNenChuaHoi` | Chỉ khi bật `InpEntryPullATR`: số lần giá hồi kịp để vào lệnh, và số lần hết nến mà giá chưa hồi (bị bỏ hoặc vào giá thị trường tùy `InpEntryPullMode`) |
+| `ChoHoi_ChamGia`, `ChoHoi_HetNen`, `ChoHoi_BiHuy`, `ChoHoi_Khop` | Chỉ khi bật `InpEntryPullATR`: số lần giá chạm mức chờ, số lần hết nến mà giá chưa hồi, số lần bị hủy vì kiểm tra lại thấy không đủ điều kiện (giờ, spread, số lệnh/ngày, lỗ ngày, tin Mỹ, đồng thuận khung nhỏ, các bộ lọc), và số lệnh **server đã khớp thật**. Chạm giá chưa chắc là khớp |
+| `RuiRoMoMax%` | Rủi ro mở lớn nhất của bot ngay sau khi vào một lớp: rủi ro còn lại của các lớp cũ (giá vào → SL hiện tại) cộng lớp mới, theo % vốn của bot. Nhồi lệnh đúng thiết kế thì xấp xỉ `InpRiskPercent` |
+| `NhoiBiBoVoiRuiRo` | Số lần nhồi bị bỏ vì các lớp cũ vẫn còn rủi ro bằng một lệnh chuẩn (chưa dời được SL về hòa vốn) |
 | `MC_SutGiamTB%`, `MC_SutGiam95%`, `MC_XacSuatDungHan%` | Monte Carlo: rút lại các lệnh 1.000 lần theo khối 5 lệnh liền nhau (giữ các chuỗi thua theo cụm). Cho biết sụt giảm thường gặp, sụt giảm ở trường hợp xấu (chỉ 5% số lần tệ hơn), và xác suất bot chạm mức dừng hẳn `InpMaxDrawdownPct` (15%). Dưới 200 lệnh thì chỉ nên xem là tham khảo |
 
 Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (không lọc ADX), C (có ADX), D (Donchian 55), cùng các lần chạy với vốn 30.000, trên `ETHUSDm`, và trên 3 năm **trước** giai đoạn đã dùng để chọn cấu hình. Các lần này tắt giới hạn sụt giảm để so sánh chiến lược. Lần cuối `MacDinh-nhu-chay-that` dùng nguyên cài đặt mặc định của bot, gồm cả dừng hẳn khi sụt 15% và khóa lỗ ngày 3%, đúng như khi chạy thật. **Bộ lọc chất lượng breakout** (mặc định tắt, đang thử trên cấu hình C):
@@ -168,7 +170,7 @@ Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (khôn
 - `InpAvoidUSNews`: không vào lệnh trong `InpNewsHours` (2) giờ trước và sau tin Mỹ quan trọng. Khi chạy thật bot dùng lịch kinh tế của MT5. Khi backtest bot dùng file `du-lieu/tin_my.csv`: lịch họp Fed (FOMC, 14:00 giờ New York) và ngày công bố CPI (8:30 giờ New York) từ 2020, đã đổi sang giờ UTC, lấy từ trang của Fed và BLS. Cần cập nhật file này khi có lịch năm mới. File lệnh có thêm cột `GioToiTin` (số giờ từ lúc vào lệnh tới tin gần nhất, âm là tin đã ra trước đó).
 - Khi backtest, script tự tải Fear & Greed và lượt xem Wikipedia vào *Common\Files*. Khi chạy thật, bot tải lại mỗi 6 giờ; cần thêm `https://api.alternative.me` và `https://wikimedia.org` vào *Allow WebRequest*.
 
-**Giảm rủi ro khi BTC và ETH cùng có lệnh** (đang bật): hai đồng thường đi cùng nhau, nên nếu một mã trong `InpCorrSymbols` (`BTCUSDm,ETHUSDm`) đã có lệnh thì lệnh mới trên mã kia chỉ rủi ro `InpCorrRiskScale` × 1% (mặc định 0,5%). Thêm một trần chung `InpMaxGroupRiskPct` (1,5%): tổng tiền có thể mất của lệnh đang mở trên mã kia (tính từ giá vào tới SL) cộng với lệnh mới không vượt 1,5% vốn của bot. Lệnh kia đã dời SL qua giá vào thì tính là 0. Lệnh không có SL tính bằng 1%. Hết chỗ thì bot bỏ tín hiệu. Làm tròn lot cũng không được vượt các giới hạn này. Hai bot H4 đóng nến cùng giờ, nên trước khi tính lot mỗi bot giữ một khóa chung (biến toàn cục của MT5) và ghi lại phần rủi ro mình sắp dùng, rồi mới gửi lệnh. Bot kia phải chờ, và khi tính sẽ thấy phần đã giữ chỗ. Không lấy được khóa trong 5 giây thì bot **không vào lệnh** và thử lại ở tick sau. Khóa bị bỏ quên quá 60 giây (ví dụ bot kia bị tắt giữa chừng) thì tự hết hạn. Vì vậy hai bot phải chạy trên **cùng một MT5** (cùng một thư mục cài đặt trên cùng máy / VPS). Khóa và phần giữ chỗ dùng biến toàn cục của MT5, nên **không đồng bộ giữa hai terminal, hai máy hay hai VPS**: chạy BTC ở terminal này và ETH ở terminal khác thì mỗi bot chỉ thấy lệnh đã khớp của bot kia, không thấy phần đang giữ chỗ. Bot ghi nhắc điều này vào nhật ký lúc khởi động. Đặt `InpCorrRiskScale = 1` và `InpMaxGroupRiskPct = 0` để tắt. Chỉ có tác dụng khi chạy bot trên cả hai chart; backtest một mã không thấy khác biệt.
+**Giảm rủi ro khi BTC và ETH cùng có lệnh** (đang bật): hai đồng thường đi cùng nhau, nên nếu một mã trong `InpCorrSymbols` (`BTCUSDm,ETHUSDm`) đã có lệnh thì lệnh mới trên mã kia chỉ rủi ro `InpCorrRiskScale` × 1% (mặc định 0,5%). Thêm một trần chung `InpMaxGroupRiskPct` (1,5%): tổng tiền có thể mất của lệnh đang mở trên mã kia (tính từ giá vào tới SL) cộng với lệnh mới không vượt 1,5% vốn của bot. Lệnh kia đã dời SL qua giá vào thì tính là 0. Lệnh không có SL tính bằng 1%. Từ v5.9 trần này cộng cả các lớp nhồi đang mở của chính bot, và riêng chuỗi nhồi của một bot không được vượt rủi ro của 1 lệnh chuẩn (1%). **Đây là giới hạn theo mô hình, không phải mức lỗ tối đa được bảo đảm:** mô hình giả định SL khớp đúng giá. Khi giá nhảy mạnh (gap cuối tuần, tin lớn, thanh lý dây chuyền), SL có thể khớp xa hơn và nhiều lớp cùng lỗ, nên lỗ thật có thể vượt 1–1,5%. Hết chỗ thì bot bỏ tín hiệu. Làm tròn lot cũng không được vượt các giới hạn này. Hai bot H4 đóng nến cùng giờ, nên trước khi tính lot mỗi bot giữ một khóa chung (biến toàn cục của MT5) và ghi lại phần rủi ro mình sắp dùng, rồi mới gửi lệnh. Bot kia phải chờ, và khi tính sẽ thấy phần đã giữ chỗ. Không lấy được khóa trong 5 giây thì bot **không vào lệnh** và thử lại ở tick sau. Khóa bị bỏ quên quá 60 giây (ví dụ bot kia bị tắt giữa chừng) thì tự hết hạn. Vì vậy hai bot phải chạy trên **cùng một MT5** (cùng một thư mục cài đặt trên cùng máy / VPS). Khóa và phần giữ chỗ dùng biến toàn cục của MT5, nên **không đồng bộ giữa hai terminal, hai máy hay hai VPS**: chạy BTC ở terminal này và ETH ở terminal khác thì mỗi bot chỉ thấy lệnh đã khớp của bot kia, không thấy phần đang giữ chỗ. Bot ghi nhắc điều này vào nhật ký lúc khởi động. Đặt `InpCorrRiskScale = 1` và `InpMaxGroupRiskPct = 0` để tắt. Chỉ có tác dụng khi chạy bot trên cả hai chart; backtest một mã không thấy khác biệt.
 
 **Chưa làm được và lý do:**
 - *Open interest:* Binance chỉ cho tải miễn phí 30 ngày gần nhất, không đủ để backtest.
@@ -403,3 +405,16 @@ Nhung bang cu dem moi lop nhoi la 1 lenh doc lap. Gom lop chong nhau cung chieu 
 Ket luan: giu C cho demo. v5.8 tinh t / top 5 / Monte Carlo theo dot, va them lan chay:
 - C+nhoi5-buoc0.5-rr0.3 (von 30000, 0,3%/lop) so voi C-von30000 / C-von30000-truoc: cung muc sut giam thi co hon C khong.
 - C-nhuThat, C+nhoi5-buoc0.5-nhuThat (von 3000, bat dung han 15% + lo ngay 3%).
+
+## Sua theo review (v5.9)
+- Cho gia hoi (InpEntryPullATR): khi gia cham muc cho, bot KIEM TRA LAI moi dieu kien bat buoc truoc khi gui lenh
+  (lo ngay, khung gio, spread, so lenh/ngay, nghi sau lenh thua, dong thuan khung nho, funding, Fear & Greed, chu y, Nasdaq, tin My).
+  Khong dat thi huy lenh cho. Viec kiem tra lenh cho chay SAU khi cap nhat lo ngay / sut giam cua tick do.
+  Chua lay duoc khoa rui ro chung voi bot cung nhom: giu lenh cho, thu lai o tick sau (truoc day mat tin hieu).
+- Cot ChoHoi_*: tach gia cham / het nen / bi huy / lenh khop that (truoc day dem "vao" ngay khi gia cham, chua biet server co khop).
+- Nhoi lenh: CalcLots cong rui ro con mo cua cac lop cu cua chinh bot. Lop cu + lop moi <= 1 lenh chuan; tran nhom 1,5% cung
+  tinh ca lop cu. Binh thuong lop cu da o hoa von nen ket qua backtest khong doi.
+- R cua dot van lay rui ro lop dau lam mau so: luc vao moi lop, cac lop cu da o hoa von nen rui ro mo chi ~1 lenh. Muc rui ro
+  them cua ca chuoi xem o cot RuiRoMoMax% va SutGiamMax% (sut giam that, tinh ca lai/lo tha noi).
+- Monte Carlo chi tron thu tu lai/lo cua cac dot da dong, khong tai tao lai/lo tha noi hay viec bot dung han giua chung.
+  Muon biet bot that co bi dung khong, xem cac lan "-nhuThat" (bat dung han 15% + lo ngay 3%, chay bang gia that).

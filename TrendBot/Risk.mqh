@@ -98,6 +98,27 @@ double GroupOpenRisk(const double stdRisk)
    }
    return sum + GroupReserved();
 }
+// Rui ro con mo cua cac lop dang mo cua CHINH bot nay (gia vao -> SL hien tai). SL da o hoa von hoac qua: 0.
+// Lenh khong co SL: tinh bang rui ro chuan cua 1 lenh.
+// Day la rui ro theo mo hinh (SL khop dung gia). Gap / truot gia manh thi lo that co the lon hon.
+double OwnOpenRisk(const double stdRisk)
+{
+   double sum = 0;
+   double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tv <= 0) tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) == 0 || !IsOwnSelected()) continue;
+      double sl = PositionGetDouble(POSITION_SL), op = PositionGetDouble(POSITION_PRICE_OPEN);
+      double vol = PositionGetDouble(POSITION_VOLUME);
+      bool   buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      if(sl <= 0 || ts <= 0 || tv <= 0) { sum += stdRisk; continue; }
+      double dist = buy ? op - sl : sl - op;
+      if(dist > 0) sum += dist / ts * tv * vol;
+   }
+   return sum;
+}
 // Ma khac trong InpCorrSymbols, hoac bot khac tren cung ma, dang co lenh -> tra mo ta, khong co -> ""
 string CorrOpen()
 {
@@ -117,6 +138,8 @@ int g_minLotSkips = 0;
 int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)
 int g_ddScaled   = 0;   // So lenh bi giam co vi dang sut giam
 int g_groupSkips  = 0;   // So tin hieu bi bo vi nhom BTC/ETH da dung het tran rui ro
+int g_chainSkips  = 0;   // So lan nhoi bi bo vi cac lop cu cua bot con rui ro (chua o hoa von) da bang 1 lenh chuan
+double g_maxOpenRiskPct = 0;   // Rui ro mo lon nhat cua bot (moi lop, ngay sau khi vao lop moi), % von cua bot
 double CalcLots(const double slDistance)
 {
    double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
@@ -144,12 +167,28 @@ double CalcLots(const double slDistance)
       riskMoney *= P_CorrRiskScale;
       PrintFormat("%s dang co lenh, giam rui ro lenh nay x%.2f.", corr, P_CorrRiskScale);
    }
-   // Tran chung cho ca nhom: lenh moi + lenh dang mo tren ma cung nhom khong vuot InpMaxGroupRiskPct
+   // Chuoi nhoi cua chinh bot: rui ro con mo cua cac lop cu + lop moi khong vuot 1 lenh chuan (InpRiskPercent).
+   // Binh thuong lop cu da doi SL ve hoa von nen own = 0 va khong doi gi. Lop cu chua co SL hoa von thi lop moi nho lai / bo.
+   double stdRisk = riskBase * P_RiskPercent / 100.0;
+   double own = OwnOpenRisk(stdRisk);
    double allowed = DBL_MAX;
+   if(own > 0)
+   {
+      allowed = stdRisk - own;
+      if(allowed <= 0)
+      {
+         g_chainSkips++;
+         g_status = "Cac lop dang mo con rui ro du 1 lenh, khong nhoi them";
+         PrintFormat("Lop dang mo cua bot con rui ro %.2f (>= 1 lenh chuan %.2f). Bo qua lan nhoi.", own, stdRisk);
+         return 0;
+      }
+      if(riskMoney > allowed) riskMoney = allowed;
+   }
+   // Tran chung cho ca nhom: lenh moi + lenh dang mo tren ma cung nhom (ca lop cu cua chinh bot) khong vuot InpMaxGroupRiskPct
    if(P_MaxGroupRiskPct > 0 && corr != "")
    {
-      double used = GroupOpenRisk(riskBase * P_RiskPercent / 100.0);
-      allowed = riskBase * P_MaxGroupRiskPct / 100.0 - used;
+      double used = GroupOpenRisk(stdRisk) + own;
+      allowed = MathMin(allowed, riskBase * P_MaxGroupRiskPct / 100.0 - used);
       if(allowed <= 0)
       {
          g_groupSkips++;
@@ -181,5 +220,6 @@ double CalcLots(const double slDistance)
    }
    if(lots > maxL) lots = maxL;
    g_lastRisk = lots * lossPerLot;
+   if(riskBase > 0) g_maxOpenRiskPct = MathMax(g_maxOpenRiskPct, (own + g_lastRisk) / riskBase * 100.0);
    return lots;
 }
