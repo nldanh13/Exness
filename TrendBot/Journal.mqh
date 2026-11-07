@@ -76,7 +76,7 @@ double JMedianLot()
    int n = ArraySize(g_jLots);
    if(n < 5) return 0;
    double a[]; ArrayCopy(a, g_jLots); ArraySort(a);
-   return n % 2 ? a[n / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+   return (n % 2 != 0) ? a[n / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
 }
 
 int JDayKey(const datetime t) { MqlDateTime d; TimeToStruct(t, d); return d.year * 10000 + d.mon * 100 + d.day; }

@@ -204,7 +204,7 @@ details.tech[open] > summary { margin-bottom: 8px; }
       </div>
       <details class="tech" id="list-row"><summary id="list-title"></summary><div class="listbox" id="list-box"></div></details>
       <div class="banner warn" id="real-warn" hidden></div>
-      <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git"><span><b>Lấy phiên bản bot mới từ GitHub</b> (<span id="opt-git-n">0</span> thay đổi). Nếu MT5 này đang chạy bot tài khoản thật, nên để trống và cập nhật vào lúc bot không giữ lệnh.</span></label>
+      <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git" onchange="this.dataset.touched=1"><span><b>Lấy phiên bản bot mới từ GitHub</b> (<span id="opt-git-n">0</span> thay đổi). Nếu MT5 này đang chạy bot tài khoản thật, nên để trống và cập nhật vào lúc bot không giữ lệnh.</span></label>
       <label class="opt" id="opt-mt5-row" hidden><input type="checkbox" id="opt-mt5"><span><b>Cho phép đóng MT5 để chạy thử.</b> Đóng MT5 sẽ dừng mọi bot đang chạy trên nó.</span></label>
       <label class="opt" id="opt-nk-row" hidden><input type="checkbox" id="opt-nk"><span><b>Đồng ý đẩy nhật ký lên GitHub</b> (repo phải để Riêng tư). Nhật ký có mọi giao dịch, nạp/rút và số dư của cả tài khoản, không có mật khẩu hay số tài khoản. Để trống thì chỉ mở thư mục để bạn tự xem và gửi.</span></label>
     </div>
@@ -348,6 +348,8 @@ function renderOptions() {
   if (list) { $('list-title').textContent = title; $('list-box').textContent = list.length ? list.join('\n') : '(trống: thử toàn bộ)'; }
   var g = d.Git || {};
   $('opt-git-row').hidden = !(g.Behind > 0) || v !== 'capnhat';   // chi nut cap nhat moi lay code moi
+  // Da chon 'Lay code moi' thi mac dinh tick san (ban van bo tick duoc)
+  if (!$('opt-git-row').hidden && !$('opt-git').dataset.touched) $('opt-git').checked = true;
   $('opt-git-n').textContent = g.Behind || 0;
   $('opt-mt5-row').hidden = !(d.MT5Mo && NEED_MT5_CLOSED[v]);
   $('opt-nk-row').hidden = v !== 'nhatky';
@@ -519,7 +521,7 @@ function initRun() {
     var v = selViec(), body = { viec: v, nhom: $('nhom').value, layCodeMoi: $('opt-git').checked && !$('opt-git-row').hidden, dongMT5: $('opt-mt5').checked && !$('opt-mt5-row').hidden, guiNhatKy: $('opt-nk').checked && v === 'nhatky' };
     $('btn-start').disabled = true; $('start-msg').textContent = 'Đang bắt đầu…';
     S.logLen = 0; FULL_LOG = ''; $('log').innerHTML = ''; $('log').dataset.filled = '1'; $('run-result').hidden = true;
-    api('/api/chay', body).then(function () { $('opt-git').checked = false; $('opt-nk').checked = false; poll(); $('sec-run').scrollIntoView({ behavior: 'smooth', block: 'start' }); })
+    api('/api/chay', body).then(function () { $('opt-git').checked = false; delete $('opt-git').dataset.touched; $('opt-nk').checked = false; poll(); $('sec-run').scrollIntoView({ behavior: 'smooth', block: 'start' }); })
       .catch(function (e) { $('btn-start').disabled = false; $('start-msg').textContent = e.message; });
   };
   $('btn-stop').onclick = function () { $('stop-confirm').hidden = false; this.hidden = true; };
