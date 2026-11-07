@@ -1,12 +1,5 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay (07/11 chieu): kiem tra khung gio tot nhat rut ra tu sao ke giao dich tay, doi chieu voi ban goc.
-Ngan-M15
-Ngan-M15-truoc
-Ngan-M30
-Ngan-M30-truoc
-Ngan-Nhoi3-M30
-Ngan-Nhoi3-M30-truoc
-Ngan-Nhoi3-H1
-Ngan-Nhoi3-H1-truoc
-*+gio6-12*
-*+bo0-6*
+# Dot nay: nhoi 3 lop dung luat cua H4 (SL keo theo 3 ATR) tren M15 / M30 / H1, doi chieu voi C+nhoi3.
+C+nhoi3
+C+nhoi3-truoc
+*+nhoi3-nhuH4*

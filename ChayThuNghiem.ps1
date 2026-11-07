@@ -190,6 +190,12 @@ foreach ($n in @("Ngan-M15", "Ngan-M30", "Ngan-Nhoi3-M30", "Ngan-Nhoi3-H1")) {
         }
     }
 }
+# Nhoi 3 lop dung y luat cua C+nhoi3 (SL keo theo 3 ATR, khong thoat khi cat EMA) nhung tren khung nho
+foreach ($tf in @(@{ N = "M15"; V = 15 }, @{ N = "M30"; V = 30 }, @{ N = "H1"; V = 16385 })) {
+    $i = Cfg $Brk $Q @{ InpTF = $tf.V; InpPyramidMax = 3; InpPyramidStepATR = 1.0; InpMaxSpreadPoints = 1500 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3-nhuH4";       Inputs = $i;         Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3-nhuH4-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
