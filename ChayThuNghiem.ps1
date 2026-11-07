@@ -217,6 +217,15 @@ foreach ($tf in @(@{ N = "M15"; V = 15 }, @{ N = "H1"; V = 16385 })) {
 }
 # Xuat du lieu gia M10 6 nam (khong giao dich) de Claude phan tich: nen 10 phut trong tung doan cua nen 4 gio
 $Runs += @{ Name = "XuatDuLieu-M10"; Inputs = (Cfg $Brk @{ InpExportTFmin = 10; InpAllowBuy = "false"; InpAllowSell = "false" }); From = $OOSFrom }
+# Vao lenh khi gia hoi ve sau pha vo (du lieu M10 2021-2026: ~75% lan gia hoi >= 0,25 ATR, ~45% hoi >= 0,5 ATR trong 4 gio sau)
+foreach ($v in @(@{ N = "C+nhoi5-buoc0.5+hoi0.25-bo";  X = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5; InpEntryPullATR = 0.25; InpEntryPullMode = 0 } },
+                 @{ N = "C+nhoi5-buoc0.5+hoi0.25-vao"; X = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5; InpEntryPullATR = 0.25; InpEntryPullMode = 1 } },
+                 @{ N = "C+nhoi5-buoc0.5+hoi0.5-vao";  X = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5; InpEntryPullATR = 0.5;  InpEntryPullMode = 1 } },
+                 @{ N = "C+nhoi3+hoi0.25-vao";         X = @{ InpPyramidMax = 3; InpEntryPullATR = 0.25; InpEntryPullMode = 1 } })) {
+    $Runs += @{ Name = $v.N;            Inputs = (Cfg $Brk $Q $v.X) }
+    $Runs += @{ Name = "$($v.N)-truoc"; Inputs = (Cfg $Brk $Q $v.X); From = $OOSFrom; To = $FromDate }
+}
+$Runs += @{ Name = "C+nhoi5-buoc0.5-ETH"; Inputs = (Cfg $Brk $Q @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5 }); Symbol = "ETHUSDm" }
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.

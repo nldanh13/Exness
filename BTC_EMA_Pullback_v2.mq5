@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.6"
+#define  BOT_VERSION "5.7"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -74,6 +74,8 @@ input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
+input double          InpEntryPullATR    = 0;         // Vao lenh: cho gia hoi ve x ATR trong 1 nen sau tin hieu thay vi vao ngay (0 = vao ngay)
+input int             InpEntryPullMode   = 0;         // Het nen ma gia chua hoi: 0 = bo tin hieu, 1 = vao gia thi truong
 input int             InpPyramidTFmin    = 0;         // Kiem tra nhoi moi x phut (vd 15) thay vi moi nen khung chinh; buoc van tinh theo ATR khung chinh (0 = khung chinh)
 input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
 input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
@@ -174,6 +176,8 @@ double          P_PyramidStepATR;
 int             P_PyramidTFmin;
 int             P_MTFAlign;
 int             P_ExportTFmin;
+double          P_EntryPullATR;
+int             P_EntryPullMode;
 bool            P_ExitOnEMA;
 bool            P_ExitOnBar;
 int             P_ImomMode;
@@ -268,6 +272,8 @@ void LoadParams()
    P_PyramidTFmin = InpPyramidTFmin;
    P_MTFAlign = InpMTFAlign;
    P_ExportTFmin = InpExportTFmin;
+   P_EntryPullATR = InpEntryPullATR;
+   P_EntryPullMode = InpEntryPullMode;
    P_ExitOnEMA = InpExitOnEMA;
    P_ExitOnBar = InpExitOnBar;
    P_ImomMode = InpImomMode;
@@ -361,6 +367,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
+   if(k == "InpEntryPullMode") { P_EntryPullMode = (int)StringToInteger(v); return true; }
    if(k == "InpExportTFmin") { P_ExportTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpMTFAlign") { P_MTFAlign = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
@@ -627,11 +635,32 @@ void OnDeinit(const int reason)
 }
 
 datetime g_lastManage = 0;
+int      g_pendDir = 0;            // tin hieu dang cho gia hoi ve: 1 buy, -1 sell, 0 khong co
+double   g_pendPrice = 0, g_pendATR = 0, g_pendSigSL = 0, g_pendSigTP = 0;
+datetime g_pendExpire = 0;
+int      g_pendFilled = 0, g_pendMissed = 0;
+void CheckPendingEntry()
+{
+   if(g_pendDir == 0) return;
+   if(HasOwnPosition() || IsHalted() || DailyLossHit()) { g_pendDir = 0; return; }
+   MqlTick tk;
+   if(!SymbolInfoTick(_Symbol, tk)) return;
+   bool buy = g_pendDir > 0;
+   bool hit = buy ? tk.ask <= g_pendPrice : tk.bid >= g_pendPrice;
+   bool expired = TimeCurrent() >= g_pendExpire;
+   if(!hit && !expired) return;
+   if(!hit && P_EntryPullMode == 0) { g_pendDir = 0; g_pendMissed++; g_status = "Gia khong hoi ve, bo tin hieu"; return; }
+   g_sigSL = g_pendSigSL; g_sigTP = g_pendSigTP;
+   g_pendDir = 0;
+   if(hit) g_pendFilled++; else g_pendMissed++;
+   SendEntry(buy, g_pendATR);
+}
 void OnTick()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
+   CheckPendingEntry();             // tin hieu dang cho gia hoi ve (moi tick)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
@@ -739,6 +768,21 @@ void OnTick()
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
 
+   if(P_EntryPullATR > 0)
+   {
+      // Cho gia hoi ve x ATR (sau pha vo H4, ~75% lan gia hoi >= 0,25 ATR trong 4 gio sau - du lieu M10 2021-2026)
+      g_pendDir = buySignal ? 1 : -1; g_pendATR = atr; g_pendSigSL = g_sigSL; g_pendSigTP = g_sigTP;
+      g_pendPrice = buySignal ? c1 - P_EntryPullATR * atr : c1 + P_EntryPullATR * atr;
+      g_pendExpire = barTime + PeriodSeconds(P_TF);
+      g_status = StringFormat("Cho gia hoi ve %s de %s", DoubleToString(g_pendPrice, _Digits), buySignal ? "BUY" : "SELL");
+      return;
+   }
+   SendEntry(buySignal, atr);
+}
+
+// Gui lenh vao (dung chung cho vao ngay va vao khi gia hoi ve)
+void SendEntry(const bool buySignal, const double atr)
+{
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
    double slDist   = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;

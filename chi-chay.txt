@@ -1,9 +1,8 @@
 # Nut 1 (muc "Theo chi-chay.txt") chi chay cac cau hinh co ten khop cac mau duoi day (* = bat ky). Xoa het dong de chay toan bo.
-# Dot nay: nhoi 3 lop dung luat cua H4 (SL keo theo 3 ATR) tren M15 / M30 / H1, doi chieu voi C+nhoi3.
+# Dot nay: nhoi 5 lop buoc 0,5 ATR (tot nhat dot 1723) + vao lenh khi gia hoi ve sau pha vo; doi chieu C+nhoi3.
 C+nhoi3
 C+nhoi3-truoc
-*+nhoi3-nhuH4*
-C+nhoi3-kt15*
-C+nhoi5-buoc0.5*
-*dongthuan*
-XuatDuLieu-M10
+C+nhoi5-buoc0.5
+C+nhoi5-buoc0.5-truoc
+C+nhoi5-buoc0.5-ETH
+*+hoi0.*

@@ -364,3 +364,17 @@ de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gia
 - InpMTFAlign = x: chi vao lenh va nhoi khi it nhat x/8 khung (M1, M3, M5, M10, M15, M30, H1, H4) co nen da dong cung phia EMA20.
 - Lan chay: C+nhoi3-kt15, C+nhoi5-buoc0.5(-kt15), C+nhoi3+dongthuan6/8, C+nhoi3-kt15+dongthuan6, Ngan-M15/H1+nhoi3+dongthuan7,
   Ngan-M15/M30/H1+nhoi3-nhuH4. Tat ca co ban 3 nam truoc. Tieu chi: PF truot 0,05% >= 1,3 ca 2 giai doan va tot hon C+nhoi3.
+
+## Ket qua dot 7/11/2026 17:23 + phan tich nen M10 (2021-07 -> 2026-11)
+Nhoi lenh (von 3000, PF truot 0,05% | t | sut giam, 3 nam gan day / 3 nam truoc):
+- C+nhoi3: +1740 / +1926, PF 1,73 / 2,43, t 2,66 / 3,10, DD 12,2% / 8,8%.
+- C+nhoi5-buoc0.5 (5 lop, moi 0,5 ATR): +3607 / +2268, PF 2,09 / 2,26, t 4,00 / 3,22, DD 16,9% / 9,5%. TOT NHAT; lai/sut giam cung tot hon. Da them vao chay tick that.
+- C+nhoi3-kt15 (kiem tra nhoi moi 15 phut): +2038 / +2353, t 2,77 / 3,51, DD 16,9% / 8,4%. Tot hon C+nhoi3 mot chut.
+- Dong thuan da khung 6/8: gan nhu bang C+nhoi3; 8/8: it lai hon. Khong giup.
+- Nhoi tren M15/M30/H1 (luat H4), co hay khong dong thuan: lo o 3 nam truoc.
+Nen M10 (Exness BTCUSDm):
+- 4 gio trong nen H4 bien dong ngang nhau, khong gio nao "quyet dinh" hon; gio dau khong du bao 3 gio sau (tuong quan ~0); gio cuoi khong du bao nen sau.
+- Dot mua/ban o at M10 (gia > 4 do lech chuan, khoi luong > 3 lan): KHONG keo tiep; 2021-24 con hoi lai nhe (-0,27% trong 4 gio), 2024-26 ~0.
+- Spread ~23,8 USD moi gio nhu nhau (Exness gan nhu co dinh).
+- Sau khi H4 dong cua pha vo kenh 20 nen: trong 4 gio sau, ~75% lan gia hoi lai >= 0,25 ATR, ~45% hoi >= 0,5 ATR (ca 2 giai doan).
+  -> v5.7 them InpEntryPullATR / InpEntryPullMode: cho gia hoi ve moi vao (het nen: bo hoac vao gia thi truong). Dang thu.
