@@ -275,6 +275,15 @@ void PyramidStep()
       if(t >= lastT) { lastT = t; lastOpen = PositionGetDouble(POSITION_PRICE_OPEN); }
    }
    if(cnt == 0) return;
+   if(P_Strategy == STRAT_IMOM)
+   {
+      datetime t0 = iTime(_Symbol, P_TF, 0);
+      MqlDateTime d; TimeToStruct(t0, d);
+      datetime day = t0 - (d.hour * 3600 + d.min * 60 + d.sec);
+      // Dong o nen dau tien tu 17:00 New York (hoac neu vi ly do nao do lenh con giu ngoai khung 16:30-17:00)
+      datetime tExit = NYTime(day, 17 * 60);
+      if(t0 >= tExit || t0 < NYTime(day, 16 * 60 + 30)) { g_status = "Het phien (17:00 New York), dong lenh"; CloseAll(); return; }
+   }
    if(P_ExitOnBar)
    {
       double o1 = iOpen(_Symbol, P_TF, 1);

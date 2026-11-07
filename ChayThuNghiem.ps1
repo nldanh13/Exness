@@ -168,13 +168,24 @@ foreach ($v in @(@{ N = "Ngan-MACD-H1+D1"; X = @{} }, @{ N = "Ngan-MACD-H1+D1-ha
     $Runs += @{ Name = $v.N;            Inputs = $i;         Deposit = 30000 }
     $Runs += @{ Name = "$($v.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Quan tinh trong ngay (Shen, Urquhart & Wang 2022, BTC 2013-2020): moi ngay 1 lenh M5, vao 16:30 dong 17:00 gio New York.
+# Ket hop: Buy khi nua gio dau (17:00 hom truoc -> 9:30) tang VA 16:00-16:30 giam; Sell khi nguoc lai; con lai dung ngoai.
+# "-dau30": chi theo nua gio dau. "-dao": chi dao chieu nua gio ke cuoi. SL an toan 2,5 ATR, khong TP, khong trailing.
+$Qi = @{ InpStrategy = 8; InpTF = 5; InpUseADX = "false"; InpUseHTF = "false"; InpAllowSell = "true"; InpUseTrailing = "false";
+         InpTrailStartR = 0; InpRR = 0; InpMaxSpreadPoints = 1500 }
+foreach ($v in @(@{ N = "Ngan-IMOM-M5"; X = @{} }, @{ N = "Ngan-IMOM-M5-dau30"; X = @{ InpImomMode = 1 } },
+                 @{ N = "Ngan-IMOM-M5-dao"; X = @{ InpImomMode = 2 } })) {
+    $i = Cfg $Brk $Qi $v.X
+    $Runs += @{ Name = $v.N;            Inputs = $i;         Deposit = 30000 }
+    $Runs += @{ Name = "$($v.N)-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
 $Von1tr = 38
 foreach ($n in @("Ngan-RSI-M15", "Ngan-RSI-M5", "Ngan-M15", "Ngan-M30", "Ngan-ORB-M5", "Ngan-M5+khoiLuong", "Ngan-M10+khoiLuong", "Ngan-M15+khoiLuong", "Ngan-M30+khoiLuong",
                "Ngan-DaoChieu-M5", "Ngan-FVG-M30", "Ngan-FVG-H1", "Ngan-Spring-M5", "Ngan-Spring-M15",
-               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5", "Ngan-Nhoi3-M15+huongH4", "Ngan-Nhoi3-M15+huongH1", "Ngan-Nhoi3-M5+huongH1", "Ngan-MACD-H1+D1")) {
+               "Ngan-Nhoi3-M15", "Ngan-Nhoi3-M5", "Ngan-Nhoi3-M15+huongH4", "Ngan-Nhoi3-M15+huongH1", "Ngan-Nhoi3-M5+huongH1", "Ngan-MACD-H1+D1", "Ngan-IMOM-M5")) {
     $src = $Runs | Where-Object { $_.Name -eq $n } | Select-Object -First 1
     if ($src) {
         $Runs += @{ Name = "$n-von1tr"; Inputs = $src.Inputs.Clone(); Deposit = $Von1tr }

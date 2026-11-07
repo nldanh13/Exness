@@ -18,6 +18,18 @@ int NYOpenUTCMin(const datetime day)
    return dst ? 810 : 870;
 }
 
+// Doi gio New York (phut tu 00:00) sang thoi diem server (gia dinh server = UTC) cho ngay 'day' (00:00 UTC)
+datetime NYTime(const datetime day, const int nyMin)
+{
+   int off = NYOpenUTCMin(day) == 810 ? 240 : 300;      // 4 gio (mua he) hoac 5 gio
+   return day + (nyMin + off) * 60;
+}
+double CloseAt(const datetime t)                         // gia dong cua nen ket thuc dung luc t
+{
+   int sh = iBarShift(_Symbol, P_TF, t - PeriodSeconds(P_TF), true);
+   return sh < 0 ? 0 : iClose(_Symbol, P_TF, sh);
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
@@ -90,6 +102,26 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       // m[0] = nen 2, m[1] = nen 1 (CopyBuffer tra theo thu tu thoi gian)
       buyBase  = m[1] > g[1] && m[0] <= g[0];
       sellBase = m[1] < g[1] && m[0] >= g[0];
+   }
+   else if(P_Strategy == STRAT_IMOM)
+   {
+      // Shen, Urquhart & Wang (2022): "ngay" BTC tinh tu 17:00 hom truoc toi 17:00 gio New York (luc CME nghi),
+      // mo cua 9:00. Nua gio dau = tu 17:00 hom truoc toi 9:30; nua gio ke cuoi = 16:00-16:30.
+      // Vao lenh luc 16:30, dong luc 17:00 (lam o PyramidStep).
+      datetime t0 = iTime(_Symbol, P_TF, 0);
+      MqlDateTime d; TimeToStruct(t0, d);
+      datetime day = t0 - (d.hour * 3600 + d.min * 60 + d.sec);
+      datetime tEntry = NYTime(day, 16 * 60 + 30);
+      if(t0 != tEntry) return true;
+      double pPrevClose = CloseAt(NYTime(day - 86400, 17 * 60));
+      double pFirst     = CloseAt(NYTime(day, 9 * 60 + 30));
+      double p1600      = CloseAt(NYTime(day, 16 * 60));
+      double p1630      = CloseAt(tEntry);
+      if(pPrevClose <= 0 || pFirst <= 0 || p1600 <= 0 || p1630 <= 0) return true;
+      double rFirst = pFirst / pPrevClose - 1, rSLH = p1630 / p1600 - 1;
+      if(P_ImomMode == 1)      { buyBase = rFirst > 0;  sellBase = !buyBase; }
+      else if(P_ImomMode == 2) { buyBase = rSLH < 0;    sellBase = !buyBase; }
+      else                     { buyBase = rFirst > 0 && rSLH < 0; sellBase = rFirst <= 0 && rSLH >= 0; }
    }
    else if(P_Strategy == STRAT_EXHAUST)
    {

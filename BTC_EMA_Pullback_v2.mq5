@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "4.9"
+#define  BOT_VERSION "5.0"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -20,7 +20,8 @@ enum ENUM_STRATEGY
    STRAT_EXHAUST      = 4,   // Luot song: dao chieu sau cu chay manh >= x% ATR ngay, TP o dai Bollinger
    STRAT_FVG          = 5,   // Luot song: gia quay lai khoang trong (FVG) cua nen lon, khoi luong cao
    STRAT_SPRING       = 6,   // Luot song: pha vo gia vung di ngang (Wyckoff spring / upthrust)
-   STRAT_MACD         = 7    // MACD(12,26,9) cat len/xuong (da khung theo Quantpedia: D1 loc huong, H1 vao lenh)
+   STRAT_MACD         = 7,   // MACD(12,26,9) cat len/xuong (da khung theo Quantpedia: D1 loc huong, H1 vao lenh)
+   STRAT_IMOM         = 8    // Quan tinh trong ngay (Shen, Urquhart & Wang 2022): vao 16:30, dong 17:00 gio New York
 };
 
 input group "=== Tin hieu ==="
@@ -74,9 +75,10 @@ input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
 input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
-input bool            InpExitOnEMA       = false;
+input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
+input int             InpImomMode        = 0;         // Quan tinh trong ngay: 0 = ket hop 2 tin hieu, 1 = nua gio dau, 2 = nua gio ke cuoi (dao chieu)
 input bool            InpExitOnBar       = false;     // Dong het o nen dau tien dong nguoc chieu (Buy: nen do; Sell: nen xanh)
-input bool            InpHTFMacd         = false;     // Loc huong khung lon bang MACD (dong > tin hieu = tang) thay vi EMA     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
+input bool            InpHTFMacd         = false;     // Loc huong khung lon bang MACD (dong > tin hieu = tang) thay vi EMA
 input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
 input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
 input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
@@ -151,6 +153,7 @@ int             P_PyramidMax;
 double          P_PyramidStepATR;
 bool            P_ExitOnEMA;
 bool            P_ExitOnBar;
+int             P_ImomMode;
 bool            P_HTFMacd;
 double          P_ExhaustATR;
 double          P_FvgBigATR;
@@ -241,6 +244,7 @@ void LoadParams()
    P_PyramidStepATR = InpPyramidStepATR;
    P_ExitOnEMA = InpExitOnEMA;
    P_ExitOnBar = InpExitOnBar;
+   P_ImomMode = InpImomMode;
    P_HTFMacd = InpHTFMacd;
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
@@ -332,6 +336,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
+   if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
    if(k == "InpExitOnBar") { P_ExitOnBar = (v == "true" || v == "1"); return true; }
    if(k == "InpHTFMacd") { P_HTFMacd = (v == "true" || v == "1"); return true; }
    if(k == "InpExitOnEMA") { P_ExitOnEMA = (v == "true" || v == "1"); return true; }
@@ -598,7 +603,7 @@ void OnTick()
    if(HasOwnPosition())
    {
       g_status = "Dang giu lenh";
-      if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar) PyramidStep();
+      if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar || P_Strategy == STRAT_IMOM) PyramidStep();
       return;
    }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return; }

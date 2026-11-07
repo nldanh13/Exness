@@ -267,3 +267,16 @@ Chưa làm và lý do:
 ## Giờ server
 - Khung giờ nghỉ và mốc "đầu ngày" tính theo **giờ server** (cột thời gian trong Market Watch).
 - Server Exness thường là GMT+0, tức chậm 7 tiếng so với giờ Việt Nam. Hãy kiểm tra lại giờ server của bạn.
+
+## Quan tinh trong ngay (bai Shen, Urquhart & Wang 2022) - chien luoc 8
+
+Bai nghien cuu: BTC 2013-2020 tren 5 san giao ngay. "Ngay" tinh tu 17:00 hom truoc toi 17:00 gio New York (luc CME nghi).
+- Nua gio dau: gia tu 17:00 hom truoc toi 9:30 sang. Nua gio ke cuoi: 16:00 -> 16:30.
+- Ket hop (InpImomMode = 0): Buy luc 16:30 neu nua gio dau tang VA 16:00-16:30 giam; Sell neu nua gio dau giam VA 16:00-16:30 tang; con lai khong vao.
+- Che do 1: chi theo nua gio dau. Che do 2: chi dao chieu 16:00-16:30.
+- Dong lenh luc 17:00 New York (tu tinh gio mua he/dong, gia dinh gio server = UTC). SL an toan 2,5 ATR M5.
+
+Ket qua trong bai (chua tru phi): ket hop 16,7%/nam, Sharpe 1,72, dung 58%; chi dao chieu 17,3%/nam; chi nua gio dau 7,8%/nam.
+Can than: moi ngay chi 1 lenh 30 phut, bien do trung binh rat nho (~0,07%, ~50 USD) so voi spread Exness (~6-20 USD);
+du lieu cua bai dung o 2020, hieu ung co the da yeu di sau khi cong bo. Chi tin khi backtest dat tieu chi da dat truoc.
+Lan chay: Ngan-IMOM-M5 (ket hop), -dau30, -dao; moi cai co ban 3 nam gan day va 3 nam truoc; ban ket hop co them -von1tr.
