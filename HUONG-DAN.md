@@ -447,3 +447,16 @@ Gop danh muc (chia deu rui ro, lai da chot):
 - Tuong quan lai thang voi BTC thap (tru ETH +0,62), nhung cac ma khac khong co loi the nen chi pha loang.
 Ket luan: khong mo rong sang ma khac. Loi the cua C (Donchian 20 H4 + ADX) chi thay o BTC: co the do BTC co xu huong manh
 dac thu, hoac mot phan may man. BTC da qua 3 nam ngoai mau, nhung chi 63-71 lenh -> demo la phep thu tiep theo.
+
+## Thu open interest / ban do thanh ly voi C (7/11/2026 21:25, cong-cu/thu_oi_C.py)
+Du lieu: OI BTCUSDT Binance theo gio tu 12/2021. Du lieu thanh ly THAT tai ve deu loi 404 (Binance khong con cho tai),
+nen "cum thanh ly" la uoc tinh tu OI moi mo + don bay pho bien (giong cach Coinglass doan), khong phai so that.
+Mo phong Python (H4, chi phi 0,06%/vong). Tong R, GD1 = 12/2021-02/2024, GD2 = 03/2024-11/2026:
+- C goc: 59,1 / 15,3 (71 / 99 lenh). Moc ngau nhien: bo ngau nhien con 75% lenh -> TB 53,7 / 14,0, 90% cao nhat 59,4 / 19,3;
+  con 60% -> TB 47,8 / 12,2, 90% cao nhat 56,2 / 19,4. Bo loc that phai vuot moc ngau nhien moi dang tin.
+- OI tang 24h: 45,3 / 1,4 (kem ngau nhien). OI giam 24h: 47,3 / 14,0 (bang ngau nhien, sut giam thap hon chi vi it lenh).
+- OI khong qua nong (bo khi OI tang 24h o phan vi > 90%): 53,6 / 19,4 - chi cham moc 90% o GD2, GD1 binh thuong. Chua du.
+- Dam dong nguoc chieu (ty le tai khoan long/short): gan nhu khong chan lenh nao. Taker xac nhan: 49,3 / 8,3 (kem).
+- Chot loi truoc cum thanh ly: 35,6 / 0,5 (kem rat ro: cat mat cac lenh lai lon).
+- Ne SL khoi cum thanh ly: 59,5 / 17,9 (+0,4 / +2,6 R, ~0,03 R/lenh) - qua nho, trong muc nhieu.
+Ket luan: khong them bo loc OI / thanh ly. Giu C.
