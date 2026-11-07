@@ -471,3 +471,11 @@ Ket luan: khong them bo loc OI / thanh ly. Giu C.
   3 lan; tin hieu M30 voi SL M5. Moi cau hinh co ban von 30000 va von 1 trieu (-1tr, InpMaxRiskRoundUp = 20), ca 2 giai doan.
 - Du doan truoc khi chay (de doi chieu): SL cang nho thi spread (~24 USD) chiem phan lon hon va bi quet nhieu hon,
   nen nhieu kha nang PF duoi 1,3. Che do nhanh chi co gia M1 nen ket qua SL M3/M5 con tho; cau hinh nao dat phai chay tick that.
+
+## Ket qua dot 7/11/2026 22:58 (danh muc nhieu thi truong + von 1 trieu tren nhieu ma)
+- DM-* (cau hinh C, von 30000): chi BTC dat ca 2 giai doan (PF truot 0,05% 1,61 / 2,34). ETH 1,30 / 0,93; vang 1,57 / 0,74;
+  bac 1,53 / 0,82; USDJPY 0,62 / 1,39; Nasdaq, US30, dau, EURUSD, GBPUSD deu duoi 1 o it nhat 1 giai doan. Khong them ma nao.
+- 1tr-* (von 38 USD, cho rui ro that toi 3%): BTC, ETH, vang, EURUSD, USDJPY: 0 lenh (moi tin hieu bi bo vi 0,01 lot qua lon).
+  Cac altcoin vao duoc lenh nhung khong ma nao dat: LTC PF 0,46 / 0,70 (t -4,2), XRP 0,34 / 1,42, SOL 0,98 / 1,35,
+  ADA 0,34 / 1,25, DOGE 1,01 / 0,85, LINK, DOT, BNB deu thua; sut giam toi 25-35%.
+- Ket luan: voi 1 trieu khong co ma nao chay C an toan. Dang thu huong SL nho (SLnho-*, v5.92).
