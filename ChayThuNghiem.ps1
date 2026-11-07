@@ -203,6 +203,18 @@ foreach ($v in @(@{ N = "C+nhoi3-kt15";        X = @{ InpPyramidMax = 3; InpPyra
     $Runs += @{ Name = $v.N;            Inputs = (Cfg $Brk $Q $v.X) }
     $Runs += @{ Name = "$($v.N)-truoc"; Inputs = (Cfg $Brk $Q $v.X); From = $OOSFrom; To = $FromDate }
 }
+# Dong thuan da khung (y cua ban): chi vao / nhoi khi it nhat 6 hoac ca 8 khung M1..H4 cung phia EMA20
+foreach ($v in @(@{ N = "C+nhoi3+dongthuan6";      X = @{ InpPyramidMax = 3; InpMTFAlign = 6 } },
+                 @{ N = "C+nhoi3+dongthuan8";      X = @{ InpPyramidMax = 3; InpMTFAlign = 8 } },
+                 @{ N = "C+nhoi3-kt15+dongthuan6"; X = @{ InpPyramidMax = 3; InpMTFAlign = 6; InpPyramidTFmin = 15 } })) {
+    $Runs += @{ Name = $v.N;            Inputs = (Cfg $Brk $Q $v.X) }
+    $Runs += @{ Name = "$($v.N)-truoc"; Inputs = (Cfg $Brk $Q $v.X); From = $OOSFrom; To = $FromDate }
+}
+foreach ($tf in @(@{ N = "M15"; V = 15 }, @{ N = "H1"; V = 16385 })) {
+    $i = Cfg $Brk $Q @{ InpTF = $tf.V; InpPyramidMax = 3; InpMTFAlign = 7; InpMaxSpreadPoints = 1500 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3+dongthuan7";       Inputs = $i;         Deposit = 30000 }
+    $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3+dongthuan7-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.

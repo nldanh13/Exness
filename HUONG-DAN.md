@@ -358,3 +358,9 @@ de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gia
 - Nut 2 "Lay code moi + cap nhat bot vao MT5": viec DUY NHAT lay code tu GitHub (hoi y truoc), roi compile vao MT5.
 - Nut 1, 3, 4 va backtest 1 lan: KHONG lay code moi, chi chay ban dang co tren may. Neu GitHub co thay doi chua lay, chi in ra 1 dong nhac.
 - Giao dien trinh duyet: o "Lay phien ban bot moi" chi hien khi chon "Lay code moi + cap nhat bot".
+
+## Nhoi lenh 15 phut va dong thuan da khung (v5.4 - v5.5)
+- InpPyramidTFmin = 15: van vao / thoat theo H4, nhung kiem tra nhoi moi 15 phut (buoc van theo ATR H4).
+- InpMTFAlign = x: chi vao lenh va nhoi khi it nhat x/8 khung (M1, M3, M5, M10, M15, M30, H1, H4) co nen da dong cung phia EMA20.
+- Lan chay: C+nhoi3-kt15, C+nhoi5-buoc0.5(-kt15), C+nhoi3+dongthuan6/8, C+nhoi3-kt15+dongthuan6, Ngan-M15/H1+nhoi3+dongthuan7,
+  Ngan-M15/M30/H1+nhoi3-nhuH4. Tat ca co ban 3 nam truoc. Tieu chi: PF truot 0,05% >= 1,3 ca 2 giai doan va tot hon C+nhoi3.

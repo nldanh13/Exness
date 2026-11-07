@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.4"
+#define  BOT_VERSION "5.5"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -79,6 +79,7 @@ input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di th
 input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
 input int             InpImomMode        = 0;         // Quan tinh trong ngay: 0 = ket hop 2 tin hieu, 1 = nua gio dau, 2 = nua gio ke cuoi (dao chieu)
 input bool            InpExitOnBar       = false;     // Dong het o nen dau tien dong nguoc chieu (Buy: nen do; Sell: nen xanh)
+input int             InpMTFAlign        = 0;         // Dong thuan da khung: can it nhat x/8 khung (M1,M3,M5,M10,M15,M30,H1,H4) cung phia EMA20 moi vao / nhoi (0 = tat)
 input bool            InpHTFMacd         = false;     // Loc huong khung lon bang MACD (dong > tin hieu = tang) thay vi EMA
 input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
 input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
@@ -170,6 +171,7 @@ bool            P_DDScale;
 int             P_PyramidMax;
 double          P_PyramidStepATR;
 int             P_PyramidTFmin;
+int             P_MTFAlign;
 bool            P_ExitOnEMA;
 bool            P_ExitOnBar;
 int             P_ImomMode;
@@ -262,6 +264,7 @@ void LoadParams()
    P_PyramidMax = InpPyramidMax;
    P_PyramidStepATR = InpPyramidStepATR;
    P_PyramidTFmin = InpPyramidTFmin;
+   P_MTFAlign = InpMTFAlign;
    P_ExitOnEMA = InpExitOnEMA;
    P_ExitOnBar = InpExitOnBar;
    P_ImomMode = InpImomMode;
@@ -355,6 +358,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpMTFAlign") { P_MTFAlign = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
    if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
@@ -518,6 +522,7 @@ int OnInit()
       hMACD = iMACD(_Symbol, P_TF, 12, 26, 9, PRICE_CLOSE);
       if(hMACD == INVALID_HANDLE) { Print("Khong tao duoc MACD"); return INIT_FAILED; }
    }
+   if(P_MTFAlign > 0 && !InitMTF()) { Print("Khong tao duoc EMA20 da khung"); return INIT_FAILED; }
    if(P_HTFMacd)
    {
       hMACDH = iMACD(_Symbol, P_HTF, 12, 26, 9, PRICE_CLOSE);
@@ -595,6 +600,7 @@ void OnDeinit(const int reason)
    if(hMACD != INVALID_HANDLE) IndicatorRelease(hMACD);
    if(hMACDH != INVALID_HANDLE) IndicatorRelease(hMACDH);
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
+   ReleaseMTF();
    Comment("");
 }
 
@@ -689,10 +695,10 @@ void OnTick()
    if(!BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase)) return;
    bool buySignal  = P_AllowBuy && buyBase
                      && (!P_UseHTF || (P_HTFMacd ? htfUp : htfClose > htfEma)) && adxOk
-                     && (!P_UseCandle || BullCandle());
+                     && (!P_UseCandle || BullCandle()) && MTFOk(true);
    bool sellSignal = P_AllowSell && sellBase
                      && (!P_UseHTF || (P_HTFMacd ? htfDn : htfClose < htfEma)) && adxOk
-                     && (!P_UseCandle || BearCandle());
+                     && (!P_UseCandle || BearCandle()) && MTFOk(false);
    if(P_UseFunding && (buySignal || sellSignal))
    {
       // Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.

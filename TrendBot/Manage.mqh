@@ -306,6 +306,7 @@ void PyramidStep(const bool addOnly = false)
       return;
    }
    if(cnt >= P_PyramidMax || IsHalted() || DailyLossHit()) return;
+   if(!MTFOk(buy)) return;                                   // cac khung nho/lon chua dong thuan thi chua nhoi
    if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
 

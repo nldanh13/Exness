@@ -352,3 +352,32 @@ bool MarketFiltersOk(const bool isBuy)
 }
 
 //+------------------------------------------------------------------+
+
+//--- Dong thuan da khung: dem so khung (M1, M3, M5, M10, M15, M30, H1, H4) co nen da dong nam cung phia EMA20 cua khung do
+ENUM_TIMEFRAMES g_mtfTF[8] = { PERIOD_M1, PERIOD_M3, PERIOD_M5, PERIOD_M10, PERIOD_M15, PERIOD_M30, PERIOD_H1, PERIOD_H4 };
+int             g_mtfH[8]  = { INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE, INVALID_HANDLE };
+bool InitMTF()
+{
+   for(int i = 0; i < 8; i++)
+   {
+      g_mtfH[i] = iMA(_Symbol, g_mtfTF[i], 20, 0, MODE_EMA, PRICE_CLOSE);
+      if(g_mtfH[i] == INVALID_HANDLE) return false;
+   }
+   return true;
+}
+void ReleaseMTF() { for(int i = 0; i < 8; i++) if(g_mtfH[i] != INVALID_HANDLE) IndicatorRelease(g_mtfH[i]); }
+// So khung dong thuan voi huong buy (true) / sell (false)
+int MTFCount(const bool buy)
+{
+   int n = 0;
+   for(int i = 0; i < 8; i++)
+   {
+      double e;
+      if(!GetValue(g_mtfH[i], 0, 1, e)) continue;
+      double c = iClose(_Symbol, g_mtfTF[i], 1);
+      if(c <= 0) continue;
+      if(buy ? c > e : c < e) n++;
+   }
+   return n;
+}
+bool MTFOk(const bool buy) { return P_MTFAlign <= 0 || MTFCount(buy) >= P_MTFAlign; }
