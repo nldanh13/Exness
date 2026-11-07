@@ -415,6 +415,7 @@ function trangThai(s) {
 }
 
 function classify(line) {
+  if (/^\[giao-dien\]/.test(line)) return 'c';
   if (/\bLOI\b|that bai|Khong (day|ket noi|thay|compile)|CHUA ?DU/i.test(line)) return 'e';
   if (/CANH BAO|Khong dong MT5|Tra loi tu giao dien|Co \d+ thay doi/i.test(line)) return 'w';
   if (/xong \(|==> Da|Da compile|Da la ban moi|Da luu/i.test(line)) return 'g';
@@ -470,6 +471,8 @@ function renderRun(d) {
     var st = stepText(FULL_LOG, j);
     $('prog-txt').textContent = st || ((nRuns ? 'Đang thử ' + nRuns + ' chiến lược · ' : '') + 'xong ' + done + '/' + all + ' nhóm' + (done && all > done ? ' · còn khoảng ' + Math.max(1, Math.round(j.Seconds / done * (all - done) / 60)) + ' phút' : ''));
   } else $('prog-txt').hidden = true;
+  var mk = /\[giao-dien\] ma-thoat=(-?\d+)/.exec(FULL_LOG);
+  if (!j.Running && mk) j.ExitCode = +mk[1];
   var rb = $('run-result');
   if (j.Running) { rb.hidden = true; return; }
   rb.hidden = false;
