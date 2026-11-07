@@ -74,6 +74,7 @@ input double          InpATRMult         = 2.5;       // SL = ATR x he so
 input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
 input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
 input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
+input int             InpPyramidTFmin    = 0;         // Kiem tra nhoi moi x phut (vd 15) thay vi moi nen khung chinh; buoc van tinh theo ATR khung chinh (0 = khung chinh)
 input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
 input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
 input int             InpImomMode        = 0;         // Quan tinh trong ngay: 0 = ket hop 2 tin hieu, 1 = nua gio dau, 2 = nua gio ke cuoi (dao chieu)
@@ -168,6 +169,7 @@ bool            P_OrbNewYork;
 bool            P_DDScale;
 int             P_PyramidMax;
 double          P_PyramidStepATR;
+int             P_PyramidTFmin;
 bool            P_ExitOnEMA;
 bool            P_ExitOnBar;
 int             P_ImomMode;
@@ -259,6 +261,7 @@ void LoadParams()
    P_DDScale = InpDDScale;
    P_PyramidMax = InpPyramidMax;
    P_PyramidStepATR = InpPyramidStepATR;
+   P_PyramidTFmin = InpPyramidTFmin;
    P_ExitOnEMA = InpExitOnEMA;
    P_ExitOnBar = InpExitOnBar;
    P_ImomMode = InpImomMode;
@@ -352,6 +355,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
    if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
    if(k == "InpExitOnBar") { P_ExitOnBar = (v == "true" || v == "1"); return true; }
@@ -619,6 +623,18 @@ void OnTick()
    UpdatePanel();
 
    datetime barTime = iTime(_Symbol, P_TF, 0);
+   // Nhoi lenh tren khung nho hon (vd moi 15 phut): chi them lop, thoat lenh van theo khung chinh
+   if(P_PyramidTFmin > 0 && P_PyramidMax > 1 && barTime == lastBarTime)
+   {
+      static datetime lastPyrBar = 0;
+      ENUM_TIMEFRAMES ptf = PyrTF();
+      datetime pt = iTime(_Symbol, ptf, 0);
+      if(pt != 0 && pt != lastPyrBar)
+      {
+         lastPyrBar = pt;
+         if(!IsHalted() && HasOwnPosition()) PyramidStep(true);
+      }
+   }
    if(barTime == 0 || barTime == lastBarTime) return;
    lastBarTime = barTime;
 

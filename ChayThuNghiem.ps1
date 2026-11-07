@@ -196,6 +196,13 @@ foreach ($tf in @(@{ N = "M15"; V = 15 }, @{ N = "M30"; V = 30 }, @{ N = "H1"; V
     $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3-nhuH4";       Inputs = $i;         Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3-nhuH4-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Vao lenh theo H4 nhung nhoi "lien tuc" hon: kiem tra nhoi moi 15 phut (buoc van 1 ATR H4), va/hoac buoc nho hon, nhieu lop hon
+foreach ($v in @(@{ N = "C+nhoi3-kt15";        X = @{ InpPyramidMax = 3; InpPyramidStepATR = 1.0; InpPyramidTFmin = 15 } },
+                 @{ N = "C+nhoi5-buoc0.5";     X = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5 } },
+                 @{ N = "C+nhoi5-buoc0.5-kt15"; X = @{ InpPyramidMax = 5; InpPyramidStepATR = 0.5; InpPyramidTFmin = 15 } })) {
+    $Runs += @{ Name = $v.N;            Inputs = (Cfg $Brk $Q $v.X) }
+    $Runs += @{ Name = "$($v.N)-truoc"; Inputs = (Cfg $Brk $Q $v.X); From = $OOSFrom; To = $FromDate }
+}
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.

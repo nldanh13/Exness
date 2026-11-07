@@ -260,11 +260,21 @@ void ManagePositions()
 // cua ca chuoi chi con khoang 1 lenh. Khong bao gio nhoi khi dang lo.
 // InpExitOnEMA: nen dong cat EMA nhanh nguoc chieu -> dong het (chot loi khi co dau hieu dao chieu).
 int g_pyrAdds = 0;
-void PyramidStep()
+ENUM_TIMEFRAMES PyrTF()
+{
+   switch(P_PyramidTFmin)
+   {
+      case 1: return PERIOD_M1;   case 5: return PERIOD_M5;   case 15: return PERIOD_M15;
+      case 30: return PERIOD_M30; case 60: return PERIOD_H1;  case 120: return PERIOD_H2;
+   }
+   return P_TF;
+}
+// addOnly = true: goi tu khung nho (InpPyramidTFmin), chi xet them lop; cac luat thoat van chay theo nen khung chinh
+void PyramidStep(const bool addOnly = false)
 {
    double fast, atr;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr) || atr <= 0) return;
-   double c1 = iClose(_Symbol, P_TF, 1);
+   double c1 = iClose(_Symbol, addOnly ? PyrTF() : P_TF, 1);
    int cnt = 0; bool buy = true; double lastOpen = 0; datetime lastT = 0;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -275,7 +285,7 @@ void PyramidStep()
       if(t >= lastT) { lastT = t; lastOpen = PositionGetDouble(POSITION_PRICE_OPEN); }
    }
    if(cnt == 0) return;
-   if(P_Strategy == STRAT_IMOM)
+   if(!addOnly && P_Strategy == STRAT_IMOM)
    {
       datetime t0 = iTime(_Symbol, P_TF, 0);
       MqlDateTime d; TimeToStruct(t0, d);
@@ -284,12 +294,12 @@ void PyramidStep()
       datetime tExit = NYTime(day, 17 * 60);
       if(t0 >= tExit || t0 < NYTime(day, 16 * 60 + 30)) { g_status = "Het phien (17:00 New York), dong lenh"; CloseAll(); return; }
    }
-   if(P_ExitOnBar)
+   if(!addOnly && P_ExitOnBar)
    {
       double o1 = iOpen(_Symbol, P_TF, 1);
       if(buy ? c1 < o1 : c1 > o1) { g_status = "Nen nguoc chieu, dong het"; CloseAll(); return; }
    }
-   if(P_ExitOnEMA && (buy ? c1 < fast : c1 > fast))
+   if(!addOnly && P_ExitOnEMA && (buy ? c1 < fast : c1 > fast))
    {
       g_status = "Het da (cat EMA), dong het";
       CloseAll();
