@@ -34,7 +34,7 @@ Khi mở VS Code, code đang có trên máy được compile vào MT5. Bước n
 
 Bot kiểm tra lệnh đang mở và giới hạn lỗ ở mọi tick (`InpManageEverySec = 0`). Tick thật ngày 06/11 cho thấy chỉ kiểm tra mỗi giây làm một lệnh (11/2025) đóng sớm, lãi giảm 50 USD (5%), nên mặc định giữ mọi tick. Lần chạy `C-moiGiay` để đối chiếu.
 
-**Dọn file:** mỗi lần chạy script xóa báo cáo cũ của MT5 và chỉ giữ 3 file zip mới nhất trong thư mục bot. Kết quả vẫn lưu đủ trong `ket-qua/` trên GitHub.
+**Dọn file:** mỗi lần chạy, sau khi đóng gói xong, script xóa báo cáo HTML/PNG của MT5 (đã nằm trong zip) và chỉ giữ file zip mới nhất trong thư mục bot. Thư mục `ket-qua/` chỉ giữ lần chạy mới nhất của mỗi chế độ (`nhanh`, `chinhxac`); file cũ bị xóa trong cùng commit đẩy kết quả mới, nên vẫn xem lại được trong lịch sử git.
 
 **Khi đang backtest:**
 - Script sẽ hỏi đóng MT5. Đóng MT5 là **dừng mọi bot đang chạy trên MT5 đó**.

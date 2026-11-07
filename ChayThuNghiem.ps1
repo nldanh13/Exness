@@ -382,9 +382,15 @@ foreach ($ld in $logDirs) {
 }
 $zip = Join-Path $outDir ("ket-qua-backtest-" + (Get-Date -Format "yyyyMMdd-HHmm") + ".zip")
 Compress-Archive -Path (Join-Path $pack "*") -DestinationPath $zip -Force
-# Chi giu 3 file zip moi nhat trong thu muc bot (ket qua da nam tren GitHub, thu muc ket-qua/)
-Get-ChildItem $outDir -Filter "ket-qua-backtest-*.zip" -File | Sort-Object LastWriteTime -Descending |
-    Select-Object -Skip 3 | Remove-Item -Force -ErrorAction SilentlyContinue
+# Chi giu file zip vua tao trong thu muc bot, xoa cac zip cu (ket qua da nam tren GitHub, thu muc ket-qua/)
+if (Test-Path $zip) {
+    Get-ChildItem $outDir -Filter "ket-qua-backtest-*.zip" -File | Where-Object { $_.FullName -ne $zip } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    # Bao cao htm/png/ini/xml cua MT5 da nam trong zip: xoa luon, khong de lai trong thu muc du lieu MT5
+    Get-ChildItem $dataDir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "$BotName-*" -and $_.Extension -in ".htm", ".html", ".png", ".ini", ".xml" } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+}
 Write-Host ""
 Write-Host "==> GUI FILE NAY CHO CLAUDE: $zip" -ForegroundColor Yellow
 # Luu bang ket qua vao thu muc ket-qua/ va day len GitHub, de Claude doc thang (khong can gui zip).
@@ -398,12 +404,27 @@ if ($summary) {
     Copy-Item $summary (Join-Path $resDir $resName) -Force
     $tradeName = $resName -replace '\.csv$', '-lenh.csv'
     if ($tradeRows.Count -gt 0) { $tradeRows | Export-Csv -Path (Join-Path $resDir $tradeName) -NoTypeInformation -Encoding ASCII }
+    # Don ket qua cu cung che do (nhanh / chinhxac): chi giu lan moi nhat trong ket-qua/.
+    # Ban cu van xem lai duoc trong lich su git. Lan chay CHUA DU chi xoa cac ban CHUA DU cu, khong dung toi ket qua day du.
+    $modeTag  = if ($ChinhXac) { "chinhxac" } else { "nhanh" }
+    $oldRegex = if ($incomplete) { "^\d{8}-\d{4}-$modeTag-CHUADU(-lenh)?\.csv$" } else { "^\d{8}-\d{4}-$modeTag(-CHUADU)?(-lenh)?\.csv$" }
+    $oldFiles = @(Get-ChildItem $resDir -File -Filter "*.csv" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match $oldRegex -and $_.Name -ne $resName -and $_.Name -ne $tradeName })
+    if ($oldFiles.Count -gt 0) {
+        $oldFiles | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host ("Da xoa {0} file ket qua cu ({1}) trong ket-qua\" -f $oldFiles.Count, $modeTag) -ForegroundColor DarkGray
+    }
     if ($incomplete) {
         Write-Host "Da luu ban CHUA DU o ket-qua\$resName (chi tren may, khong day len GitHub)." -ForegroundColor Yellow
     } elseif ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $ProjectDir ".git"))) {
         $rel = "ket-qua/$resName"
         $relT = "ket-qua/$tradeName"
         $paths = @($rel); if (Test-Path (Join-Path $ProjectDir $relT)) { $paths += $relT }
+        # File cu da xoa o tren (ca file con sot tu lan truoc khong day duoc): dua viec xoa vao cung commit
+        foreach ($t in @(& git -C $ProjectDir ls-files -- "ket-qua" 2>$null)) {
+            $leaf = Split-Path $t -Leaf
+            if ($leaf -match $oldRegex -and -not (Test-Path (Join-Path $ProjectDir $t))) { $paths += $t }
+        }
         # Neu may ban dang co commit chua day len, KHONG day ho (git push day ca nhanh).
         & git -C $ProjectDir fetch -q 2>&1 | Out-Null
         $ahead = [int](& git -C $ProjectDir rev-list --count "@{u}..HEAD" 2>$null)
