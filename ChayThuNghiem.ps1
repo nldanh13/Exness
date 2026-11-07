@@ -215,6 +215,8 @@ foreach ($tf in @(@{ N = "M15"; V = 15 }, @{ N = "H1"; V = 16385 })) {
     $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3+dongthuan7";       Inputs = $i;         Deposit = 30000 }
     $Runs += @{ Name = "Ngan-$($tf.N)+nhoi3+dongthuan7-truoc"; Inputs = $i.Clone(); Deposit = 30000; From = $OOSFrom; To = $FromDate }
 }
+# Xuat du lieu gia M10 6 nam (khong giao dich) de Claude phan tich: nen 10 phut trong tung doan cua nen 4 gio
+$Runs += @{ Name = "XuatDuLieu-M10"; Inputs = (Cfg $Brk @{ InpExportTFmin = 10; InpAllowBuy = "false"; InpAllowSell = "false" }); From = $OOSFrom }
 # Von that cua ban: 1 trieu VND ~ 38 USD (ty gia ~26.000). Chay lai cac cau hinh luot song uu tien voi von nay,
 # 3 nam gan day, de thay BoQuaLot (tin hieu bi bo vi 0,01 lot da rui ro qua 1%) va ket qua that voi tai khoan nho.
 # Dot 1756: voi rui ro 1%, gan nhu moi tin hieu bi bo (0 lenh). Ban "-von1tr-rr5": van vao 0,01 lot neu SL mat toi da 5% tai khoan.
@@ -440,6 +442,15 @@ if ($summary) {
     Copy-Item $summary (Join-Path $resDir $resName) -Force
     $tradeName = $resName -replace '\.csv$', '-lenh.csv'
     if ($tradeRows.Count -gt 0) { $tradeRows | Export-Csv -Path (Join-Path $resDir $tradeName) -NoTypeInformation -Encoding ASCII }
+    # Du lieu gia bot xuat ra (lan chay XuatDuLieu-*): nen zip vao ket-qua\ de Claude phan tich
+    $barsZips = @()
+    foreach ($bf in @(Get-ChildItem $mt5.CommonFiles -File -Filter "TrendBot_bars_*.csv" -ErrorAction SilentlyContinue)) {
+        $zn = "gia-" + ($bf.BaseName -replace '^TrendBot_bars_', '') + ".zip"
+        Compress-Archive -Path $bf.FullName -DestinationPath (Join-Path $resDir $zn) -Force
+        Remove-Item $bf.FullName -Force -ErrorAction SilentlyContinue
+        $barsZips += "ket-qua/$zn"
+        Write-Host "Da nen du lieu gia $($bf.Name) -> ket-qua\$zn" -ForegroundColor Green
+    }
     # Don ket qua cu cung che do (nhanh / chinhxac): chi giu lan moi nhat trong ket-qua/.
     # Ban cu van xem lai duoc trong lich su git. Lan chay CHUA DU chi xoa cac ban CHUA DU cu, khong dung toi ket qua day du.
     $modeTag  = if ($ChinhXac) { "chinhxac" } else { "nhanh" }
@@ -456,6 +467,7 @@ if ($summary) {
         $rel = "ket-qua/$resName"
         $relT = "ket-qua/$tradeName"
         $paths = @($rel); if (Test-Path (Join-Path $ProjectDir $relT)) { $paths += $relT }
+        $paths += $barsZips
         # File cu da xoa o tren (ca file con sot tu lan truoc khong day duoc): dua viec xoa vao cung commit
         foreach ($t in @(& git -C $ProjectDir ls-files -- "ket-qua" 2>$null)) {
             $leaf = Split-Path $t -Leaf

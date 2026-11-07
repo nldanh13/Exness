@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.5"
+#define  BOT_VERSION "5.6"
 #property version   "4.90"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -146,6 +146,7 @@ input string          InpTgChatId        = "";        // Telegram chat id
 input group "=== Khac ==="
 input bool            InpShowPanel       = true;      // Hien bang thong tin
 input ulong           InpMagic           = 20261105;  // Magic number
+input int             InpExportTFmin     = 0;         // Chi dung khi backtest: cuoi lan chay, xuat nen x phut (vd 10) ra Common\Files\TrendBot_bars_Mx.csv (0 = tat)
 input string          InpTestLabel       = "";        // Ten lan chay backtest (ghi vao file ket qua)
 input int             InpManageEverySec  = 0;         // Kiem tra lenh dang mo / gioi han lo moi X giay (0 = moi tick, mac dinh: tick that cho thay 1 giay lam lech 1 lenh)
 input int             InpPreset          = 0;         // Backtest: so thu tu cau hinh trong file TrendBot_presets.csv (0 = dung tham so tren)
@@ -172,6 +173,7 @@ int             P_PyramidMax;
 double          P_PyramidStepATR;
 int             P_PyramidTFmin;
 int             P_MTFAlign;
+int             P_ExportTFmin;
 bool            P_ExitOnEMA;
 bool            P_ExitOnBar;
 int             P_ImomMode;
@@ -265,6 +267,7 @@ void LoadParams()
    P_PyramidStepATR = InpPyramidStepATR;
    P_PyramidTFmin = InpPyramidTFmin;
    P_MTFAlign = InpMTFAlign;
+   P_ExportTFmin = InpExportTFmin;
    P_ExitOnEMA = InpExitOnEMA;
    P_ExitOnBar = InpExitOnBar;
    P_ImomMode = InpImomMode;
@@ -358,6 +361,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpExportTFmin") { P_ExportTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpMTFAlign") { P_MTFAlign = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
@@ -586,8 +590,26 @@ bool TryInitState()
    return true;
 }
 
+void ExportBars()
+{
+   ENUM_TIMEFRAMES tf = P_ExportTFmin == 1 ? PERIOD_M1 : P_ExportTFmin == 5 ? PERIOD_M5 : P_ExportTFmin == 10 ? PERIOD_M10 :
+                        P_ExportTFmin == 15 ? PERIOD_M15 : P_ExportTFmin == 30 ? PERIOD_M30 : PERIOD_H1;
+   MqlRates r[];
+   int n = CopyRates(_Symbol, tf, D'2000.01.01', TimeCurrent(), r);
+   if(n <= 0) { Print("Xuat du lieu: khong lay duoc nen, loi ", GetLastError()); return; }
+   string fn = "TrendBot_bars_" + _Symbol + "_M" + IntegerToString(P_ExportTFmin) + ".csv";
+   int h = FileOpen(fn, FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON);
+   if(h == INVALID_HANDLE) { Print("Xuat du lieu: khong ghi duoc ", fn); return; }
+   FileWriteString(h, "time,open,high,low,close,tickvol,spread\r\n");
+   for(int i = 0; i < n; i++)
+      FileWriteString(h, StringFormat("%I64d,%.2f,%.2f,%.2f,%.2f,%I64d,%d\r\n", (long)r[i].time, r[i].open, r[i].high, r[i].low, r[i].close, r[i].tick_volume, r[i].spread));
+   FileClose(h);
+   PrintFormat("Xuat du lieu: %d nen M%d -> Common\\Files\\%s", n, P_ExportTFmin, fn);
+}
+
 void OnDeinit(const int reason)
 {
+   if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); }
    IndicatorRelease(hFast);
    IndicatorRelease(hTrend);
