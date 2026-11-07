@@ -43,11 +43,23 @@ Bot kiểm tra lệnh đang mở và giới hạn lỗ ở mọi tick (`InpManag
 ## Giao diện trên trình duyệt (không cần VS Code)
 Bấm đúp **`GiaoDien.cmd`** trong thư mục bot. Trình duyệt mở `http://localhost:8765` với hai trang:
 
-- **Bảng điều khiển**:
-  - *Tình trạng hiện tại* nói bằng một câu: MT5 đang mở hay tắt, bot đang chạy tài khoản **thật hay demo**, bot đang **giữ bao nhiêu lệnh**, có phiên bản bot mới không. Bot từ v5.4 mới báo được tài khoản và số lệnh (ghi file `TrendBot_trangthai_*.txt` trong Common\Files mỗi 10 giây, không ghi số tài khoản).
-  - *Chiến lược đã vượt qua kiểm thử chưa?* tóm tắt lần thử mới nhất: mấy chiến lược đạt, chiến lược nào chắc chắn nhất, bước tiếp theo.
-  - *Bạn muốn làm gì?*: Thử các chiến lược (nút 1), Kiểm tra kỹ (nút 3), Xem kết quả, Cập nhật phiên bản bot (nút 2), Gửi nhật ký tài khoản (nút 4), Tự thử 1 lần trong MT5. Các câu hỏi y/n trước đây thành ô tích. Nếu tài khoản thật đang có lệnh mở, giao diện cảnh báo trước khi đóng MT5.
-- **Kết quả thử nghiệm**: mỗi chiến lược có kết luận *Đạt tiêu chí kiểm thử*, *Kết quả chưa đạt yêu cầu*, hoặc *Chưa đủ dữ liệu để kết luận*. Bấm một dòng để xem giải thích bằng lời, tiền lời cộng dồn, lời/lỗ theo năm và theo giờ. Bấm "Chỉ số kỹ thuật" để hiện PF, Recovery, t-stat…
+Giao diện dùng từ ngữ trung tính (phương án, mô phỏng, môi trường chính/thử, mục mở) để người khác nhìn vào không biết là bot giao dịch. Bảng đối chiếu:
+
+| Trên giao diện | Nghĩa là |
+|---|---|
+| Ứng dụng | MT5 |
+| Môi trường **chính** / **thử** | Tài khoản thật / demo |
+| Mục mở | Lệnh bot đang giữ |
+| Phương án | Chiến lược (cấu hình backtest); `Dc` = Donchian, đuôi `-B` = chạy trên ETH |
+| Mô phỏng nhanh / chi tiết | Nút 1 (thử các chiến lược) / nút 3 (kiểm tra kỹ) |
+| Cập nhật | Nút 2 (lấy code mới + cập nhật bot) |
+| Gửi nhật ký | Nút 4 |
+| Kết quả, Sụt giảm lớn nhất, Tỷ lệ tốt, Số lượt | Lời/lỗ (USD), DD max, tỷ lệ thắng, số lệnh |
+| Giai đoạn gần / trước, Bộ dữ liệu B | 3 năm gần đây / 3 năm trước, ETH |
+| Chiều + / − | Mua / Bán |
+
+- **Điều khiển**, từ trên xuống: *Tình trạng* (ba ô Ứng dụng, Môi trường, Phiên bản; bot từ v5.4 mới báo được, qua file `TrendBot_trangthai_*.txt` trong Common\Files, không ghi số tài khoản), *Tiến trình* (chỉ hiện khi có việc), *Kết luận gần nhất*, rồi *Chạy việc mới*: nhóm Mô phỏng (1. Nhanh, 2. Chi tiết) và nhóm Khác (Cập nhật, Gửi nhật ký, Tự chạy 1 lần).
+- **Kết quả**: mỗi phương án có kết luận *Đạt*, *Chưa đạt* hoặc *Chưa đủ dữ liệu*. Bấm một dòng để xem giải thích và kết quả cộng dồn; "Chỉ số chi tiết" hiện PF, Recovery, t-stat…
 
 Tiêu chí "đạt": PF sau trượt giá 0,05% từ 1,3 trở lên ở **cả** 3 năm gần đây và 3 năm trước đó, mỗi giai đoạn ít nhất 30 lệnh.
 

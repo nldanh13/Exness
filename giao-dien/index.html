@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bot giao dịch BTC</title>
+<title>Bảng điều khiển</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -76,6 +76,9 @@ h2 { font-size: 15px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 .opt input { margin-top: 3px; accent-color: var(--accent); }
 .field { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 select, input[type="text"], input[type="number"] { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.plist > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); width: max-content; }
+.ptags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 120px; overflow: auto; }
+.ptags span { font: 12px/1.6 var(--font-num); color: var(--ink2); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 8px; }
 .listbox { font-family: var(--font-num); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; max-height: 140px; overflow: auto; white-space: pre; color: var(--ink2); }
 .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 button { font: inherit; font-weight: 600; border-radius: 6px; padding: 8px 16px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
@@ -153,60 +156,98 @@ svg text { fill: var(--ink3); font: 11px var(--font-num); }
 .explain p { margin: 0; max-width: 80ch; }
 details.tech > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink2); padding: 4px 0; }
 details.tech[open] > summary { margin-bottom: 8px; }
+.strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 720px) { .strip { grid-template-columns: 1fr; } }
+.strip .st { padding: 10px 12px; gap: 4px; align-content: start; }
+.jobgroups { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.jg { display: grid; gap: 6px; }
+.jg-l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
+.verdict-a { font-size: 14px; max-width: 80ch; }
+.sec-head .hint, .sec-head > button { margin-left: auto; }
+.sec-head a.hint { color: var(--accent); font-weight: 600; font-size: 13px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--ink2); background: var(--panel); }
+.seg input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.job-desc { margin: 0; font-size: 13px; }
+.now-text { font-size: 14px; }
+.sec { padding: 14px; gap: 10px; }
+main { gap: 14px; padding-block: 14px 40px; }
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <div class="brand">Bot giao dịch BTC <small id="brand-sub">Bảng điều khiển</small></div>
+  <div class="brand">Bảng điều khiển</div>
   <nav class="tabs" aria-label="Trang">
-    <a href="#chay" id="tab-chay">Bảng điều khiển</a>
-    <a href="#ket-qua" id="tab-ket-qua">Kết quả thử nghiệm</a>
+    <a href="#chay" id="tab-chay">Điều khiển</a>
+    <a href="#ket-qua" id="tab-ket-qua">Kết quả</a>
   </nav>
 </div></header>
 
 <div class="wrap">
 <main id="view-chay">
-  <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy có MT5. Phần kết quả dùng dữ liệu thật của các lần thử gần nhất.</div>
+  <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy của bạn.</div>
 
-  <section class="sec now">
-    <h2>Tình trạng hiện tại</h2>
-    <p class="now-text" id="now-text">Đang đọc tình trạng…</p>
-    <div class="status" aria-label="Chi tiết tình trạng">
-      <div class="st"><span class="lbl">Tài khoản đang chạy bot</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
-      <div class="st"><span class="lbl">Phần mềm giao dịch MT5</span><span class="val"><i class="dot" id="mt5-dot"></i><span id="mt5-val">…</span></span><span class="sub" id="mt5-sub"></span></div>
-      <div class="st"><span class="lbl">Phiên bản bot</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul><div><button class="small ghost" id="git-check">Kiểm tra lại</button></div></div>
-    </div>
-    <div class="verdict">
-      <span class="q">Chiến lược đã vượt qua kiểm thử chưa?</span>
-      <div class="a" id="verdict-text">Đang đọc kết quả thử nghiệm gần nhất…</div>
+  <section class="sec" id="sec-status">
+    <div class="sec-head"><h2>Tình trạng</h2><button class="small ghost" id="git-check">Kiểm tra lại</button></div>
+    <p class="now-text banner bad" id="now-text" hidden></p>
+    <div class="strip" aria-label="Chi tiết tình trạng">
+      <div class="st"><span class="lbl">Ứng dụng</span><span class="val"><i class="dot" id="mt5-dot"></i><span id="mt5-val">…</span></span><span class="sub" id="mt5-sub"></span></div>
+      <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
+      <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul></div>
     </div>
   </section>
 
-  <section class="sec" id="sec-start">
-    <h2>Bạn muốn làm gì?</h2>
-    <div class="jobs" role="radiogroup" aria-label="Việc">
-      <label class="job"><input type="radio" name="viec" value="sosanh" id="viec-sosanh" checked><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/></svg>Thử các chiến lược giao dịch</span><span class="d">Cho bot giao dịch thử bằng dữ liệu giá cũ. Không dùng tiền thật. Khoảng 30–45 phút.</span></label>
-      <label class="job"><input type="radio" name="viec" value="sosanh-chinhxac" id="viec-chinhxac"><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8.5 11l2 2 3.5-4"/></svg>Kiểm tra kỹ chiến lược tốt nhất</span><span class="d">Thử lại bằng dữ liệu chi tiết hơn (từng biến động giá) trước khi chạy tài khoản demo. Khoảng 1,5 giờ, máy sẽ chậm.</span></label>
-      <a class="job link" href="#ket-qua"><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Xem kết quả thử nghiệm</span><span class="d">Xem lời lỗ bao nhiêu, mức rủi ro và chiến lược nào tốt hơn.</span></a>
-      <label class="job"><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Lấy code mới + cập nhật bot</span><span class="d">Lấy phiên bản mới từ GitHub rồi nạp vào MT5. Các việc chạy thử khác không tự lấy code mới.</span></label>
-      <label class="job"><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Gửi nhật ký tài khoản cho Claude</span><span class="d">Gửi các giao dịch thật để Claude đối chiếu với kết quả thử.</span></label>
-      <label class="job"><input type="radio" name="viec" value="backtest" id="viec-backtest"><span class="t"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13-8z"/></svg>Tự thử 1 lần trong MT5</span><span class="d">Mở sẵn cửa sổ thử của MT5 với cài đặt mặc định để bạn tự xem.</span></label>
+  <section class="sec" id="sec-run" hidden>
+    <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
+    <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
+    <div class="muted" id="prog-txt" style="font-size:12px" hidden></div>
+    <div class="banner" id="run-result" hidden></div>
+    <details class="tech" id="log-wrap"><summary>Nhật ký kỹ thuật</summary>
+      <div class="log" id="log" aria-live="polite"><span class="muted">Chưa có việc nào chạy.</span></div>
+      <div class="actions" style="margin-top:8px"><button class="ghost small" id="btn-follow" aria-pressed="true">Tự cuộn: bật</button></div>
+    </details>
+    <div class="actions">
+      <button class="danger" id="btn-stop" hidden>Dừng</button>
+      <span id="stop-confirm" hidden>Dừng hẳn việc đang chạy? <button class="small danger" id="btn-stop-yes">Dừng ngay</button> <button class="small ghost" id="btn-stop-no">Thôi</button></span>
     </div>
+  </section>
+  <section class="sec" id="sec-verdict">
+    <div class="sec-head"><h2>Kết luận gần nhất</h2><a class="hint" href="#ket-qua">Xem bảng kết quả</a></div>
+    <div class="verdict-a" id="verdict-text">Đang đọc…</div>
+  </section>
+
+  <section class="sec" id="sec-start">
+    <h2>Chạy việc mới</h2>
+    <div class="jobgroups" role="radiogroup" aria-label="Việc">
+      <div class="jg"><span class="jg-l">Mô phỏng</span><div class="seg">
+        <label><input type="radio" name="viec" value="sosanh" id="viec-sosanh" checked><span>1. Nhanh</span></label>
+        <label><input type="radio" name="viec" value="sosanh-chinhxac" id="viec-chinhxac"><span>2. Chi tiết</span></label>
+      </div></div>
+      <div class="jg"><span class="jg-l">Khác</span><div class="seg">
+        <label><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
+        <label><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span>Gửi nhật ký</span></label>
+        <label><input type="radio" name="viec" value="backtest" id="viec-backtest"><span>Tự chạy 1 lần</span></label>
+      </div></div>
+    </div>
+    <p class="muted job-desc" id="job-desc"></p>
     <div class="opts">
-      <div class="field" id="nhom-row"><label for="nhom">Thử nhóm nào:</label>
+      <div class="field" id="nhom-row"><label for="nhom">Nhóm:</label>
         <select id="nhom">
-          <option value="file">Danh sách Claude chọn (khuyên dùng)</option>
-          <option value="h4">Chiến lược khung 4 giờ và các bộ lọc</option>
-          <option value="luotsong">Lướt sóng (vốn 30.000 USD)</option>
-          <option value="von1tr">Lướt sóng với vốn 1 triệu VND</option>
+          <option value="file">Danh sách Claude chọn</option>
+          <option value="h4">Nhóm A</option>
+          <option value="luotsong">Nhóm B</option>
+          <option value="von1tr">Nhóm B (quy mô nhỏ)</option>
           <option value="tatca">Tất cả (rất lâu)</option>
         </select>
       </div>
-      <details class="tech" id="list-row"><summary id="list-title"></summary><div class="listbox" id="list-box"></div></details>
+      <details class="plist" id="list-row"><summary id="list-title"></summary><div class="ptags" id="list-box"></div></details>
       <div class="banner warn" id="real-warn" hidden></div>
-      <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git" onchange="this.dataset.touched=1"><span><b>Lấy phiên bản bot mới từ GitHub</b> (<span id="opt-git-n">0</span> thay đổi). Nếu MT5 này đang chạy bot tài khoản thật, nên để trống và cập nhật vào lúc bot không giữ lệnh.</span></label>
-      <label class="opt" id="opt-mt5-row" hidden><input type="checkbox" id="opt-mt5"><span><b>Cho phép đóng MT5 để chạy thử.</b> Đóng MT5 sẽ dừng mọi bot đang chạy trên nó.</span></label>
-      <label class="opt" id="opt-nk-row" hidden><input type="checkbox" id="opt-nk"><span><b>Đồng ý đẩy nhật ký lên GitHub</b> (repo phải để Riêng tư). Nhật ký có mọi giao dịch, nạp/rút và số dư của cả tài khoản, không có mật khẩu hay số tài khoản. Để trống thì chỉ mở thư mục để bạn tự xem và gửi.</span></label>
+      <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git" onchange="this.dataset.touched=1"><span>Lấy bản mới (<span id="opt-git-n">0</span> thay đổi)</span></label>
+      <label class="opt" id="opt-mt5-row" hidden><input type="checkbox" id="opt-mt5"><span>Cho phép đóng ứng dụng để chạy (mọi phiên đang chạy trên nó sẽ dừng)</span></label>
+      <label class="opt" id="opt-nk-row" hidden><input type="checkbox" id="opt-nk"><span>Đồng ý đẩy nhật ký lên GitHub (repo Riêng tư). Để trống thì chỉ mở thư mục.</span></label>
     </div>
     <div class="actions">
       <button class="primary" id="btn-start">Bắt đầu</button>
@@ -214,49 +255,32 @@ details.tech[open] > summary { margin-bottom: 8px; }
     </div>
   </section>
 
-  <section class="sec" id="sec-run">
-    <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
-    <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
-    <div class="muted" id="prog-txt" style="font-size:12px" hidden></div>
-    <div class="banner" id="run-result" hidden></div>
-    <details class="tech" id="log-wrap"><summary>Nhật ký chi tiết (dành cho Claude khi có lỗi)</summary>
-      <div class="log" id="log" aria-live="polite"><span class="muted">Chưa có việc nào chạy trong lần mở này.</span></div>
-      <div class="actions" style="margin-top:8px"><button class="ghost small" id="btn-follow" aria-pressed="true">Tự cuộn: bật</button></div>
-    </details>
-    <div class="actions">
-      <button class="danger" id="btn-stop" hidden>Dừng</button>
-      <span id="stop-confirm" hidden>Dừng hẳn việc đang chạy (kể cả cửa sổ thử của MT5)? <button class="small danger" id="btn-stop-yes">Dừng ngay</button> <button class="small ghost" id="btn-stop-no">Thôi</button></span>
-    </div>
-  </section>
 </main>
 
 <main id="view-ket-qua" hidden>
   <section class="sec">
     <div class="toolbar">
-      <label for="file-sel" class="muted" style="font-size:12px">Lần thử</label>
+      <label for="file-sel" class="muted" style="font-size:12px">Lần chạy</label>
       <select id="file-sel"></select>
-      <input type="text" id="q" placeholder="Tìm theo tên, vd. Nhoi3 hoặc M15" aria-label="Tìm theo tên" style="flex:1;min-width:160px">
+      <input type="text" id="q" placeholder="Tìm theo tên" aria-label="Tìm theo tên" style="flex:1;min-width:160px">
     </div>
     <div class="toolbar">
       <div class="chips" id="chips-group" aria-label="Giai đoạn">
-        <button class="chip" data-g="gan" aria-pressed="true">3 năm gần đây</button>
-        <button class="chip" data-g="truoc" aria-pressed="false">Giai đoạn trước đó</button>
-        <button class="chip" data-g="eth" aria-pressed="false">Trên ETH</button>
+        <button class="chip" data-g="gan" aria-pressed="true">Giai đoạn gần</button>
+        <button class="chip" data-g="truoc" aria-pressed="false">Giai đoạn trước</button>
+        <button class="chip" data-g="eth" aria-pressed="false">Bộ dữ liệu B</button>
         <button class="chip" data-g="tatca" aria-pressed="false">Tất cả</button>
       </div>
       <div class="chips">
-        <button class="chip" id="chip-dat" aria-pressed="false">Chỉ chiến lược đạt</button>
-        <button class="chip" id="chip-zero" aria-pressed="true">Ẩn chiến lược 0 lệnh</button>
-        <button class="chip" id="chip-tech" aria-pressed="false">Chỉ số kỹ thuật</button>
+        <button class="chip" id="chip-dat" aria-pressed="false">Chỉ phương án đạt</button>
+        <button class="chip" id="chip-zero" aria-pressed="true">Ẩn phương án trống</button>
+        <button class="chip" id="chip-tech" aria-pressed="false">Chỉ số chi tiết</button>
       </div>
       <span class="muted" style="font-size:12px;margin-left:auto" id="count"></span>
     </div>
     <div class="tbl-wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
-    <details class="tech"><summary>Cách đánh giá "đạt tiêu chí kiểm thử"</summary>
-      <div style="font-size:13px;display:grid;gap:6px;max-width:80ch">
-        <p style="margin:0">Một chiến lược <b>đạt</b> khi vẫn có lời rõ ràng sau khi tính thêm trượt giá, ở <b>cả</b> 3 năm gần đây <b>và</b> 3 năm trước đó (giai đoạn chưa dùng để chọn chiến lược), với ít nhất 30 lệnh mỗi giai đoạn.</p>
-        <p style="margin:0">"Lời rõ ràng" nghĩa là tổng lời gấp ít nhất <input type="number" id="nguong" value="1.3" step="0.05" min="0" style="width:72px" aria-label="Ngưỡng"> lần tổng lỗ (chỉ số PF sau trượt giá 0,05%). Claude đặt mức 1,3 trước khi thử.</p>
-      </div>
+    <details class="tech"><summary>Cách đánh giá "đạt"</summary>
+      <p style="margin:0;font-size:13px;max-width:80ch">Một phương án <b>đạt</b> khi chỉ số chất lượng (PF, đã trừ hao 0,05%) từ <input type="number" id="nguong" value="1.3" step="0.05" min="0" style="width:72px" aria-label="Ngưỡng"> trở lên ở <b>cả</b> giai đoạn gần và giai đoạn trước, mỗi giai đoạn ít nhất 30 lượt.</p>
     </details>
   </section>
 
@@ -264,17 +288,19 @@ details.tech[open] > summary { margin-bottom: 8px; }
     <div class="sec-head"><h2 id="d-title"></h2><span class="hint" id="d-sub"></span></div>
     <div class="explain" id="d-explain"></div>
     <div class="kpis" id="d-kpis"></div>
-    <details class="tech"><summary>Chỉ số kỹ thuật</summary><div class="kpis" id="d-kpis-tech"></div></details>
+    <details class="tech"><summary>Chỉ số chi tiết</summary><div class="kpis" id="d-kpis-tech"></div></details>
     <div class="chart" id="c-equity"></div>
-    <div class="grid2">
+    <details class="tech"><summary>Thêm biểu đồ và bảng</summary>
+    <div class="grid2" style="margin-top:8px">
       <div class="chart" id="c-year"></div>
       <div class="chart" id="c-hour"></div>
     </div>
-    <div class="grid2">
+    <div class="grid2" style="margin-top:12px">
       <div id="d-side"></div>
       <div id="d-compare"></div>
     </div>
-    <details class="tech"><summary>Danh sách lệnh <span class="muted" id="d-trades-n"></span></summary>
+    </details>
+    <details class="tech"><summary>Danh sách lượt <span class="muted" id="d-trades-n"></span></summary>
       <div class="tbl-wrap" style="max-height:420px"><table id="d-trades"><thead></thead><tbody></tbody></table></div>
     </details>
   </section>
@@ -325,7 +351,9 @@ function csvHead(text) { var l = text.replace(/^﻿/, '').split(/\r?\n/)[0] || '
    TAB BẢNG ĐIỀU KHIỂN
    ===================================================================== */
 var S = { logLen: 0, follow: true, last: null };
-var VIEC_TEN = { 'sosanh': 'Thử các chiến lược giao dịch', 'sosanh-chinhxac': 'Kiểm tra kỹ chiến lược tốt nhất', 'capnhat': 'Lấy code mới + cập nhật bot', 'backtest': 'Tự thử 1 lần trong MT5', 'nhatky': 'Gửi nhật ký tài khoản' };
+var VIEC_TEN = { 'sosanh': 'Mô phỏng nhanh', 'sosanh-chinhxac': 'Mô phỏng chi tiết', 'capnhat': 'Cập nhật bản mới', 'backtest': 'Tự chạy 1 lần', 'nhatky': 'Gửi nhật ký' };
+var JOB_DESC = { 'sosanh': 'Chạy mô phỏng các phương án trên dữ liệu cũ, khoảng 30–45 phút.', 'sosanh-chinhxac': 'Chạy lại chi tiết các phương án tốt nhất, khoảng 1,5 giờ.', 'capnhat': 'Lấy bản mới từ GitHub và nạp vào ứng dụng.', 'nhatky': 'Gửi nhật ký cho Claude đối chiếu.', 'backtest': 'Mở ứng dụng với cài đặt mặc định để tự chạy.' };
+function dn(n) { return String(n || '').replace(/-ETH$/, '-B').replace(/Donchian/g, 'Dc'); }
 var NEED_MT5_CLOSED = { 'sosanh': 1, 'sosanh-chinhxac': 1, 'backtest': 1 };
 
 function api(path, body) {
@@ -335,17 +363,18 @@ function api(path, body) {
 function selViec() { var r = document.querySelector('input[name="viec"]:checked'); return r ? r.value : 'sosanh'; }
 function bots(d) { return (d && d.Bot) || []; }
 function tfName(s) { return String(s || '').replace(/PERIOD_M(\d+)/, 'khung $1 phút').replace(/PERIOD_H(\d+)/, 'khung $1 giờ').replace('PERIOD_D1', 'khung ngày'); }
-function acctName(b) { return b.taikhoan === 'that' ? 'THẬT' : b.taikhoan === 'demo' ? 'DEMO' : 'thi đấu'; }
+function acctName(b) { return b.taikhoan === 'that' ? 'CHÍNH' : 'THỬ'; }
 function realBusy(d) { return bots(d).filter(function (b) { return b.taikhoan === 'that' && (+b.lenhbot > 0 || +b.lenhtaikhoan > 0); }); }
 
 function renderOptions() {
   var v = selViec(), d = S.last || {};
   $('nhom-row').hidden = v !== 'sosanh';
+  $('job-desc').textContent = JOB_DESC[v] || '';
   var list = null, title = '';
-  if (v === 'sosanh' && $('nhom').value === 'file') { list = d.ChiChay; title = 'Xem danh sách chiến lược sẽ thử (' + (list ? list.length : 0) + ' mục)'; }
-  if (v === 'sosanh-chinhxac') { list = d.ChinhXac; title = 'Xem danh sách chiến lược sẽ kiểm tra kỹ (' + (list ? list.length : 0) + ')'; }
+  if (v === 'sosanh' && $('nhom').value === 'file') { list = d.ChiChay; title = 'Xem danh sách phương án (' + (list ? list.length : 0) + ')'; }
+  if (v === 'sosanh-chinhxac') { list = d.ChinhXac; title = 'Xem danh sách phương án (' + (list ? list.length : 0) + ')'; }
   $('list-row').hidden = !list;
-  if (list) { $('list-title').textContent = title; $('list-box').textContent = list.length ? list.join('\n') : '(trống: thử toàn bộ)'; }
+  if (list) { $('list-title').textContent = title; $('list-box').innerHTML = list.length ? list.map(function (x) { return '<span>' + esc(dn(x)) + '</span>'; }).join('') : '<em class="muted">Trống: chạy toàn bộ</em>'; }
   var g = d.Git || {};
   $('opt-git-row').hidden = !(g.Behind > 0) || v !== 'capnhat';   // chi nut cap nhat moi lay code moi
   // Da chon 'Lay code moi' thi mac dinh tick san (ban van bo tick duoc)
@@ -357,9 +386,9 @@ function renderOptions() {
   if (busy.length && (NEED_MT5_CLOSED[v] || v === 'capnhat')) {
     var n = busy.reduce(function (s, b) { return s + (+b.lenhtaikhoan || 0); }, 0);
     w.hidden = false;
-    w.innerHTML = '<b>Cẩn thận: tài khoản THẬT đang có ' + n + ' lệnh mở.</b> ' + (NEED_MT5_CLOSED[v]
-      ? 'Việc này cần đóng MT5. Khi MT5 đóng, bot ngừng theo dõi và dời cắt lỗ; mức cắt lỗ đã đặt vẫn nằm trên sàn. Nên đợi lúc không có lệnh, hoặc chạy thử trên một bản MT5 cài riêng.'
-      : 'Cập nhật sẽ nạp lại bot đang chạy trên biểu đồ. Nên làm lúc bot không giữ lệnh.');
+    w.innerHTML = '<b>Lưu ý: môi trường chính đang có ' + n + ' mục mở.</b> ' + (NEED_MT5_CLOSED[v]
+      ? 'Việc này cần đóng ứng dụng; các mục đang mở vẫn giữ mức bảo vệ đã đặt. Nên đợi lúc không có mục mở.'
+      : 'Cập nhật sẽ nạp lại chương trình đang chạy. Nên làm lúc không có mục mở.');
   } else w.hidden = true;
 }
 
@@ -370,48 +399,38 @@ function renderStatus(d) {
   if (g.Error) { $('git-dot').className = 'dot bad'; $('git-val').textContent = /ket noi/.test(g.Error) ? 'Không kết nối được GitHub' : /git/.test(g.Error) ? 'Không thấy git trên máy' : g.Error; }
   else if (g.Behind > 0) { $('git-dot').className = 'dot warn'; $('git-val').textContent = 'Có bản mới chưa cập nhật'; }
   else { $('git-dot').className = 'dot ok'; $('git-val').textContent = 'Đang là bản mới nhất'; }
-  $('git-sub').textContent = g.Behind > 0 ? g.Behind + ' thay đổi mới trên GitHub:' : (g.Checked ? 'Kiểm tra lúc ' + g.Checked : '');
-  var ul = $('git-commits'); ul.hidden = !(g.Commits && g.Commits.length);
-  ul.innerHTML = (g.Commits || []).map(function (c) { return '<li>' + esc(c.replace(/^\w+\s/, '')) + '</li>'; }).join('');
-  // MT5
+  var ver = b.map(function (x) { return x.phienban; }).filter(Boolean)[0];
+  $('git-sub').textContent = [g.Behind > 0 ? g.Behind + ' thay đổi mới' : (g.Checked ? 'Kiểm tra lúc ' + g.Checked : ''), ver ? 'đang chạy v' + ver : ''].filter(Boolean).join(' · ');
+  $('git-commits').hidden = true;
+  // Ứng dụng
   $('mt5-dot').className = 'dot ' + (d.MT5Mo ? 'warn' : 'ok');
   $('mt5-val').textContent = d.MT5Mo ? 'Đang mở' : 'Đang tắt';
-  $('mt5-sub').textContent = d.MT5Mo ? 'Muốn chạy thử thì phải đóng MT5 (giao diện sẽ hỏi).' : 'Sẵn sàng chạy thử.';
+  $('mt5-sub').textContent = d.MT5Mo ? 'Mô phỏng cần đóng ứng dụng (sẽ hỏi trước).' : 'Sẵn sàng mô phỏng.';
   // Tài khoản
   if (b.length) {
     $('acct').innerHTML = b.map(function (x) {
       var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
-      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span><b>' + esc(tfName(x.chienluoc)) + '</b> <span class="muted">' + esc(x.ma || '') + ' · v' + esc(x.phienban || '') + '</span></div>' +
-        '<div class="acct-row">Bot giữ <b class="num">' + esc(x.lenhbot) + '</b> lệnh · cả tài khoản có <b class="num">' + esc(x.lenhtaikhoan) + '</b> lệnh mở</div>' +
-        '<div class="acct-row muted">' + esc(trangThai(x.trangthai)) + (x.choGD === '0' ? ' · <span style="color:var(--loss)">MT5 đang tắt nút cho phép giao dịch tự động</span>' : '') + '</div>';
-    }).join('<hr style="border:0;border-top:1px solid var(--line);margin:4px 0">');
+      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span><span><b class="num">' + esc(x.lenhbot) + '</b> mục mở</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span>' +
+        (x.choGD === '0' ? '<span style="color:var(--loss)">· tự động đang tắt</span>' : '') + '</div>';
+    }).join('');
   } else {
-    $('acct').innerHTML = '<span class="muted">' + (d.MT5Mo ? 'Không thấy bot nào báo tình trạng. Bot bản cũ hơn 5.4 chưa báo được: hãy cập nhật phiên bản bot.' : 'Không có bot nào đang chạy (MT5 đang tắt).') + '</span>';
+    $('acct').innerHTML = '<span class="muted">' + (d.MT5Mo ? 'Chưa thấy phiên nào báo tình trạng (cần bản 5.4 trở lên).' : 'Ứng dụng đang tắt.') + '</span>';
   }
-  // Câu tóm tắt
-  var parts = [];
-  parts.push(d.MT5Mo ? 'Phần mềm giao dịch đang mở.' : 'Phần mềm giao dịch đang tắt.');
-  b.forEach(function (x) {
-    parts.push('Bot ' + esc(tfName(x.chienluoc)) + ' đang chạy trên tài khoản <b class="' + (x.taikhoan === 'that' ? 'real' : 'demo') + '">' + (x.taikhoan === 'that' ? 'tiền thật' : x.taikhoan === 'demo' ? 'demo' : 'thi đấu') + '</b>' +
-      (+x.lenhbot > 0 ? ', đang giữ ' + x.lenhbot + ' lệnh.' : ', chưa giữ lệnh nào.'));
-  });
-  if (g.Behind > 0) parts.push('Có phiên bản bot mới chưa cập nhật.');
-  if (j.Running) parts.push('Đang làm: <b>' + esc(VIEC_TEN[j.Viec] || j.Viec) + '</b> (' + dur(j.Seconds) + ').');
-  $('now-text').innerHTML = parts.join(' ');
+  $('now-text').hidden = true;
   $('btn-start').disabled = !!j.Running;
   $('start-msg').textContent = j.Running ? 'Đang có việc chạy. Đợi xong hoặc bấm Dừng.' : '';
   $('btn-stop').hidden = !j.Running; if (!j.Running) $('stop-confirm').hidden = true;
+  $('sec-run').hidden = !j.Viec;
   renderOptions();
   renderRun(d);
   if (d.KetQua) RES.files = d.KetQua;
 }
 function trangThai(s) {
   if (!s) return '';
-  var m = { 'Dang giu lenh': 'Đang giữ lệnh', 'Cho tin hieu': 'Đang chờ tín hiệu', 'Khoi dong': 'Vừa khởi động', 'Spread qua rong': 'Tạm chờ: chênh lệch giá mua/bán quá rộng', 'Du so lenh trong ngay': 'Đã đủ số lệnh trong ngày', 'Cham gioi han lo ngay, nghi den mai': 'Chạm giới hạn lỗ trong ngày, nghỉ đến mai', 'DUNG HAN (sut giam)': 'ĐÃ DỪNG HẲN vì lỗ sâu quá giới hạn', 'Nghi sau lenh thua': 'Nghỉ một lúc sau lệnh thua', 'Cho dang nhap tai khoan...': 'Chờ đăng nhập tài khoản' };
+  var m = { 'Dang giu lenh': 'Đang có mục mở', 'Cho tin hieu': 'Đang chờ', 'Khoi dong': 'Vừa khởi động', 'Spread qua rong': 'Tạm chờ', 'Du so lenh trong ngay': 'Đủ hạn mức hôm nay', 'Cham gioi han lo ngay, nghi den mai': 'Chạm giới hạn ngày, nghỉ đến mai', 'DUNG HAN (sut giam)': 'Đã dừng hẳn (vượt giới hạn)', 'Nghi sau lenh thua': 'Tạm nghỉ', 'Cho dang nhap tai khoan...': 'Chờ đăng nhập' };
   if (m[s]) return m[s];
-  if (/^Tam nghi: /.test(s)) return 'Tạm nghỉ: ' + s.slice(10);
-  if (/^Gan tin My: /.test(s)) return 'Gần giờ tin Mỹ: ' + s.slice(12);
-  return 'Tình trạng: ' + s;
+  if (/^Tam nghi: |^Gan tin My: /.test(s)) return 'Tạm nghỉ';
+  return 'Đang chạy';
 }
 
 function classify(line) {
@@ -441,11 +460,11 @@ var FULL_LOG = '';
 function stepText(log, j) {
   // Câu dễ hiểu cho bước đang làm, đọc từ nhật ký
   var lines = log.split(/\r?\n/).filter(Boolean), last = lines[lines.length - 1] || '';
-  if (/Dang kiem tra code moi/.test(last)) return 'Đang kiểm tra phiên bản mới trên GitHub…';
-  if (/Lay ban moi|Tra loi tu giao dien: y/.test(log) && !/Da compile/.test(log) && !/\[dot/.test(log)) return 'Đang lấy phiên bản mới…';
+  if (/Dang kiem tra code moi/.test(last)) return 'Đang kiểm tra bản mới…';
+  if (/Lay ban moi|Tra loi tu giao dien: y/.test(log) && !/Da compile/.test(log) && !/\[dot/.test(log)) return 'Đang lấy bản mới…';
   if (/\[dot/.test(log)) return null;
-  if (/funding|Fear|Wikipedia|Nasdaq/i.test(last)) return 'Đang tải dữ liệu thị trường (funding, chỉ số sợ hãi/tham lam…)…';
-  if (/compile/i.test(last)) return 'Đang nạp bot vào MT5…';
+  if (/funding|Fear|Wikipedia|Nasdaq/i.test(last)) return 'Đang tải dữ liệu…';
+  if (/compile/i.test(last)) return 'Đang nạp bản mới…';
   return 'Đang chuẩn bị…';
 }
 function renderRun(d) {
@@ -469,7 +488,7 @@ function renderRun(d) {
   }
   if (j.Running) {
     var st = stepText(FULL_LOG, j);
-    $('prog-txt').textContent = st || ((nRuns ? 'Đang thử ' + nRuns + ' chiến lược · ' : '') + 'xong ' + done + '/' + all + ' nhóm' + (done && all > done ? ' · còn khoảng ' + Math.max(1, Math.round(j.Seconds / done * (all - done) / 60)) + ' phút' : ''));
+    $('prog-txt').textContent = st || ((nRuns ? 'Đang chạy ' + nRuns + ' phương án · ' : '') + 'xong ' + done + '/' + all + ' nhóm' + (done && all > done ? ' · còn khoảng ' + Math.max(1, Math.round(j.Seconds / done * (all - done) / 60)) + ' phút' : ''));
   } else $('prog-txt').hidden = true;
   var mk = /\[giao-dien\] ma-thoat=(-?\d+)/.exec(FULL_LOG);
   if (!j.Running && mk) j.ExitCode = +mk[1];
@@ -478,12 +497,12 @@ function renderRun(d) {
   rb.hidden = false;
   var pushed = /==> Da day ket qua len GitHub/.test(FULL_LOG), incomplete = /CHUA ?DU/i.test(FULL_LOG), noMT5 = /Khong dong MT5/.test(FULL_LOG);
   var html, cls;
-  if (j.Stopped) { cls = 'warn'; html = '<b>Đã dừng.</b> Kết quả lần này không đầy đủ, đừng dùng để chọn chiến lược.'; }
-  else if (noMT5) { cls = 'warn'; html = '<b>Chưa chạy vì MT5 đang mở.</b> Tích ô "Cho phép đóng MT5" rồi bấm Bắt đầu lại, hoặc tự đóng MT5 trước.'; }
-  else if (j.ExitCode !== 0 && !(pushed && j.ExitCode == null)) { cls = 'bad'; html = '<b>Có lỗi, việc chưa xong.</b> Mở "Nhật ký chi tiết" bên dưới, chụp màn hình gửi Claude.'; $('log-wrap').open = true; }
-  else if (isTest && incomplete) { cls = 'bad'; html = '<b>Thiếu kết quả.</b> Có chiến lược thử chưa xong, nên kết quả không được gửi lên GitHub. Chạy lại, hoặc gửi file ket-qua-backtest-….zip cho Claude.'; }
-  else if (isTest) { cls = 'ok'; html = '<b>Xong sau ' + dur(j.Seconds) + '.</b> ' + (pushed ? 'Kết quả đã gửi lên GitHub, chỉ cần nhắn Claude "xong rồi".' : 'Không gửi được lên GitHub: gửi file ket-qua-backtest-….zip cho Claude.') + ' <button class="small primary" id="btn-see">Xem kết quả</button>'; }
-  else if (j.Viec === 'nhatky') { cls = 'ok'; html = /==> Da gui/.test(FULL_LOG) ? '<b>Đã gửi nhật ký.</b> Nhắn Claude "đã gửi nhật ký" để đối chiếu.' : /Khong co gi de gui/.test(FULL_LOG) ? '<b>Chưa có nhật ký để gửi.</b> Bot chưa chạy trên tài khoản thật hoặc demo.' : '<b>Đã mở thư mục nhật ký.</b> Bạn có thể tự xem rồi gửi cho Claude.'; }
+  if (j.Stopped) { cls = 'warn'; html = '<b>Đã dừng.</b> Kết quả lần này không đầy đủ, đừng dùng để chọn phương án.'; }
+  else if (noMT5) { cls = 'warn'; html = '<b>Chưa chạy vì ứng dụng đang mở.</b> Tích ô cho phép đóng ứng dụng rồi bấm lại.'; }
+  else if (j.ExitCode !== 0 && !(pushed && j.ExitCode == null)) { cls = 'bad'; html = '<b>Có lỗi, việc chưa xong.</b> Mở "Nhật ký kỹ thuật" bên dưới, chụp màn hình gửi Claude.'; $('log-wrap').open = true; }
+  else if (isTest && incomplete) { cls = 'bad'; html = '<b>Thiếu kết quả.</b> Có phương án chưa chạy xong nên chưa gửi đi. Chạy lại, hoặc gửi file .zip kết quả cho Claude.'; }
+  else if (isTest) { cls = 'ok'; html = '<b>Xong sau ' + dur(j.Seconds) + '.</b> ' + (pushed ? 'Kết quả đã gửi đi, chỉ cần nhắn Claude "xong rồi".' : 'Chưa gửi được: gửi file .zip kết quả cho Claude.') + ' <button class="small primary" id="btn-see">Xem kết quả</button>'; }
+  else if (j.Viec === 'nhatky') { cls = 'ok'; html = /==> Da gui/.test(FULL_LOG) ? '<b>Đã gửi nhật ký.</b> Nhắn Claude "đã gửi nhật ký" để đối chiếu.' : /Khong co gi de gui/.test(FULL_LOG) ? '<b>Chưa có nhật ký để gửi.</b>' : '<b>Đã mở thư mục nhật ký.</b> Bạn có thể tự xem rồi gửi cho Claude.'; }
   else { cls = 'ok'; html = '<b>Xong:</b> ' + esc(VIEC_TEN[j.Viec] || ''); }
   rb.className = 'banner ' + cls; rb.innerHTML = html;
   var bt = $('btn-see'); if (bt) bt.onclick = function () { RES.loaded = false; RES.want = 'newest'; location.hash = '#ket-qua'; };
@@ -498,7 +517,7 @@ function poll() {
     if (n !== lastResCount) { lastResCount = n; loadVerdict(); }
     pollTimer = setTimeout(poll, d.Viec && d.Viec.Running ? 1500 : 5000);
   }).catch(function () {
-    $('now-text').innerHTML = '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
+    $('now-text').hidden = false; $('now-text').innerHTML = '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
     pollTimer = setTimeout(poll, 5000);
   });
 }
@@ -512,8 +531,7 @@ function initRun() {
     $('static-note').hidden = false;
     renderStatus({ Git: {}, MT5Mo: false, Viec: {}, Bot: [], ChiChay: NHUNG.chiChay || [], ChinhXac: NHUNG.chinhXac || [], KetQua: NHUNG.files });
     $('btn-start').disabled = true; $('git-check').disabled = true;
-    $('now-text').textContent = 'Bản xem trước không đọc được MT5 trên máy bạn. Mở bằng GiaoDien.cmd để thấy tình trạng thật.';
-    $('acct').innerHTML = '<span class="muted">Chỉ xem được trên máy có MT5.</span>';
+    $('acct').innerHTML = '<span class="muted">Chỉ xem được trên máy.</span>';
     $('git-val').textContent = 'Chỉ xem được trên máy'; $('git-dot').className = 'dot'; $('git-sub').textContent = '';
     $('mt5-val').textContent = 'Chỉ xem được trên máy'; $('mt5-dot').className = 'dot'; $('mt5-sub').textContent = '';
     $('sec-run').hidden = true;
@@ -538,7 +556,7 @@ function initRun() {
 function loadVerdict() {
   var p = NHUNG ? Promise.resolve(NHUNG.files) : api('/api/trangthai?tu=999999999').then(function (d) { return d.KetQua; });
   p.then(function (files) {
-    if (!files || !files.length) { $('verdict-text').textContent = 'Chưa có kết quả thử nghiệm nào. Bấm "Thử các chiến lược giao dịch" để bắt đầu.'; return; }
+    if (!files || !files.length) { $('verdict-text').textContent = 'Chưa có kết quả nào. Chọn "Mô phỏng nhanh" rồi bấm Bắt đầu.'; return; }
     var f = files.filter(function (x) { return !/CHUADU/.test(x.Ten); })[0] || files[0];
     return getText(f.Ten).then(function (t) {
       var rows = parseCSV(t), map = {}; rows.forEach(function (r) { map[r.Lan] = r; });
@@ -547,17 +565,16 @@ function loadVerdict() {
       var ok = main.filter(function (r) { return datState(r, map, thr) === 'ok'; });
       ok.sort(function (a, b) { return num(b['PF_Truot0.05%']) - num(a['PF_Truot0.05%']); });
       var when = fileLabel(f).replace(/ · .*/, '');
-      var html = 'Lần thử ' + (quick ? 'nhanh' : 'kỹ') + ' lúc ' + esc(when) + ': ';
-      if (!ok.length) html += '<b>chưa chiến lược nào đạt yêu cầu</b> trong ' + main.length + ' chiến lược đã thử. Chưa nên chạy tiền thật với các chiến lược này.';
+      var html = 'Lần chạy ' + (quick ? 'nhanh' : 'chi tiết') + ' lúc ' + esc(when) + ': ';
+      if (!ok.length) html += '<b>chưa phương án nào đạt</b> (' + main.length + ' phương án).';
       else {
         var b = ok[0];
-        html += '<b>' + ok.length + '/' + main.length + ' chiến lược đạt tiêu chí kiểm thử.</b> Chắc chắn nhất (lời nhiều nhất so với lỗ): <b>' + esc(b.Lan) + '</b> (lời ' + money(num(b.LoiNhuan)) + ' USD trong 3 năm, lỗ sâu nhất ' + fmt(num(b['SutGiamMax%']), 1) + '% từ đỉnh).';
-        if (quick) html += ' Đây mới là thử nhanh: nên <b>Kiểm tra kỹ</b> trước khi chạy demo.';
+        html += '<b>' + ok.length + '/' + main.length + ' phương án đạt.</b> Tốt nhất: <b>' + esc(dn(b.Lan)) + '</b> (kết quả ' + money(num(b.LoiNhuan)) + ', sụt giảm ' + fmt(num(b['SutGiamMax%']), 1) + '%).';
+        if (quick) html += ' Nên chạy <b>Mô phỏng chi tiết</b>.';
       }
-      html += ' <a href="#ket-qua">Xem chi tiết</a>';
       $('verdict-text').innerHTML = html;
     });
-  }).catch(function () { $('verdict-text').textContent = 'Không đọc được kết quả thử nghiệm.'; });
+  }).catch(function () { $('verdict-text').textContent = 'Không đọc được kết quả.'; });
 }
 
 /* =====================================================================
@@ -566,28 +583,28 @@ function loadVerdict() {
 var RES = { files: [], loaded: false, want: null, rows: [], byName: {}, trades: null, tradeText: null, sort: { k: '_dat', dir: 1 }, group: 'gan', dat: false, hideZero: true, tech: false, sel: null, file: null };
 var MIN_TRADES = 30;
 var COLS = [
-  { k: 'Lan', l: 'Chiến lược' },
-  { k: '_dat', l: 'Kết luận', tip: 'Đạt khi vẫn lời rõ ràng sau trượt giá ở cả 3 năm gần đây và 3 năm trước đó, mỗi giai đoạn ít nhất 30 lệnh' },
-  { k: 'LoiNhuan', l: 'Lời/lỗ (USD)', d: 2, sign: true, tip: 'Tiền lời hoặc lỗ sau phí và swap' },
-  { k: 'SutGiamMax%', l: 'Lỗ sâu nhất từ đỉnh', d: 1, pct: true, risk: true, tip: 'Mức vốn bị giảm nhiều nhất so với lúc cao nhất. Càng thấp càng an toàn' },
-  { k: 'TyLeThang%', l: 'Lệnh thắng', d: 0, pct: true },
-  { k: 'SoLenh', l: 'Số lệnh', d: 0 },
-  { k: 'ProfitFactor', l: 'PF', d: 2, tech: true, tip: 'Profit factor = tổng lãi / tổng lỗ. Trên 1 là có lãi' },
-  { k: 'PF_Truot0.05%', l: 'PF trượt 0.05%', d: 2, tech: true, pf: true, tip: 'PF nếu mỗi lệnh bị trượt giá thêm 0.05%' },
-  { k: '_pfTruoc', l: 'PF trượt · giai đoạn trước', d: 2, tech: true, pf: true, tip: 'PF trượt 0.05% của cùng chiến lược ở 3 năm trước đó' },
-  { k: '_pfEth', l: 'PF trượt · ETH', d: 2, tech: true, pf: true, tip: 'PF trượt 0.05% của cùng chiến lược trên ETHUSDm' },
-  { k: 'RecoveryFactor', l: 'Recovery', d: 2, tech: true, tip: 'Lợi nhuận / sụt giảm lớn nhất' },
-  { k: 'E_R', l: 'Kỳ vọng R', d: 3, tech: true, tip: 'Lãi trung bình mỗi lệnh tính theo R (R = số tiền rủi ro khi chạm SL)' },
-  { k: 'tStat', l: 't-stat', d: 2, tech: true, tip: 'Trên 2 thì khó là do may mắn' },
-  { k: 'PF_BoTop5', l: 'PF bỏ top 5', d: 2, tech: true, tip: 'PF khi bỏ 5 lệnh lãi lớn nhất' },
-  { k: 'MC_SutGiam95%', l: 'MC sụt giảm 95%', d: 2, tech: true, tip: 'Monte Carlo: 95% số lần xáo trộn thứ tự lệnh có sụt giảm thấp hơn mức này' },
-  { k: 'BoQuaLot', l: 'Bỏ vì lot', d: 0, tech: true, tip: 'Số tín hiệu bị bỏ vì 0,01 lot đã rủi ro quá mức cho phép' }
+  { k: 'Lan', l: 'Phương án' },
+  { k: '_dat', l: 'Kết luận', tip: 'Đạt khi kết quả vẫn dương rõ ràng ở cả giai đoạn gần và giai đoạn trước, mỗi giai đoạn ít nhất 30 lượt' },
+  { k: 'LoiNhuan', l: 'Kết quả', d: 2, sign: true, tip: 'Tổng kết quả sau mọi chi phí' },
+  { k: 'SutGiamMax%', l: 'Sụt giảm lớn nhất', d: 1, pct: true, risk: true, tip: 'Mức giảm lớn nhất so với đỉnh. Càng thấp càng ổn định' },
+  { k: 'TyLeThang%', l: 'Tỷ lệ tốt', d: 0, pct: true },
+  { k: 'SoLenh', l: 'Số lượt', d: 0 },
+  { k: 'ProfitFactor', l: 'PF', d: 2, tech: true, tip: 'Tổng dương / tổng âm. Trên 1 là kết quả dương' },
+  { k: 'PF_Truot0.05%', l: 'PF có sai lệch', d: 2, tech: true, pf: true, tip: 'PF khi cộng thêm sai lệch 0.05% mỗi lượt' },
+  { k: '_pfTruoc', l: 'PF · giai đoạn trước', d: 2, tech: true, pf: true, tip: 'PF có sai lệch của cùng phương án ở giai đoạn trước' },
+  { k: '_pfEth', l: 'PF · bộ B', d: 2, tech: true, pf: true, tip: 'PF có sai lệch của cùng phương án trên bộ dữ liệu B' },
+  { k: 'RecoveryFactor', l: 'Recovery', d: 2, tech: true, tip: 'Kết quả / sụt giảm lớn nhất' },
+  { k: 'E_R', l: 'Kỳ vọng R', d: 3, tech: true, tip: 'Kết quả trung bình mỗi lượt theo đơn vị R' },
+  { k: 'tStat', l: 't-stat', d: 2, tech: true, tip: 'Trên 2 thì khó là do ngẫu nhiên' },
+  { k: 'PF_BoTop5', l: 'PF bỏ top 5', d: 2, tech: true, tip: 'PF khi bỏ 5 lượt tốt nhất' },
+  { k: 'MC_SutGiam95%', l: 'MC sụt giảm 95%', d: 2, tech: true, tip: 'Monte Carlo: 95% số lần xáo trộn thứ tự có sụt giảm thấp hơn mức này' },
+  { k: 'BoQuaLot', l: 'Bỏ qua', d: 0, tech: true, tip: 'Số lượt bị bỏ vì vượt mức rủi ro cho phép' }
 ];
 
 function fileLabel(f) {
   var m = f.Ten.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})-(.+)\.csv$/);
   if (!m) return f.Ten;
-  var kind = m[6].replace('-CHUADU', ''), mode = kind === 'chinhxac' ? 'Kiểm tra kỹ' : kind === 'nhanh' ? 'Thử nhanh' : kind;
+  var kind = m[6].replace('-CHUADU', ''), mode = kind === 'chinhxac' ? 'Chi tiết' : kind === 'nhanh' ? 'Nhanh' : kind;
   return m[4] + ':' + m[5] + ' ngày ' + m[3] + '/' + m[2] + '/' + m[1] + ' · ' + mode + (m[6].indexOf('CHUADU') >= 0 ? ' · CHƯA ĐỦ' : '');
 }
 function getText(name) {
@@ -601,7 +618,7 @@ function ensureResults() {
     RES.files = files || []; RES.loaded = true;
     var sel = $('file-sel');
     sel.innerHTML = RES.files.map(function (f) { return '<option value="' + esc(f.Ten) + '">' + esc(fileLabel(f)) + '</option>'; }).join('');
-    if (!RES.files.length) { $('tbl').querySelector('tbody').innerHTML = '<tr><td class="empty" colspan="6">Chưa có kết quả nào. Ở Bảng điều khiển, chọn "Thử các chiến lược giao dịch" rồi bấm Bắt đầu.</td></tr>'; return; }
+    if (!RES.files.length) { $('tbl').querySelector('tbody').innerHTML = '<tr><td class="empty" colspan="6">Chưa có kết quả nào. Ở tab Điều khiển, chọn "Mô phỏng nhanh" rồi bấm Bắt đầu.</td></tr>'; return; }
     var keep = RES.want !== 'newest' && RES.file && RES.files.some(function (f) { return f.Ten === RES.file; });
     sel.value = keep ? RES.file : RES.files[0].Ten;
     RES.want = null;
@@ -661,7 +678,7 @@ function datState(r, map, thr) {
   if (+p.gan.SoLenh < MIN_TRADES || +p.truoc.SoLenh < MIN_TRADES) return 'na';
   return 'ok';
 }
-var VERDICT = { ok: 'Đạt tiêu chí kiểm thử', no: 'Kết quả chưa đạt yêu cầu', na: 'Chưa đủ dữ liệu để kết luận', zero: 'Không vào lệnh nào' };
+var VERDICT = { ok: 'Đạt', no: 'Chưa đạt', na: 'Chưa đủ dữ liệu', zero: 'Không có lượt nào' };
 function pill(s) {
   var cls = { ok: 'ok', no: 'no', na: 'na', zero: 'zero' }[s], ic = { ok: '✓ ', no: '✗ ', na: '? ', zero: '– ' }[s];
   return '<span class="pill ' + cls + '">' + ic + VERDICT[s] + '</span>';
@@ -671,21 +688,21 @@ function explain(r) {
   function pf(x) { return fmt(num(x['PF_Truot0.05%']), 2); }
   function per(x, name) {
     var v = num(x['PF_Truot0.05%']), lr = num(x.LoiNhuan);
-    if (+x.SoLenh < MIN_TRADES) return name + ' chỉ có ' + x.SoLenh + ' lệnh, quá ít để tin.';
-    if (v < 1) return name + ' bị <b>lỗ</b> sau khi tính trượt giá (PF ' + pf(x) + ', lời/lỗ ' + money(lr) + ' USD).';
-    if (v < thr) return name + ' lời quá mỏng sau trượt giá (PF ' + pf(x) + ', cần từ ' + fmt(thr, 2) + ').';
-    return name + ' lời rõ ràng (PF ' + pf(x) + ', lời ' + money(lr) + ' USD).';
+    if (+x.SoLenh < MIN_TRADES) return name + ' chỉ có ' + x.SoLenh + ' lượt, quá ít để tin.';
+    if (v < 1) return name + ' cho kết quả <b>âm</b> khi tính sai lệch (PF ' + pf(x) + ', kết quả ' + money(lr) + ').';
+    if (v < thr) return name + ' dương quá mỏng khi tính sai lệch (PF ' + pf(x) + ', cần từ ' + fmt(thr, 2) + ').';
+    return name + ' dương rõ ràng (PF ' + pf(x) + ', kết quả ' + money(lr) + ').';
   }
-  if (s === 'zero') out.push('Chiến lược này không vào lệnh nào trong thời gian thử, nên không đánh giá được. Thường do vốn quá nhỏ so với lot tối thiểu.');
+  if (s === 'zero') out.push('Phương án này không có lượt nào trong thời gian mô phỏng, nên không đánh giá được.');
   else {
-    if (p.gan) out.push(per(p.gan, '3 năm gần đây'));
-    if (p.truoc) out.push(per(p.truoc, '3 năm trước đó'));
-    if (!p.truoc) out.push('Chưa có kết quả của 3 năm trước đó, nên chưa biết lời có phải do may mắn không.');
-    if (s === 'ok') out.push(isQuick() ? 'Đây mới là lần <b>thử nhanh</b>. Bước tiếp theo: "Kiểm tra kỹ chiến lược tốt nhất" trước khi chạy tài khoản demo.' : 'Đã qua lần kiểm tra kỹ. Có thể chạy thử trên tài khoản demo vài tuần.');
+    if (p.gan) out.push(per(p.gan, 'Giai đoạn gần'));
+    if (p.truoc) out.push(per(p.truoc, 'Giai đoạn trước'));
+    if (!p.truoc) out.push('Chưa có kết quả giai đoạn trước, nên chưa biết có phải do ngẫu nhiên không.');
+    if (s === 'ok') out.push(isQuick() ? 'Đây mới là lần chạy <b>nhanh</b>. Bước tiếp theo: "Mô phỏng chi tiết".' : 'Đã qua lần chạy chi tiết. Có thể chạy ở môi trường thử vài tuần.');
   }
   var dd = num(r['SutGiamMax%']);
-  if (dd != null && dd >= 20) out.push('Lưu ý rủi ro: có lúc vốn giảm tới <b>' + fmt(dd, 1) + '%</b> so với đỉnh.');
-  if (isEth(r.Lan)) out.push('Dòng này là kết quả trên ETH, dùng để xem chiến lược có hoạt động ở thị trường khác không.');
+  if (dd != null && dd >= 20) out.push('Lưu ý: có lúc giảm tới <b>' + fmt(dd, 1) + '%</b> so với đỉnh.');
+  if (isEth(r.Lan)) out.push('Dòng này chạy trên bộ dữ liệu B, để xem phương án có ổn ở nơi khác không.');
   return '<p><b>' + VERDICT[s] + '.</b></p>' + out.map(function (x) { return '<p>' + x + '</p>'; }).join('');
 }
 function setGroup(g) {
@@ -725,7 +742,7 @@ function renderTable() {
   }).join('') + '</tr>';
   $('tbl').querySelector('tbody').innerHTML = rows.length ? rows.map(function (r) {
     return '<tr data-n="' + esc(r.Lan) + '"' + (RES.sel === r.Lan ? ' class="sel"' : '') + '>' + cols.map(function (c) {
-      if (c.k === 'Lan') return '<td><b>' + esc(r.Lan) + '</b></td>';
+      if (c.k === 'Lan') return '<td><b>' + esc(dn(r.Lan)) + '</b></td>';
       if (c.k === '_dat') return '<td>' + pill(r._datS) + '</td>';
       var n = num(r[c.k]);
       if (n == null) return '<td class="num muted">–</td>';
@@ -736,9 +753,9 @@ function renderTable() {
       var txt = c.sign ? money(n) : fmt(n, c.d) + (c.pct ? '%' : '');
       return '<td class="' + cls + '">' + txt + '</td>';
     }).join('') + '</tr>';
-  }).join('') : '<tr><td class="empty" colspan="' + cols.length + '">Không có chiến lược nào khớp bộ lọc.</td></tr>';
+  }).join('') : '<tr><td class="empty" colspan="' + cols.length + '">Không có phương án nào khớp bộ lọc.</td></tr>';
   var nDat = RES.rows.filter(function (r) { return !isTruoc(r.Lan) && !isEth(r.Lan) && datState(r) === 'ok'; }).length;
-  $('count').textContent = rows.length + '/' + RES.rows.length + ' dòng · ' + nDat + ' chiến lược đạt';
+  $('count').textContent = rows.length + '/' + RES.rows.length + ' dòng · ' + nDat + ' phương án đạt';
 }
 
 /* ---------- Chi tiết một chiến lược ---------- */
@@ -759,25 +776,25 @@ function showDetail(name) {
   RES.sel = name;
   document.querySelectorAll('#tbl tbody tr').forEach(function (tr) { tr.classList.toggle('sel', tr.dataset.n === name); });
   $('detail').hidden = false;
-  $('d-title').textContent = name;
-  $('d-sub').innerHTML = '<span class="num">lệnh đầu tiên ' + esc(r.LenhDau || '') + '</span>';
+  $('d-title').textContent = dn(name);
+  $('d-sub').innerHTML = '<span class="num">lượt đầu tiên ' + esc(r.LenhDau || '') + '</span>';
   var st = datState(r);
   $('d-explain').className = 'explain ' + st; $('d-explain').innerHTML = explain(r);
   var p = num(r.LoiNhuan), dd = num(r['SutGiamMax%']);
   $('d-kpis').innerHTML = [
-    kpi('Lời/lỗ', '<span style="color:var(--' + (p >= 0 ? 'gain' : 'loss') + ')">' + money(p) + ' $</span>', 'sau phí và swap'),
-    kpi('Lỗ sâu nhất từ đỉnh', '<span' + (dd >= 20 ? ' style="color:var(--loss)"' : '') + '>' + fmt(dd, 1) + '%</span>', dd >= 20 ? 'cao, cần cẩn thận' : dd >= 10 ? 'trung bình' : 'thấp'),
-    kpi('Lệnh thắng', fmt(num(r['TyLeThang%']), 0) + '%', 'lời TB ' + fmt(num(r.LaiTB), 2) + ' $ · lỗ TB ' + fmt(Math.abs(num(r.LoTB)), 2) + ' $'),
-    kpi('Số lệnh', fmt(num(r.SoLenh), 0), 'mua ' + (r.Buy || 0) + ' · bán ' + (r.Sell || 0))
+    kpi('Kết quả', '<span style="color:var(--' + (p >= 0 ? 'gain' : 'loss') + ')">' + money(p) + '</span>', 'sau mọi chi phí'),
+    kpi('Sụt giảm lớn nhất', '<span' + (dd >= 20 ? ' style="color:var(--loss)"' : '') + '>' + fmt(dd, 1) + '%</span>', dd >= 20 ? 'cao' : dd >= 10 ? 'trung bình' : 'thấp'),
+    kpi('Tỷ lệ tốt', fmt(num(r['TyLeThang%']), 0) + '%', 'TB dương ' + fmt(num(r.LaiTB), 2) + ' · TB âm ' + fmt(Math.abs(num(r.LoTB)), 2)),
+    kpi('Số lượt', fmt(num(r.SoLenh), 0), 'chiều + ' + (r.Buy || 0) + ' · chiều − ' + (r.Sell || 0))
   ].join('');
   $('d-kpis-tech').innerHTML = [
     kpi('Profit factor', fmt(num(r.ProfitFactor), 2), 'trượt 0.05%: ' + fmt(num(r['PF_Truot0.05%']), 2) + ' · 0.1%: ' + fmt(num(r['PF_Truot0.1%']), 2)),
     kpi('Recovery factor', fmt(num(r.RecoveryFactor), 2), 'Sharpe ' + fmt(num(r.Sharpe), 2)),
-    r.E_R != null ? kpi('Kỳ vọng mỗi lệnh', fmt(num(r.E_R), 3) + ' R', 't-stat ' + fmt(num(r.tStat), 2)) : '',
-    kpi('Monte Carlo sụt giảm 95%', fmt(num(r['MC_SutGiam95%']), 2) + '%', r.MC_ChuoiThua95 != null ? 'chuỗi thua 95%: ' + r.MC_ChuoiThua95 + ' lệnh' : ''),
-    r.PF_BoTop5 != null ? kpi('PF bỏ 5 lệnh tốt nhất', fmt(num(r.PF_BoTop5), 2), 'top 5 chiếm ' + fmt(num(r['TyTrongTop5%']), 0) + '% lời') : '',
-    kpi('Giữ lệnh trung bình', fmt(num(r.GiuLenhTB_gio), 1) + ' giờ', 'swap ' + fmt(num(r.TongSwap), 2) + ' $'),
-    kpi('Bỏ vì lot', fmt(num(r.BoQuaLot), 0), 'tín hiệu bị bỏ do lot tối thiểu quá rủi ro')
+    r.E_R != null ? kpi('Kỳ vọng mỗi lượt', fmt(num(r.E_R), 3) + ' R', 't-stat ' + fmt(num(r.tStat), 2)) : '',
+    kpi('Monte Carlo sụt giảm 95%', fmt(num(r['MC_SutGiam95%']), 2) + '%', r.MC_ChuoiThua95 != null ? 'chuỗi âm 95%: ' + r.MC_ChuoiThua95 + ' lượt' : ''),
+    r.PF_BoTop5 != null ? kpi('PF bỏ 5 lượt tốt nhất', fmt(num(r.PF_BoTop5), 2), 'top 5 chiếm ' + fmt(num(r['TyTrongTop5%']), 0) + '% kết quả') : '',
+    kpi('Thời gian mỗi lượt', fmt(num(r.GiuLenhTB_gio), 1) + ' giờ', 'trung bình'),
+    kpi('Bỏ qua', fmt(num(r.BoQuaLot), 0), 'lượt vượt mức rủi ro cho phép')
   ].join('');
   var trades = tradesFor(name).slice().sort(function (a, b) { return (parseTime(a.ThoiGianVao) || 0) - (parseTime(b.ThoiGianVao) || 0); });
   drawEquity(trades, r);
@@ -805,7 +822,7 @@ function hideTip(box) { var t = box.querySelector('.tip'); if (t) t.hidden = tru
 
 function drawEquity(trades, r) {
   var box = $('c-equity');
-  if (!trades.length) { box.innerHTML = '<div class="ttl">Lời lũy kế</div><div class="empty">' + (RES.tradeText === null && !(RES.files.filter(function (f) { return f.Ten === RES.file; })[0] || {}).Lenh ? 'Đợt này không có file danh sách lệnh (-lenh.csv).' : RES.tradeText ? 'Cấu hình này không có lệnh nào.' : 'Đang tải danh sách lệnh…') + '</div>'; return; }
+  if (!trades.length) { box.innerHTML = '<div class="ttl">Kết quả cộng dồn</div><div class="empty">' + (RES.tradeText === null && !(RES.files.filter(function (f) { return f.Ten === RES.file; })[0] || {}).Lenh ? 'Lần chạy này không có danh sách lượt.' : RES.tradeText ? 'Phương án này không có lượt nào.' : 'Đang tải danh sách lượt…') + '</div>'; return; }
   var pts = [], cum = 0, peak = 0;
   trades.forEach(function (t) { var x = parseTime(t.ThoiGianVao); if (x == null) return; cum += num(t.LaiRong) || 0; peak = Math.max(peak, cum); pts.push({ x: x, y: cum, p: num(t.LaiRong) || 0, t: t, dd: cum - peak }); });
   var W = svgW(box), H = 240, L = 64, R = 12, T = 12, B = 26;
@@ -817,7 +834,7 @@ function drawEquity(trades, r) {
   var area = 'M' + sx(pts[0].x).toFixed(1) + ' ' + sy(0) + pts.map(function (p) { return 'L' + sx(p.x).toFixed(1) + ' ' + sy(p.y).toFixed(1); }).join('') + 'L' + sx(pts[pts.length - 1].x).toFixed(1) + ' ' + sy(0) + 'Z';
   var years = []; for (var yy = new Date(x0).getUTCFullYear() + 1; Date.UTC(yy, 0, 1) <= x1; yy++) years.push(yy);
   var last = pts[pts.length - 1];
-  var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Lãi lũy kế của ' + esc(r.Lan) + '">' +
+  var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kết quả cộng dồn của ' + esc(dn(r.Lan)) + '">' +
     ticks.map(function (t) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + sy(t) + '" y2="' + sy(t) + '" stroke="var(--line)" stroke-width="1"' + (t === 0 ? '' : ' stroke-dasharray="2 3"') + '/><text x="' + (L - 8) + '" y="' + (sy(t) + 4) + '" text-anchor="end">' + fmt(t, 0) + '</text>'; }).join('') +
     years.map(function (y) { var x = sx(Date.UTC(y, 0, 1)); return '<line x1="' + x + '" x2="' + x + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/><text x="' + x + '" y="' + (H - 8) + '" text-anchor="middle">' + y + '</text>'; }).join('') +
     '<path d="' + area + '" fill="var(--accent)" fill-opacity="0.10" stroke="none"/>' +
@@ -826,7 +843,7 @@ function drawEquity(trades, r) {
     '<line id="eq-x" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--ink3)" stroke-width="1" visibility="hidden"/>' +
     '<circle id="eq-dot" r="4" fill="var(--accent)" stroke="var(--panel)" stroke-width="2" visibility="hidden"/>' +
     '<rect x="' + L + '" y="0" width="' + (W - L - R) + '" height="' + H + '" fill="transparent" stroke="none" id="eq-hit"/></svg>';
-  box.innerHTML = '<div class="ttl">Tiền lời cộng dồn (USD)</div><div class="cap">Đường đi lên là đang lời, đi xuống là đang lỗ · cuối kỳ <span class="num">' + money(last.y) + '</span> · ' + pts.length + ' lệnh</div>' + g;
+  box.innerHTML = '<div class="ttl">Kết quả cộng dồn</div><div class="cap">Đi lên là tăng, đi xuống là giảm · cuối kỳ <span class="num">' + money(last.y) + '</span> · ' + pts.length + ' lượt</div>' + g;
   var svg = box.querySelector('svg'), hit = svg.querySelector('#eq-hit'), vx = svg.querySelector('#eq-x'), dot = svg.querySelector('#eq-dot');
   function move(ev) {
     var rc = svg.getBoundingClientRect(), mx = (ev.clientX - rc.left) * W / rc.width;
@@ -836,7 +853,7 @@ function drawEquity(trades, r) {
     var p = pts[lo], px = sx(p.x), py = sy(p.y);
     vx.setAttribute('x1', px); vx.setAttribute('x2', px); vx.setAttribute('visibility', 'visible');
     dot.setAttribute('cx', px); dot.setAttribute('cy', py); dot.setAttribute('visibility', 'visible');
-    tipAt(box, '<b>' + dstr(p.x) + '</b> · lệnh ' + (lo + 1) + ' (' + esc(p.t.Chieu) + ')<br>Lệnh này: <span class="num">' + money(p.p) + '</span> (' + fmt(num(p.t.R), 2) + ' R)<br>Lũy kế: <span class="num">' + money(p.y) + '</span>' + (p.dd < 0 ? ' · từ đỉnh <span class="num">' + fmt(p.dd, 2) + '</span>' : ''), px * rc.width / W, py * rc.height / H + 40);
+    tipAt(box, '<b>' + dstr(p.x) + '</b> · lượt ' + (lo + 1) + ' (' + side(p.t.Chieu) + ')<br>Lượt này: <span class="num">' + money(p.p) + '</span> (' + fmt(num(p.t.R), 2) + ' R)<br>Cộng dồn: <span class="num">' + money(p.y) + '</span>' + (p.dd < 0 ? ' · từ đỉnh <span class="num">' + fmt(p.dd, 2) + '</span>' : ''), px * rc.width / W, py * rc.height / H + 40);
   }
   hit.addEventListener('mousemove', move);
   hit.addEventListener('mouseleave', function () { vx.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); hideTip(box); });
@@ -866,18 +883,19 @@ function barChart(box, title, cap, items, opt) {
   });
 }
 function drawYears(r) {
-  var items = String(r.LaiTheoNam || '').split(/\s+/).map(function (s) { var m = /(\d{4})=([+-]?\d+(?:\.\d+)?)/.exec(s); return m ? { label: m[1], v: +m[2], tip: '<b>Năm ' + m[1] + '</b><br><span class="num">' + money(+m[2]) + '</span> USD' } : null; }).filter(Boolean);
-  barChart($('c-year'), 'Lời/lỗ theo năm (USD)', 'Năm đầu và năm cuối có thể không đủ 12 tháng.', items);
+  var items = String(r.LaiTheoNam || '').split(/\s+/).map(function (s) { var m = /(\d{4})=([+-]?\d+(?:\.\d+)?)/.exec(s); return m ? { label: m[1], v: +m[2], tip: '<b>Năm ' + m[1] + '</b><br><span class="num">' + money(+m[2]) + '</span>' } : null; }).filter(Boolean);
+  barChart($('c-year'), 'Theo năm', 'Năm đầu và năm cuối có thể không đủ 12 tháng.', items);
 }
 function drawHours(trades) {
   var box = $('c-hour');
-  if (!trades.length || trades[0].GioUTC == null) { box.innerHTML = '<div class="ttl">Lời/lỗ theo giờ vào lệnh</div><div class="empty">Đợt này không ghi giờ vào lệnh.</div>'; return; }
+  if (!trades.length || trades[0].GioUTC == null) { box.innerHTML = '<div class="ttl">Theo giờ bắt đầu</div><div class="empty">Lần chạy này không ghi giờ.</div>'; return; }
   var h = []; for (var i = 0; i < 24; i++) h.push({ n: 0, w: 0, p: 0 });
   trades.forEach(function (t) { var g = +t.GioUTC; if (g >= 0 && g < 24) { h[g].n++; h[g].p += num(t.LaiRong) || 0; if (num(t.LaiRong) > 0) h[g].w++; } });
-  barChart(box, 'Lời/lỗ theo giờ vào lệnh (giờ UTC, giờ VN = +7)', 'Cột xanh: các lệnh vào giờ đó có lời; cột đỏ: lỗ.', h.map(function (x, i) {
-    return { label: String(i), v: x.p, tip: '<b>' + i + 'h UTC (' + ((i + 7) % 24) + 'h VN)</b><br>' + x.n + ' lệnh · thắng ' + (x.n ? Math.round(100 * x.w / x.n) : 0) + '%<br><span class="num">' + money(x.p) + '</span> USD' };
+  barChart(box, 'Theo giờ bắt đầu (UTC, giờ VN = +7)', 'Cột xanh: kết quả dương; cột đỏ: âm.', h.map(function (x, i) {
+    return { label: String(i), v: x.p, tip: '<b>' + i + 'h UTC (' + ((i + 7) % 24) + 'h VN)</b><br>' + x.n + ' lượt · tốt ' + (x.n ? Math.round(100 * x.w / x.n) : 0) + '%<br><span class="num">' + money(x.p) + '</span>' };
   }));
 }
+function side(c) { return c === 'Buy' ? '+' : c === 'Sell' ? '−' : esc(c); }
 function statRows(list) {
   var n = list.length, w = list.filter(function (t) { return num(t.LaiRong) > 0; }).length, p = list.reduce(function (s, t) { return s + (num(t.LaiRong) || 0); }, 0);
   var rs = list.map(function (t) { return num(t.R); }).filter(function (x) { return x != null; });
@@ -885,38 +903,39 @@ function statRows(list) {
   return { n: n, w: n ? 100 * w / n : null, p: p, er: er };
 }
 function miniTable(title, rows) {
-  return '<div class="ttl" style="font-weight:600;margin-bottom:6px">' + title + '</div><div class="tbl-wrap"><table><thead><tr><th style="cursor:default">Nhóm</th><th style="cursor:default">Lệnh</th><th style="cursor:default">Thắng %</th><th style="cursor:default">Kỳ vọng R</th><th style="cursor:default">Lời/lỗ $</th></tr></thead><tbody>' +
+  return '<div class="ttl" style="font-weight:600;margin-bottom:6px">' + title + '</div><div class="tbl-wrap"><table><thead><tr><th style="cursor:default">Nhóm</th><th style="cursor:default">Lượt</th><th style="cursor:default">Tỷ lệ tốt %</th><th style="cursor:default">Kỳ vọng R</th><th style="cursor:default">Kết quả</th></tr></thead><tbody>' +
     rows.map(function (r) { var s = r.s; return '<tr style="cursor:default"><td>' + esc(r.l) + '</td><td class="num">' + s.n + '</td><td class="num">' + fmt(s.w, 1) + '</td><td class="num">' + fmt(s.er, 3) + '</td><td class="num ' + (s.p > 0 ? 'pos' : s.p < 0 ? 'neg' : '') + '">' + money(s.p) + '</td></tr>'; }).join('') + '</tbody></table></div>';
 }
 function drawSide(trades) {
   if (!trades.length) { $('d-side').innerHTML = ''; return; }
-  var rows = [{ l: 'Lệnh mua', s: statRows(trades.filter(function (t) { return t.Chieu === 'Buy'; })) }, { l: 'Lệnh bán', s: statRows(trades.filter(function (t) { return t.Chieu === 'Sell'; })) }];
+  var rows = [{ l: 'Chiều +', s: statRows(trades.filter(function (t) { return t.Chieu === 'Buy'; })) }, { l: 'Chiều −', s: statRows(trades.filter(function (t) { return t.Chieu === 'Sell'; })) }];
   if (trades[0].Thu != null) {
     var we = trades.filter(function (t) { return t.Thu === '0' || t.Thu === '6'; }), wd = trades.filter(function (t) { return t.Thu !== '0' && t.Thu !== '6'; });
     rows.push({ l: 'Ngày thường', s: statRows(wd) }, { l: 'Cuối tuần', s: statRows(we) });
   }
-  $('d-side').innerHTML = miniTable('Mua hay bán, ngày thường hay cuối tuần', rows);
+  $('d-side').innerHTML = miniTable('Theo chiều và ngày', rows);
 }
 function drawCompare(r) {
-  var fam = [['3 năm gần đây', partner(r.Lan, 'base')], ['3 năm trước đó', partner(r.Lan, 'truoc')], ['ETH', partner(r.Lan, 'eth')]];
+  var fam = [['Giai đoạn gần', partner(r.Lan, 'base')], ['Giai đoạn trước', partner(r.Lan, 'truoc')], ['Bộ dữ liệu B', partner(r.Lan, 'eth')]];
   var have = fam.filter(function (f) { return f[1]; });
   if (have.length < 2) { $('d-compare').innerHTML = ''; return; }
-  $('d-compare').innerHTML = '<div class="ttl" style="font-weight:600;margin-bottom:6px">Cùng chiến lược ở giai đoạn / thị trường khác</div><div class="tbl-wrap"><table><thead><tr><th style="cursor:default">Giai đoạn</th><th style="cursor:default">Lãi $</th><th style="cursor:default">PF</th><th style="cursor:default">PF trượt 0.05%</th><th style="cursor:default">Sụt giảm %</th><th style="cursor:default">Lệnh</th></tr></thead><tbody>' +
-    have.map(function (f) { var x = f[1], p = num(x.LoiNhuan); return '<tr data-n="' + esc(x.Lan) + '"' + (x.Lan === r.Lan ? ' class="sel"' : '') + '><td>' + esc(f[0]) + '<br><span class="muted" style="font-size:11px">' + esc(x.Lan) + '</span></td><td class="num ' + (p > 0 ? 'pos' : p < 0 ? 'neg' : '') + '">' + money(p) + '</td><td class="num">' + fmt(num(x.ProfitFactor), 2) + '</td><td class="num">' + fmt(num(x['PF_Truot0.05%']), 2) + '</td><td class="num">' + fmt(num(x['SutGiamMax%']), 2) + '</td><td class="num">' + esc(x.SoLenh) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  $('d-compare').innerHTML = '<div class="ttl" style="font-weight:600;margin-bottom:6px">Cùng phương án ở nơi khác</div><div class="tbl-wrap"><table><thead><tr><th style="cursor:default">Dữ liệu</th><th style="cursor:default">Kết quả</th><th style="cursor:default">PF</th><th style="cursor:default">PF có sai lệch</th><th style="cursor:default">Sụt giảm %</th><th style="cursor:default">Lượt</th></tr></thead><tbody>' +
+    have.map(function (f) { var x = f[1], p = num(x.LoiNhuan); return '<tr data-n="' + esc(x.Lan) + '"' + (x.Lan === r.Lan ? ' class="sel"' : '') + '><td>' + esc(f[0]) + '<br><span class="muted" style="font-size:11px">' + esc(dn(x.Lan)) + '</span></td><td class="num ' + (p > 0 ? 'pos' : p < 0 ? 'neg' : '') + '">' + money(p) + '</td><td class="num">' + fmt(num(x.ProfitFactor), 2) + '</td><td class="num">' + fmt(num(x['PF_Truot0.05%']), 2) + '</td><td class="num">' + fmt(num(x['SutGiamMax%']), 2) + '</td><td class="num">' + esc(x.SoLenh) + '</td></tr>'; }).join('') + '</tbody></table></div>';
   $('d-compare').querySelectorAll('tr[data-n]').forEach(function (tr) { tr.onclick = function () { showDetail(tr.dataset.n); }; });
 }
 function drawTrades(trades) {
   var t = $('d-trades'), MAX = 300;
-  $('d-trades-n').textContent = trades.length ? (trades.length > MAX ? MAX + ' lệnh gần nhất / ' + trades.length : trades.length + ' lệnh') : '';
-  if (!trades.length) { t.querySelector('thead').innerHTML = ''; t.querySelector('tbody').innerHTML = '<tr><td class="empty">Không có lệnh.</td></tr>'; return; }
-  var cols = [['ThoiGianVao', 'Vào lệnh'], ['Chieu', 'Chiều'], ['LaiRong', 'Lãi $'], ['R', 'R'], ['MFE_R', 'MFE R'], ['MAE_R', 'MAE R'], ['GioGiu', 'Giữ (giờ)'], ['ViThe', 'Vị thế'], ['ADX', 'ADX'], ['Spread_diem', 'Spread'], ['Tin', 'Tin gần'], ['GioToiTin', 'Giờ tới tin']]
+  $('d-trades-n').textContent = trades.length ? (trades.length > MAX ? MAX + ' lượt gần nhất / ' + trades.length : trades.length + ' lượt') : '';
+  if (!trades.length) { t.querySelector('thead').innerHTML = ''; t.querySelector('tbody').innerHTML = '<tr><td class="empty">Không có lượt nào.</td></tr>'; return; }
+  var cols = [['ThoiGianVao', 'Bắt đầu'], ['Chieu', 'Chiều'], ['LaiRong', 'Kết quả'], ['R', 'R'], ['GioGiu', 'Thời gian (giờ)']]
     .filter(function (c) { return trades[0][c[0]] != null; });
   t.querySelector('thead').innerHTML = '<tr>' + cols.map(function (c) { return '<th style="cursor:default">' + c[1] + '</th>'; }).join('') + '</tr>';
   t.querySelector('tbody').innerHTML = trades.slice(-MAX).reverse().map(function (x) {
     return '<tr style="cursor:default">' + cols.map(function (c) {
       var v = x[c[0]];
       if (c[0] === 'LaiRong') { var n = num(v); return '<td class="num ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '') + '">' + money(n) + '</td>'; }
-      if (c[0] === 'ThoiGianVao' || c[0] === 'Chieu' || c[0] === 'Tin') return '<td>' + esc(v) + '</td>';
+      if (c[0] === 'Chieu') return '<td>' + side(v) + '</td>';
+      if (c[0] === 'ThoiGianVao') return '<td>' + esc(v) + '</td>';
       return '<td class="num">' + esc(v) + '</td>';
     }).join('') + '</tr>';
   }).join('');
