@@ -12,6 +12,9 @@ $ResDir     = Join-Path $ProjectDir "ket-qua"
 $WorkDir    = Join-Path $env:TEMP "TrendBot-giaodien"
 if (-not (Test-Path $WorkDir)) { New-Item -ItemType Directory -Path $WorkDir | Out-Null }
 $LogFile    = Join-Path $WorkDir "nhat-ky.txt"
+$SetDir     = Join-Path $ProjectDir "cai-dat"          # bo cai dat san (co trong git)
+$MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu tu tab "Thong so" (KHONG dua len git: co the chua token)
+. (Join-Path $ProjectDir "MT5Common.ps1")              # Find-MT5, $BotName
 $ErrFile    = Join-Path $WorkDir "loi.txt"
 
 # Viec dang chay (chi 1 viec mot luc, giong cac nut VS Code)
@@ -99,6 +102,10 @@ function Start-BotJob($body) {
     $env:TRENDBOT_DONGMT5 = if ($body.dongMT5) { "y" } else { "n" }
     $env:TRENDBOT_GUINHATKY = if ($body.guiNhatKy) { "y" } else { "n" }
     $env:TRENDBOT_GIAODIEN = "1"
+    # Backtest voi bo thong so tu tab "Thong so" (CaiDatBot.ps1 doc bien nay)
+    $env:TRENDBOT_SETFILE = ""
+    if ($viec -eq 'backtest' -and $body.setFile) { $env:TRENDBOT_SETFILE = (Resolve-SetFile ([string]$body.setFile)) }
+    $env:TRENDBOT_VON = [string]$body.von; $env:TRENDBOT_SONAM = [string]$body.soNam
     foreach ($f in @($LogFile, $ErrFile)) { if (Test-Path $f) { Remove-Item $f -Force } }
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $ProjectDir 'Chay.ps1')`"", '-Viec', $viec, '-Nhom', $nhom)
     $sp = @{ FilePath = "powershell"; ArgumentList = $argList; WorkingDirectory = $ProjectDir; PassThru = $true
@@ -107,7 +114,7 @@ function Start-BotJob($body) {
     $p = Start-Process @sp
     # Giu handle ngay: Windows PowerShell chi doc duoc ExitCode khi da lay Handle truoc luc tien trinh ket thuc
     $null = $p.Handle
-    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY, Env:\TRENDBOT_GIAODIEN -ErrorAction SilentlyContinue
+    Remove-Item Env:\TRENDBOT_LAYCODE, Env:\TRENDBOT_DONGMT5, Env:\TRENDBOT_GUINHATKY, Env:\TRENDBOT_GIAODIEN, Env:\TRENDBOT_SETFILE, Env:\TRENDBOT_VON, Env:\TRENDBOT_SONAM -ErrorAction SilentlyContinue
     $script:Job = @{ Proc = $p; Viec = $viec; Nhom = $nhom; Start = Get-Date; End = $null; ExitCode = $null; Stopped = $false }
 }
 
@@ -126,6 +133,52 @@ function Get-ResultFiles {
         $t = $_.Name -replace '\.csv$', '-lenh.csv'
         @{ Ten = $_.Name; Lenh = $(if (Test-Path (Join-Path $ResDir $t)) { $t } else { "" }); Sua = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm") }
     })
+}
+
+# ---- Tab "Thong so" ----
+# Ten file .set hop le: chu, so, - _ . + (khong co duong dan)
+function Test-SetName([string]$name) { return $name -match '^[\w.+-]{1,60}\.set$' }
+# "rieng:ten.set" -> cai-dat-rieng\ten.set ; "ten.set" -> cai-dat\ten.set
+function Resolve-SetFile([string]$ref) {
+    $dir = $SetDir; $name = $ref
+    if ($ref.StartsWith("rieng:")) { $dir = $MySetDir; $name = $ref.Substring(6) }
+    if (-not (Test-SetName $name)) { throw "Ten file khong hop le: $ref" }
+    $f = Join-Path $dir $name
+    if (-not (Test-Path $f)) { throw "Khong thay file $ref" }
+    return $f
+}
+function Get-SetList {
+    $out = @()
+    foreach ($d in @(@{ Dir = $MySetDir; Pre = "rieng:"; Nguon = "rieng" }, @{ Dir = $SetDir; Pre = ""; Nguon = "cai-dat" })) {
+        if (-not (Test-Path $d.Dir)) { continue }
+        foreach ($f in @(Get-ChildItem $d.Dir -File -Filter "*.set" | Sort-Object Name)) {
+            if (-not (Test-SetName $f.Name)) { continue }
+            $out += @{ Ref = $d.Pre + $f.Name; Ten = $f.Name; Nguon = $d.Nguon; Sua = $f.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
+                       NoiDung = [IO.File]::ReadAllText($f.FullName) }   # tu nhan BOM UTF-16 / UTF-8
+        }
+    }
+    return $out
+}
+function Save-SetFile($body) {
+    $name = [string]$body.ten
+    if (-not $name.EndsWith(".set")) { $name += ".set" }
+    if (-not (Test-SetName $name)) { throw "Ten chi gom chu khong dau, so, dau - _ . (toi da 60 ky tu)." }
+    $text = [string]$body.noiDung
+    if ($text.Length -gt 200000 -or $text -notmatch '(?m)^Inp\w+=') { throw "Noi dung khong hop le." }
+    if (-not (Test-Path $MySetDir)) { New-Item -ItemType Directory -Path $MySetDir | Out-Null }
+    $f = Join-Path $MySetDir $name
+    if ((Test-Path $f) -and -not $body.ghiDe) { return @{ Ok = $false; DaCo = $true } }
+    $text = ($text -replace "`r?`n", "`r`n")
+    [IO.File]::WriteAllText($f, $text, [Text.Encoding]::Unicode)   # UTF-16 LE co BOM: dung dinh dang MT5 ghi
+    $mt5Path = ""; $mt5Loi = ""
+    try {
+        $mt5 = Find-MT5
+        $dst = Join-Path $mt5.DataDir "MQL5\Presets"
+        if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst | Out-Null }
+        Copy-Item $f $dst -Force
+        $mt5Path = Join-Path $dst $name
+    } catch { $mt5Loi = "$($_.Exception.Message)" }
+    return @{ Ok = $true; Ref = "rieng:$name"; File = $f; MT5 = $mt5Path; MT5Loi = $mt5Loi }
 }
 
 function Send-Bytes($ctx, [byte[]]$bytes, [string]$type, [int]$code = 200) {
@@ -193,6 +246,13 @@ try {
             elseif ($path -eq "/api/dung" -and $method -eq "POST") {
                 Stop-BotJob
                 Send-Json $ctx @{ Ok = $true }
+            }
+            elseif ($path -eq "/api/thongso") {
+                $src = Join-Path $ProjectDir "$BotName.mq5"
+                Send-Json $ctx @{ Mq5 = [IO.File]::ReadAllText($src); Bo = @(Get-SetList) }
+            }
+            elseif ($path -eq "/api/luuthongso" -and $method -eq "POST") {
+                Send-Json $ctx (Save-SetFile (Read-Body $ctx))
             }
             elseif ($path -like "/ket-qua/*") {
                 $name = [Uri]::UnescapeDataString($path.Substring(9))

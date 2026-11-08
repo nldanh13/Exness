@@ -7,3 +7,6 @@ ket-qua-so-sanh.csv
 # Thong tin bi mat (token Telegram, mat khau...)
 *.secret
 .env
+
+# Bo thong so tu luu tu giao dien (tab "Thong so"): co the chua token Telegram
+cai-dat-rieng/

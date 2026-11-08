@@ -479,3 +479,11 @@ Ket luan: khong them bo loc OI / thanh ly. Giu C.
   Cac altcoin vao duoc lenh nhung khong ma nao dat: LTC PF 0,46 / 0,70 (t -4,2), XRP 0,34 / 1,42, SOL 0,98 / 1,35,
   ADA 0,34 / 1,25, DOGE 1,01 / 0,85, LINK, DOT, BNB deu thua; sut giam toi 25-35%.
 - Ket luan: voi 1 trieu khong co ma nao chay C an toan. Dang thu huong SL nho (SLnho-*, v5.92).
+
+## Tab "Thong so" trong giao dien (8/11/2026)
+Mo GiaoDien.cmd -> tab "Thong so". Doc thang moi thong so tu code bot (luon khop phien ban), chia theo nhom, co mo ta.
+- Bat dau tu: mac dinh cua bot, mot bo cai dat san (cai-dat/*.set) hoac bo ban da luu. Thong so khac mac dinh duoc to mau, bam ↺ de tra lai.
+- Muc "Can chu y" canh bao khi rui ro > 2%/lenh, tat khoa lo ngay / dung han, SL < 1 ATR, khac cau hinh C da kiem thu...
+- Luu: ghi file .set day du (UTF-16, dung dinh dang MT5) vao cai-dat-rieng/ (KHONG dua len git, co the chua token Telegram)
+  va chep vao MQL5\Presets. Trong MT5: chart -> F7 -> Inputs -> Load -> chon file.
+- "Luu roi backtest": chay CaiDatBot.ps1 voi bo nay (chon von, 1/3/6 nam), MT5 mo ra va chay bang tick that.

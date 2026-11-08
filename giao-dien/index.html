@@ -175,6 +175,28 @@ details.tech[open] > summary { margin-bottom: 8px; }
 .now-text { font-size: 14px; }
 .sec { padding: 14px; gap: 10px; }
 main { gap: 14px; padding-block: 14px 40px; }
+/* Tab Thông số */
+.ts-groups { display: grid; gap: 12px; }
+.ts-group { padding: 0; gap: 0; }
+.ts-group > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 14px 16px; }
+.ts-group > summary::-webkit-details-marker { display: none; }
+.ts-group > summary::before { content: "▸"; color: var(--ink3); width: 10px; }
+.ts-group[open] > summary::before { content: "▾"; }
+.ts-group > summary h2 { margin: 0; font-size: 15px; }
+.ts-nd { color: var(--accent); }
+.ts-rows { border-top: 1px solid var(--line); }
+.ts-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, 240px) minmax(120px, 200px); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.ts-row:last-child { border-bottom: 0; }
+.ts-row.changed { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.ts-l label { display: block; font-weight: 500; }
+.ts-meta { display: flex; gap: 8px; align-items: center; margin-top: 2px; font-size: 11px; color: var(--ink3); }
+.ts-c select, .ts-c input[type="text"], .ts-c input[type="number"], .ts-c input[type="password"] { width: 100%; }
+.ts-c input[type="password"] { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.ts-d { font-size: 12px; display: flex; gap: 6px; align-items: center; justify-content: flex-end; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.ts-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.ts-sw input { width: 18px; height: 18px; accent-color: var(--accent); }
+.ts-warns { display: grid; gap: 8px; }
+@media (max-width: 720px) { .ts-row { grid-template-columns: 1fr; gap: 6px; } .ts-d { justify-content: flex-start; text-align: left; } }
 </style>
 </head>
 <body>
@@ -183,6 +205,7 @@ main { gap: 14px; padding-block: 14px 40px; }
   <nav class="tabs" aria-label="Trang">
     <a href="#chay" id="tab-chay">Điều khiển</a>
     <a href="#ket-qua" id="tab-ket-qua">Kết quả</a>
+    <a href="#thong-so" id="tab-thong-so">Thông số</a>
   </nav>
 </div></header>
 
@@ -306,6 +329,62 @@ main { gap: 14px; padding-block: 14px 40px; }
     </details>
   </section>
 </main>
+<main id="view-thong-so" hidden>
+  <div class="banner warn" id="ts-static" hidden><b>Chỉ dùng được trên máy.</b> Tab này đọc code bot và ghi file vào thư mục MT5, nên chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span>.</div>
+
+  <section class="sec">
+    <div class="sec-head"><h2>Bộ thông số</h2><span class="hint" id="ts-ver"></span></div>
+    <div class="toolbar">
+      <label for="ts-src" class="muted" style="font-size:12px">Bắt đầu từ</label>
+      <select id="ts-src" style="min-width:260px"></select>
+      <button class="small" id="ts-load">Nạp</button>
+      <input type="text" id="ts-q" placeholder="Tìm thông số (tên hoặc mô tả)" aria-label="Tìm thông số" style="flex:1;min-width:180px">
+    </div>
+    <div class="toolbar">
+      <div class="chips">
+        <button class="chip" id="ts-only" aria-pressed="false">Chỉ hiện thông số đã đổi</button>
+        <button class="chip" id="ts-expand" aria-pressed="false">Mở hết các nhóm</button>
+      </div>
+      <span class="muted" style="font-size:12px;margin-left:auto" id="ts-count"></span>
+    </div>
+    <div class="banner info" id="ts-loadnote" hidden></div>
+  </section>
+
+  <section class="sec" id="ts-warn-sec" hidden>
+    <div class="sec-head"><h2>Cần chú ý</h2><span class="hint">Tự cập nhật khi bạn sửa</span></div>
+    <div id="ts-warn" class="ts-warns"></div>
+  </section>
+
+  <div id="ts-groups" class="ts-groups"></div>
+
+  <section class="sec ts-save" id="ts-save">
+    <div class="sec-head"><h2>Lưu và dùng</h2><span class="hint" id="ts-diffn"></span></div>
+    <div class="toolbar">
+      <label for="ts-name" class="muted" style="font-size:12px">Tên file</label>
+      <input type="text" id="ts-name" style="flex:1;min-width:200px" spellcheck="false" aria-describedby="ts-name-hint">
+      <span class="num muted">.set</span>
+      <button class="primary" id="ts-btn-save">Lưu</button>
+    </div>
+    <div class="muted" style="font-size:12px" id="ts-name-hint">Chữ không dấu, số, dấu - _ . Lưu vào thư mục <span class="num">cai-dat-rieng</span> (không đưa lên GitHub) và chép vào MT5 (<span class="num">MQL5\Presets</span>).</div>
+    <div id="ts-save-msg"></div>
+    <details class="tech"><summary>Backtest thử bộ này trong MT5</summary>
+      <div style="display:grid;gap:10px;margin-top:8px;max-width:80ch">
+        <div class="toolbar">
+          <label class="muted" style="font-size:12px" for="ts-von">Vốn (USD)</label>
+          <input type="number" id="ts-von" value="3000" min="10" step="1" style="width:110px">
+          <label class="muted" style="font-size:12px" for="ts-nam">Thời gian</label>
+          <select id="ts-nam"><option value="1">1 năm gần nhất</option><option value="3">3 năm gần nhất</option><option value="6">6 năm gần nhất</option></select>
+        </div>
+        <label class="opt"><input type="checkbox" id="ts-dong"> <span>Đóng MT5 nếu đang mở. <span class="muted">Bot đang chạy trên tài khoản thật/demo cũng dừng theo. Không đóng thì MT5 chỉ được cài bot, bạn tự mở Tester.</span></span></label>
+        <div class="actions"><button id="ts-btn-bt">Lưu rồi backtest</button></div>
+        <div class="muted" style="font-size:12px">MT5 mở ra và chạy backtest chế độ chính xác (giá tick thật), kết quả xem ngay trong MT5. Một lần backtest không đủ để kết luận: muốn so với C thì cần chạy cả 2 giai đoạn qua nút "Mô phỏng nhanh".</div>
+      </div>
+    </details>
+    <details class="tech"><summary>Xem nội dung file</summary>
+      <pre class="listbox" id="ts-preview" style="max-height:300px"></pre>
+    </details>
+  </section>
+</main>
 </div>
 
 <script>
@@ -320,13 +399,15 @@ function money(v) { if (v == null) return '–'; return (v > 0 ? '+' : '') + fmt
 function dur(s) { s = Math.max(0, s | 0); var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ' giờ ' : '') + m + ' phút ' + x + ' giây'; }
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
-/* ---------- Điều hướng 2 tab ---------- */
+/* ---------- Điều hướng 3 tab ---------- */
 function route() {
-  var h = location.hash === '#ket-qua' ? 'ket-qua' : 'chay';
-  $('view-chay').hidden = h !== 'chay'; $('view-ket-qua').hidden = h !== 'ket-qua';
-  $('tab-chay').setAttribute('aria-current', h === 'chay' ? 'page' : 'false');
-  $('tab-ket-qua').setAttribute('aria-current', h === 'ket-qua' ? 'page' : 'false');
+  var h = location.hash === '#ket-qua' ? 'ket-qua' : location.hash === '#thong-so' ? 'thong-so' : 'chay';
+  ['chay', 'ket-qua', 'thong-so'].forEach(function (k) {
+    $('view-' + k).hidden = h !== k;
+    $('tab-' + k).setAttribute('aria-current', h === k ? 'page' : 'false');
+  });
   if (h === 'ket-qua') ensureResults();
+  if (h === 'thong-so' && window.TB_ThongSo) window.TB_ThongSo();
 }
 window.addEventListener('hashchange', route);
 
@@ -964,6 +1045,322 @@ function initResults() {
 initRun();
 initResults();
 route();
+})();
+</script>
+<script>
+/* ---------- Tab "Thông số": đọc input từ code bot, sửa, lưu file .set cho MT5 ---------- */
+(function () {
+'use strict';
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+function api(path, body) {
+  var o = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  return fetch(path, o).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.Loi || ('Lỗi ' + r.status)); return j; }); });
+}
+
+var TF = [['PERIOD_M1', 1, 'M1 (1 phút)'], ['PERIOD_M2', 2, 'M2'], ['PERIOD_M3', 3, 'M3'], ['PERIOD_M4', 4, 'M4'], ['PERIOD_M5', 5, 'M5 (5 phút)'],
+  ['PERIOD_M6', 6, 'M6'], ['PERIOD_M10', 10, 'M10'], ['PERIOD_M12', 12, 'M12'], ['PERIOD_M15', 15, 'M15 (15 phút)'], ['PERIOD_M20', 20, 'M20'],
+  ['PERIOD_M30', 30, 'M30 (30 phút)'], ['PERIOD_H1', 16385, 'H1 (1 giờ)'], ['PERIOD_H2', 16386, 'H2'], ['PERIOD_H3', 16387, 'H3'], ['PERIOD_H4', 16388, 'H4 (4 giờ)'],
+  ['PERIOD_H6', 16390, 'H6'], ['PERIOD_H8', 16392, 'H8'], ['PERIOD_H12', 16396, 'H12'], ['PERIOD_D1', 16408, 'D1 (ngày)'], ['PERIOD_W1', 32769, 'W1 (tuần)'], ['PERIOD_MN1', 49153, 'MN1 (tháng)']];
+var GROUP_VI = { 'Tin hieu': 'Tín hiệu vào lệnh', 'Bo loc thi truong': 'Bộ lọc thị trường', 'SL / TP / Khoi luong': 'SL / TP / Khối lượng',
+  'Quan ly lenh': 'Quản lý lệnh', 'Bo loc thoi gian (gio server)': 'Bộ lọc thời gian (giờ server)', 'Gioi han vao lenh': 'Giới hạn vào lệnh',
+  'Bao ve tai khoan': 'Bảo vệ tài khoản', 'Bao ve lenh vao tay (rut ra tu sao ke giao dich tay)': 'Bảo vệ lệnh vào tay',
+  'Nhat ky & canh bao ky luat (tai khoan that)': 'Nhật ký và cảnh báo kỷ luật (tài khoản thật)', 'Thong bao': 'Thông báo', 'Khac': 'Khác' };
+var BT_ONLY = { InpPreset: 1, InpTestLabel: 1, InpExportTFmin: 1 };
+var SECRET = { InpTgToken: 1, InpTgChatId: 1 };
+// Cấu hình C đã kiểm thử (preset 1). Đổi các thông số này là ra chiến lược khác, kết quả backtest cũ không còn đúng.
+var C_KEYS = ['InpStrategy', 'InpTF', 'InpDonchianPeriod', 'InpUseADX', 'InpADXMin', 'InpUseHTF', 'InpHTF', 'InpATRMult', 'InpRR', 'InpUseTrailing',
+  'InpTrailStartR', 'InpTrailATRMult', 'InpPyramidMax', 'InpSLTFmin', 'InpReEntryMax', 'InpEntryPullATR', 'InpBreakMinVol', 'InpFastEMA', 'InpTrendEMA', 'InpATRPeriod'];
+
+var T = { params: [], byName: {}, groups: [], enums: {}, vals: {}, base: {}, baseName: '', ver: '', bo: [], only: false, q: '', ready: false, savedRef: '' };
+
+/* ---- Đọc code bot ---- */
+function parseMq5(src) {
+  var enums = {}, m, re = /enum\s+(\w+)\s*\{([\s\S]*?)\};/g;
+  while ((m = re.exec(src))) {
+    var list = [];
+    m[2].split(/\r?\n/).forEach(function (l) {
+      var e = /^\s*(\w+)\s*=\s*(-?\d+)\s*,?\s*(?:\/\/\s*(.*))?$/.exec(l);
+      if (e) list.push([e[1], parseInt(e[2], 10), (e[3] || e[1]).trim()]);
+    });
+    enums[m[1]] = list;
+  }
+  enums.ENUM_TIMEFRAMES = TF;
+  var params = [], groups = [], g = null;
+  src.split(/\r?\n/).forEach(function (l) {
+    var gm = /^\s*input\s+group\s+"([^"]*)"/.exec(l);
+    if (gm) { g = { name: gm[1].replace(/=+/g, '').trim(), items: [] }; groups.push(g); return; }
+    var im = /^\s*input\s+(\w+)\s+(\w+)\s*=\s*([^;]*?)\s*;\s*(?:\/\/\s*(.*))?$/.exec(l);
+    if (!im) return;
+    if (!g) { g = { name: 'Chung', items: [] }; groups.push(g); }
+    var p = { type: im[1], name: im[2], raw: im[3], desc: (im[4] || '').trim(), group: g.name };
+    p.kind = p.type === 'bool' ? 'bool' : p.type === 'string' ? 'string' : enums[p.type] ? 'enum' : /double|float/.test(p.type) ? 'double' : 'int';
+    p.def = defVal(p, enums);
+    params.push(p); g.items.push(p);
+  });
+  var vm = /#define\s+BOT_VERSION\s+"([^"]+)"/.exec(src);
+  return { params: params, groups: groups, enums: enums, ver: vm ? vm[1] : '' };
+}
+function defVal(p, enums) {
+  var v = p.raw.trim();
+  if (p.kind === 'string') return v.replace(/^"|"$/g, '');
+  if (p.kind === 'bool') return v === 'true' ? 'true' : 'false';
+  if (p.kind === 'enum') {
+    var e = enums[p.type].filter(function (x) { return x[0] === v; })[0];
+    return e ? String(e[1]) : v;
+  }
+  return v;
+}
+function norm(p, v) {
+  v = String(v == null ? '' : v).trim();
+  if (p.kind === 'bool') return /^(true|1)$/i.test(v) ? 'true' : 'false';
+  if (p.kind === 'int' || p.kind === 'enum' || p.kind === 'double') { var n = parseFloat(v.replace(',', '.')); return isNaN(n) ? v : String(n); }
+  return v;
+}
+function same(p, a, b) { return norm(p, a) === norm(p, b); }
+
+/* ---- File .set ---- */
+function parseSet(text) {
+  var o = {}, order = [];
+  String(text || '').replace(/^﻿/, '').split(/\r?\n/).forEach(function (l) {
+    var m = /^\s*(Inp\w+)\s*=(.*)$/.exec(l);
+    if (m) { o[m[1]] = m[2].split('||')[0]; order.push(m[1]); }
+  });
+  return o;
+}
+function buildSet(name) {
+  var diff = T.params.filter(function (p) { return !same(p, T.vals[p.name], p.def); });
+  var lines = ['; TrendBot - ' + name + ' (tạo từ giao diện, bot ' + T.ver + ', ' + new Date().toLocaleString('vi-VN') + ')',
+    '; Bắt đầu từ: ' + (T.baseName || 'mặc định của bot'),
+    '; Khác mặc định: ' + (diff.length ? diff.map(function (p) { return p.name + '=' + T.vals[p.name]; }).join(', ') : 'không có')];
+  T.params.forEach(function (p) { if (!BT_ONLY[p.name]) lines.push(p.name + '=' + norm(p, T.vals[p.name])); });
+  return lines.join('\r\n') + '\r\n';
+}
+function slug(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .replace(/\.set$/i, '').replace(/[^\w.+-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56);
+}
+
+/* ---- Cảnh báo ---- */
+function num(n) { var v = parseFloat(String(T.vals[n]).replace(',', '.')); return isNaN(v) ? 0 : v; }
+function on(n) { return norm({ kind: 'bool' }, T.vals[n]) === 'true'; }
+function warnings() {
+  var w = [];
+  function add(lv, t, keys) { w.push({ lv: lv, t: t, keys: keys || [] }); }
+  if (!T.byName.InpRiskPercent) return w;
+  var r = num('InpRiskPercent');
+  if (r > 5) add('bad', 'Rủi ro ' + r + '%/lệnh: 5 lệnh thua liền (chuyện bình thường) mất khoảng ' + Math.round((1 - Math.pow(1 - r / 100, 5)) * 100) + '% vốn.', ['InpRiskPercent']);
+  else if (r > 2) add('warn', 'Rủi ro ' + r + '%/lệnh cao hơn mức đã kiểm thử (1%).', ['InpRiskPercent']);
+  if (r <= 0) add('bad', 'Rủi ro mỗi lệnh = 0: bot sẽ không vào lệnh nào.', ['InpRiskPercent']);
+  var ru = num('InpMaxRiskRoundUp');
+  if (ru > 3) add('warn', 'Cho phép làm tròn lên lot tối thiểu khi rủi ro thật tới ' + ru + '%/lệnh. Với vốn nhỏ, rủi ro thật có thể lớn hơn nhiều so với "Rủi ro mỗi lệnh".', ['InpMaxRiskRoundUp']);
+  var dl = num('InpMaxDailyLossPct'), dd = num('InpMaxDrawdownPct');
+  if (dl <= 0) add('warn', 'Đã tắt khóa lỗ ngày.', ['InpMaxDailyLossPct']);
+  else if (dl > 10) add('warn', 'Khóa lỗ ngày ' + dl + '%: một ngày xấu có thể mất tới mức đó.', ['InpMaxDailyLossPct']);
+  if (dd <= 0) add('bad', 'Đã tắt dừng hẳn khi sụt giảm: bot chạy tiếp dù tài khoản tụt sâu.', ['InpMaxDrawdownPct']);
+  else if (dd > 30) add('warn', 'Dừng hẳn khi sụt ' + dd + '% là khá trễ.', ['InpMaxDrawdownPct']);
+  if (dd > 0) add('info', 'Mức dừng hẳn ' + dd + '% chỉ tính lãi đã chốt và lỗ đang chạy, không tính lãi đang chạy bị trả lại. Tài khoản có thể tụt so với đỉnh nhiều hơn con số này.', []);
+  if (num('InpATRMult') > 0 && num('InpATRMult') < 1) add('warn', 'SL dưới 1 ATR: rất dễ bị quét, spread chiếm phần lớn mỗi lệnh.', ['InpATRMult']);
+  if (on('InpResetHalt')) add('warn', 'Đặt lại mốc vốn đang BẬT: chỉ bật 1 lần để mở khóa, chạy xong nhớ tắt.', ['InpResetHalt']);
+  if (!on('InpAllowBuy') && !on('InpAllowSell')) add('bad', 'Đã tắt cả Buy và Sell: bot không vào lệnh nào.', ['InpAllowBuy', 'InpAllowSell']);
+  if (num('InpPyramidMax') > 1) add('info', 'Nhồi lệnh: đã thử ngày 07/11, ở cùng mức sụt giảm không hơn C.', ['InpPyramidMax']);
+  if (num('InpEntryPullATR') > 0) add('info', 'Chờ giá hồi: đã thử ngày 07/11, kém hơn vào ngay.', ['InpEntryPullATR']);
+  if (num('InpSLTFmin') > 0) add('info', 'SL theo khung nhỏ: chưa có kết quả backtest (đợt SLnho-*). Spread ~24 USD/BTC chiếm phần lớn SL nhỏ.', ['InpSLTFmin']);
+  var tf = T.byName.InpTF;
+  if (tf && num('InpTF') < 16388 && on('InpUseADX') && String(T.vals.InpStrategy) === '1') add('info', 'Donchian dưới H4: các lần backtest (M1–H1) đều lỗ ở giai đoạn 2020–2023.', ['InpTF']);
+  var c = cBase();
+  if (c) {
+    var dk = C_KEYS.filter(function (k) { return T.byName[k] && !same(T.byName[k], T.vals[k], c[k] != null ? c[k] : T.byName[k].def); });
+    if (dk.length) add('info', 'Khác cấu hình C đã kiểm thử ở: ' + dk.join(', ') + '. Đây là chiến lược khác, chưa có kết quả backtest.', dk);
+  }
+  return w;
+}
+function cBase() {
+  var b = T.bo.filter(function (x) { return /^1-Donchian-H4/.test(x.Ten); })[0];
+  return b ? parseSet(b.NoiDung) : null;
+}
+
+/* ---- Hiển thị ---- */
+function control(p) {
+  var v = T.vals[p.name], id = 'tp-' + p.name;
+  if (p.kind === 'bool') return '<label class="ts-sw"><input type="checkbox" id="' + id + '" data-p="' + p.name + '"' + (norm(p, v) === 'true' ? ' checked' : '') + '><span>' + (norm(p, v) === 'true' ? 'Bật' : 'Tắt') + '</span></label>';
+  if (p.kind === 'enum') {
+    var list = T.enums[p.type], cur = norm(p, v), found = false;
+    var opts = list.map(function (e) { var s = String(e[1]) === cur; if (s) found = true; return '<option value="' + e[1] + '"' + (s ? ' selected' : '') + '>' + esc(e[2]) + '</option>'; }).join('');
+    if (!found) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (?)</option>';
+    return '<select id="' + id + '" data-p="' + p.name + '">' + opts + '</select>';
+  }
+  if (p.kind === 'string') return '<input type="' + (SECRET[p.name] ? 'password' : 'text') + '" id="' + id + '" data-p="' + p.name + '" value="' + esc(v) + '" spellcheck="false" autocomplete="off">';
+  return '<input type="number" id="' + id + '" data-p="' + p.name + '" value="' + esc(v) + '" step="' + (p.kind === 'double' ? 'any' : '1') + '">';
+}
+function defText(p) {
+  if (p.kind === 'bool') return p.def === 'true' ? 'Bật' : 'Tắt';
+  if (p.kind === 'enum') { var e = T.enums[p.type].filter(function (x) { return String(x[1]) === p.def; })[0]; return e ? e[2] : p.def; }
+  if (p.kind === 'string') return p.def === '' ? '(trống)' : p.def;
+  return p.def;
+}
+function match(p) {
+  if (T.only && same(p, T.vals[p.name], p.def)) return false;
+  if (!T.q) return true;
+  var q = slug(T.q).toLowerCase().replace(/-/g, ' ');
+  return (p.name + ' ' + slug(p.desc).replace(/-/g, ' ') + ' ' + p.group).toLowerCase().indexOf(q) >= 0;
+}
+function render() {
+  var open = JSON.parse(store('tb-ts-open') || '{}'), html = '', shown = 0;
+  T.groups.forEach(function (g, gi) {
+    var items = g.items.filter(match);
+    if (!items.length) return;
+    shown += items.length;
+    var nd = g.items.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
+    var isOpen = T.q || T.only || open[g.name] || $('ts-expand').getAttribute('aria-pressed') === 'true';
+    html += '<details class="sec ts-group" data-g="' + esc(g.name) + '"' + (isOpen ? ' open' : '') + '><summary><h2>' + esc(GROUP_VI[g.name] || g.name) + '</h2>' +
+      '<span class="muted">' + g.items.length + ' thông số' + (nd ? ' · <b class="ts-nd">' + nd + ' đã đổi</b>' : '') + '</span></summary><div class="ts-rows">' +
+      items.map(row).join('') + '</div></details>';
+  });
+  $('ts-groups').innerHTML = html || '<div class="sec empty">Không có thông số nào khớp.</div>';
+  var nd = T.params.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
+  $('ts-count').textContent = 'Hiện ' + shown + '/' + T.params.length + ' · ' + nd + ' khác mặc định';
+  renderSide();
+}
+function row(p) {
+  var ch = !same(p, T.vals[p.name], p.def);
+  return '<div class="ts-row' + (ch ? ' changed' : '') + '" data-row="' + p.name + '">' +
+    '<div class="ts-l"><label for="tp-' + p.name + '">' + esc(p.desc || p.name) + '</label>' +
+    '<div class="ts-meta"><span class="num">' + p.name + '</span>' + (BT_ONLY[p.name] ? '<span class="pill na">chỉ khi backtest</span>' : '') + '</div></div>' +
+    '<div class="ts-c">' + control(p) + '</div>' +
+    '<div class="ts-d">' + (ch ? '<span class="muted">mặc định: ' + esc(defText(p)) + '</span> <button class="small ghost" data-reset="' + p.name + '" aria-label="Về mặc định">↺</button>' : '<span class="muted">mặc định</span>') + '</div></div>';
+}
+function renderSide() {
+  var w = warnings();
+  $('ts-warn-sec').hidden = !w.length;
+  $('ts-warn').innerHTML = w.map(function (x) {
+    return '<div class="banner ' + (x.lv === 'bad' ? 'bad' : x.lv === 'warn' ? 'warn' : 'info') + '">' + esc(x.t) + '</div>';
+  }).join('');
+  var nd = T.params.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
+  $('ts-diffn').textContent = nd + ' thông số khác mặc định';
+  $('ts-preview').textContent = buildSet(slug($('ts-name').value) || 'cua-toi');
+}
+function setVal(name, v) {
+  var p = T.byName[name]; if (!p) return;
+  T.vals[name] = p.kind === 'bool' ? (v ? 'true' : 'false') : String(v);
+  var r = document.querySelector('[data-row="' + name + '"]');
+  if (r) { var tmp = document.createElement('div'); tmp.innerHTML = row(p); var nr = tmp.firstChild; r.parentNode.replaceChild(nr, r); }
+  var nd = T.params.filter(function (x) { return !same(x, T.vals[x.name], x.def); }).length;
+  $('ts-count').textContent = $('ts-count').textContent.replace(/· \d+ khác/, '· ' + nd + ' khác');
+  document.querySelectorAll('.ts-group').forEach(function (d) {
+    var g = T.groups.filter(function (x) { return x.name === d.dataset.g; })[0]; if (!g) return;
+    var n = g.items.filter(function (x) { return !same(x, T.vals[x.name], x.def); }).length;
+    d.querySelector('summary .muted').innerHTML = g.items.length + ' thông số' + (n ? ' · <b class="ts-nd">' + n + ' đã đổi</b>' : '');
+  });
+  T.savedRef = '';
+  renderSide();
+}
+
+/* ---- Nạp bộ ---- */
+function fillSrc() {
+  var sel = $('ts-src'), cur = sel.value || store('tb-ts-src') || '';
+  var mine = T.bo.filter(function (b) { return b.Nguon === 'rieng'; }), preset = T.bo.filter(function (b) { return b.Nguon !== 'rieng'; });
+  sel.innerHTML = '<option value="">Mặc định trong code bot</option>' +
+    (mine.length ? '<optgroup label="Bộ của bạn">' + mine.map(function (b) { return '<option value="' + esc(b.Ref) + '">' + esc(b.Ten) + ' · ' + esc(b.Sua) + '</option>'; }).join('') + '</optgroup>' : '') +
+    (preset.length ? '<optgroup label="Cài đặt sẵn (cai-dat)">' + preset.map(function (b) { return '<option value="' + esc(b.Ref) + '">' + esc(b.Ten) + '</option>'; }).join('') + '</optgroup>' : '');
+  if ([].some.call(sel.options, function (o) { return o.value === cur; })) sel.value = cur;
+}
+function loadFrom(ref) {
+  T.vals = {}; T.params.forEach(function (p) { T.vals[p.name] = p.def; });
+  var note = '', b = T.bo.filter(function (x) { return x.Ref === ref; })[0];
+  if (b) {
+    var s = parseSet(b.NoiDung), unk = [];
+    Object.keys(s).forEach(function (k) { if (T.byName[k]) T.vals[k] = norm(T.byName[k], s[k]); else unk.push(k); });
+    var c = (String(b.NoiDung).match(/^;.*$/gm) || []).map(function (l) { return l.replace(/^;\s?/, ''); }).slice(0, 4).join(' · ');
+    note = '<b>' + esc(b.Ten) + '</b>: ' + Object.keys(s).length + ' thông số, phần còn lại lấy mặc định của bot.' + (c ? '<br><span class="muted">' + esc(c) + '</span>' : '') +
+      (unk.length ? '<br>Bỏ qua (không có trong bản bot này): <span class="num">' + esc(unk.join(', ')) + '</span>' : '');
+    T.baseName = b.Ten;
+    $('ts-name').value = b.Nguon === 'rieng' ? b.Ten.replace(/\.set$/, '') : slug(b.Ten.replace(/\.set$/, '')) + '-sua';
+    T.savedRef = b.Nguon === 'rieng' ? b.Ref : '';
+  } else {
+    T.baseName = ''; $('ts-name').value = 'cua-toi-' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    T.savedRef = '';
+  }
+  $('ts-loadnote').innerHTML = note; $('ts-loadnote').hidden = !note;
+  store('tb-ts-src', ref || '');
+  $('ts-save-msg').innerHTML = '';
+  render();
+}
+function fetchAll(keepVals) {
+  return api('/api/thongso').then(function (d) {
+    var r = parseMq5(d.Mq5 || '');
+    T.params = r.params; T.groups = r.groups; T.enums = r.enums; T.ver = r.ver; T.bo = d.Bo || [];
+    T.byName = {}; T.params.forEach(function (p) { T.byName[p.name] = p; });
+    $('ts-ver').textContent = 'Bot ' + T.ver + ' · ' + T.params.length + ' thông số, đọc thẳng từ code';
+    fillSrc();
+    if (!keepVals) loadFrom($('ts-src').value);
+    T.ready = true;
+  });
+}
+
+/* ---- Lưu / backtest ---- */
+function save(overwrite) {
+  var name = slug($('ts-name').value);
+  if (!name) { msg('bad', 'Đặt tên file trước khi lưu.'); return Promise.reject(); }
+  $('ts-name').value = name;
+  return api('/api/luuthongso', { ten: name, noiDung: buildSet(name), ghiDe: !!overwrite }).then(function (r) {
+    if (r.DaCo) {
+      $('ts-save-msg').innerHTML = '<div class="banner warn">Đã có file <b class="num">' + esc(name) + '.set</b>. <button class="small" id="ts-over">Ghi đè</button> <button class="small ghost" id="ts-over-no">Đổi tên</button></div>';
+      return new Promise(function (res, rej) {
+        $('ts-over').onclick = function () { save(true).then(res, rej); };
+        $('ts-over-no').onclick = function () { $('ts-save-msg').innerHTML = ''; $('ts-name').focus(); rej(); };
+      });
+    }
+    T.savedRef = r.Ref;
+    msg('ok', 'Đã lưu <b class="num">' + esc(name) + '.set</b>.' + (r.MT5 ? ' Trong MT5: chart BTCUSDm, mở bot (F7) → tab <b>Inputs</b> → <b>Load</b> → chọn file này → <b>OK</b>.' :
+      ' Chưa chép được vào MT5 (' + esc(r.MT5Loi) + '). File nằm ở <span class="num">' + esc(r.File) + '</span>, trong MT5 bấm Load rồi chọn file đó.') +
+      '<br><span class="muted">Đổi thông số trên chart đang chạy: bot nạp lại ngay, lệnh đang mở vẫn giữ.</span>');
+    return fetchAll(true).then(function () { $('ts-src').value = r.Ref; store('tb-ts-src', r.Ref); return r; });
+  }).catch(function (e) { if (e) msg('bad', 'Không lưu được: ' + esc(e.message || e)); throw e; });
+}
+function msg(lv, h) { $('ts-save-msg').innerHTML = '<div class="banner ' + lv + '">' + h + '</div>'; }
+function backtest() {
+  var bad = warnings().filter(function (w) { return w.lv === 'bad'; });
+  if (bad.length && !$('ts-btn-bt').dataset.ok) { msg('bad', 'Còn cảnh báo đỏ ở trên. Bấm lại "Lưu rồi backtest" nếu vẫn muốn chạy.'); $('ts-btn-bt').dataset.ok = '1'; return; }
+  delete $('ts-btn-bt').dataset.ok;
+  save(false).then(function (r) {
+    return api('/api/chay', { viec: 'backtest', setFile: r.Ref, von: $('ts-von').value, soNam: $('ts-nam').value, dongMT5: $('ts-dong').checked, layCodeMoi: false });
+  }).then(function () { location.hash = '#chay'; }).catch(function (e) { if (e) msg('bad', 'Không chạy được: ' + esc(e.message || e)); });
+}
+
+/* ---- Khởi động ---- */
+function init() {
+  $('ts-load').onclick = function () { loadFrom($('ts-src').value); };
+  $('ts-q').addEventListener('input', function () { T.q = this.value.trim(); render(); });
+  $('ts-only').onclick = function () { T.only = !T.only; this.setAttribute('aria-pressed', T.only); render(); };
+  $('ts-expand').onclick = function () { var v = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', v); if (!v) store('tb-ts-open', '{}'); render(); };
+  $('ts-name').addEventListener('input', function () { T.savedRef = ''; renderSide(); });
+  $('ts-btn-save').onclick = function () { save(false).catch(function () {}); };
+  $('ts-btn-bt').onclick = backtest;
+  var g = $('ts-groups');
+  g.addEventListener('change', function (e) {
+    var el = e.target, n = el.dataset && el.dataset.p; if (!n) return;
+    setVal(n, el.type === 'checkbox' ? el.checked : el.value);
+  });
+  g.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-reset]'); if (b) { var p = T.byName[b.dataset.reset]; setVal(p.name, p.kind === 'bool' ? p.def === 'true' : p.def); }
+  });
+  g.addEventListener('toggle', function (e) {
+    var d = e.target; if (!d.classList || !d.classList.contains('ts-group') || T.q || T.only) return;
+    var open = JSON.parse(store('tb-ts-open') || '{}'); open[d.dataset.g] = d.open; store('tb-ts-open', JSON.stringify(open));
+  }, true);
+}
+var started = false;
+window.TB_ThongSo = function () {
+  if (started) return; started = true;
+  init();
+  if (location.protocol === 'file:' || window.__DU_LIEU_NHUNG__) { $('ts-static').hidden = false; $('ts-save').hidden = true; return; }
+  $('ts-groups').innerHTML = '<div class="sec empty">Đang đọc code bot…</div>';
+  fetchAll(false).catch(function (e) { $('ts-groups').innerHTML = ''; $('ts-static').hidden = false; $('ts-static').innerHTML = '<b>Không đọc được thông số:</b> ' + esc(e.message); $('ts-save').hidden = true; });
+};
+if (location.hash === '#thong-so') window.TB_ThongSo();
+window.TB_ThongSoTest = { parseMq5: parseMq5, parseSet: parseSet, buildSet: buildSet, slug: slug, T: T, warnings: warnings, loadFrom: loadFrom };
 })();
 </script>
 </body>

@@ -1,5 +1,6 @@
 # CaiDatBot.ps1 - Cai bot vao MT5 va chay 1 lan backtest voi tham so mac dinh trong code
 #   powershell -ExecutionPolicy Bypass -File .\CaiDatBot.ps1
+# Bien moi truong TRENDBOT_SETFILE (giao dien, tab "Thong so" > Backtest): duong dan file .set, ghi de len mac dinh.
 
 $ErrorActionPreference = "Stop"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -7,6 +8,10 @@ $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $Symbol   = "BTCUSDm"
 $Deposit  = 3000
+$Years    = 1
+# Giao dien (tab "Thong so") co the chon von va so nam
+$d = 0; if ([double]::TryParse([string]$env:TRENDBOT_VON, [ref]$d) -and $d -ge 10) { $Deposit = $d }
+$y = 0; if ([int]::TryParse([string]$env:TRENDBOT_SONAM, [ref]$y) -and $y -ge 1 -and $y -le 7) { $Years = $y }
 $Leverage = "1:100"
 
 try {
@@ -25,10 +30,26 @@ try {
 
     Write-Host "[3/4] Tao cau hinh backtest (ghi day du moi tham so mac dinh)..."
     $inputs = Get-BotInputs $src
-    $from = (Get-Date).AddYears(-1).ToString("yyyy.MM.dd")
+    $over = @{ InpTestLabel = "mac-dinh" }
+    $setFile = $env:TRENDBOT_SETFILE
+    if ($setFile) {
+        if (-not (Test-Path $setFile)) { throw "Khong thay file thong so $setFile" }
+        $over.InpTestLabel = [IO.Path]::GetFileNameWithoutExtension($setFile)
+        $bo = 0
+        foreach ($line in ([IO.File]::ReadAllText($setFile) -split "`r?`n")) {
+            if ($line -notmatch '^\s*(Inp\w+)=(.*)$') { continue }
+            $k = $Matches[1]; $v = ($Matches[2] -split '\|\|')[0]
+            if ($k -in @('InpTestLabel', 'InpPreset')) { continue }
+            if (-not $inputs.Defaults.Contains($k)) { $bo++; continue }   # thong so cua ban bot cu / khac
+            $over[$k] = $v
+        }
+        Write-Host "      Dung bo thong so: $setFile ($($over.Count - 1) thong so)" -ForegroundColor Cyan
+        if ($bo -gt 0) { Write-Host "      Bo qua $bo thong so khong co trong ban bot nay." -ForegroundColor Yellow }
+    }
+    $from = (Get-Date).AddYears(-$Years).ToString("yyyy.MM.dd")
     $to   = (Get-Date).AddDays(-1).ToString("yyyy.MM.dd")
     $ini  = Join-Path $mt5.DataDir "$BotName-tester.ini"
-    New-TesterIni $mt5 $inputs @{ InpTestLabel = "mac-dinh" } $ini @{
+    New-TesterIni $mt5 $inputs $over $ini @{
         Symbol = $Symbol; From = $from; To = $to; Deposit = $Deposit; Leverage = $Leverage
         Report = "$BotName-report"; Shutdown = $false }
 
