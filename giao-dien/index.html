@@ -176,27 +176,42 @@ details.tech[open] > summary { margin-bottom: 8px; }
 .sec { padding: 14px; gap: 10px; }
 main { gap: 14px; padding-block: 14px 40px; }
 /* Tab Thông số */
-.ts-groups { display: grid; gap: 12px; }
+.ts-bar { position: sticky; top: 53px; z-index: 4; padding: 10px 12px; gap: 8px; }
+.ts-bar .toolbar { gap: 8px; }
+.ts-bar select { min-width: 0; max-width: 300px; }
+.ts-bar input[type="text"] { flex: 1; min-width: 140px; }
+.ts-note { font-size: 12px; color: var(--ink2); }
+.ts-note a { color: var(--accent); font-weight: 600; cursor: pointer; }
+.ts-alerts { display: grid; gap: 6px; }
+.ts-alerts .banner { padding: 6px 10px; font-size: 12.5px; }
+.ts-alerts details > summary { cursor: pointer; font-size: 12px; color: var(--ink2); font-weight: 600; }
+.ts-alerts details ul { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink2); display: grid; gap: 4px; }
+.ts-card { padding: 12px 14px; gap: 6px; }
+.ts-card > h3, .ts-group > summary h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.ts-card > h3 { color: var(--ink2); text-transform: uppercase; font-size: 11px; letter-spacing: .06em; margin-top: 4px; }
 .ts-group { padding: 0; gap: 0; }
-.ts-group > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 14px 16px; }
+.ts-group > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; }
 .ts-group > summary::-webkit-details-marker { display: none; }
 .ts-group > summary::before { content: "▸"; color: var(--ink3); width: 10px; }
 .ts-group[open] > summary::before { content: "▾"; }
-.ts-group > summary h2 { margin: 0; font-size: 15px; }
+.ts-group > summary .muted { font-size: 12px; }
+.ts-group[open] > .ts-rows { padding: 0 14px 8px; border-top: 1px solid var(--line); }
 .ts-nd { color: var(--accent); }
-.ts-rows { border-top: 1px solid var(--line); }
-.ts-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, 240px) minmax(120px, 200px); gap: 14px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
-.ts-row:last-child { border-bottom: 0; }
-.ts-row.changed { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
-.ts-l label { display: block; font-weight: 500; }
-.ts-meta { display: flex; gap: 8px; align-items: center; margin-top: 2px; font-size: 11px; color: var(--ink3); }
-.ts-c select, .ts-c input[type="text"], .ts-c input[type="number"], .ts-c input[type="password"] { width: 100%; }
-.ts-c input[type="password"] { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-.ts-d { font-size: 12px; display: flex; gap: 6px; align-items: center; justify-content: flex-end; text-align: right; min-width: 0; overflow-wrap: anywhere; }
-.ts-sw { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
-.ts-sw input { width: 18px; height: 18px; accent-color: var(--accent); }
-.ts-warns { display: grid; gap: 8px; }
-@media (max-width: 720px) { .ts-row { grid-template-columns: 1fr; gap: 6px; } .ts-d { justify-content: flex-start; text-align: left; } }
+.ts-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); column-gap: 28px; }
+.ts-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 24px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); min-height: 38px; }
+.ts-row.changed .ts-l label { color: var(--accent); font-weight: 600; }
+.ts-l { min-width: 0; }
+.ts-l label { display: block; font-size: 13px; line-height: 1.35; }
+.ts-l .ts-def { font-size: 11px; color: var(--ink3); }
+.ts-c select, .ts-c input { width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.ts-row.changed .ts-c select, .ts-row.changed .ts-c input:not([type="checkbox"]) { border-color: var(--accent); background: var(--accent-soft); }
+.ts-c input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); padding: 0; }
+.ts-sw { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+.ts-x { border: 0; background: none; padding: 0; width: 24px; height: 24px; color: var(--ink3); cursor: pointer; font-size: 14px; border-radius: 4px; }
+.ts-x:hover { color: var(--accent); background: var(--accent-soft); }
+.ts-save { padding: 12px 14px; gap: 8px; }
+.ts-save .toolbar { gap: 8px; }
+@media (max-width: 720px) { .ts-rows { grid-template-columns: 1fr; } .ts-row { grid-template-columns: minmax(0, 1fr) 120px 24px; } .ts-bar { top: 97px; } }
 </style>
 </head>
 <body>
@@ -332,57 +347,40 @@ main { gap: 14px; padding-block: 14px 40px; }
 <main id="view-thong-so" hidden>
   <div class="banner warn" id="ts-static" hidden><b>Chỉ dùng được trên máy.</b> Tab này đọc code bot và ghi file vào thư mục MT5, nên chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span>.</div>
 
-  <section class="sec">
-    <div class="sec-head"><h2>Bộ thông số</h2><span class="hint" id="ts-ver"></span></div>
+  <section class="sec ts-bar" id="ts-bar">
     <div class="toolbar">
-      <label for="ts-src" class="muted" style="font-size:12px">Bắt đầu từ</label>
-      <select id="ts-src" style="min-width:260px"></select>
-      <button class="small" id="ts-load">Nạp</button>
-      <input type="text" id="ts-q" placeholder="Tìm thông số (tên hoặc mô tả)" aria-label="Tìm thông số" style="flex:1;min-width:180px">
+      <select id="ts-src" aria-label="Bắt đầu từ"></select>
+      <input type="text" id="ts-q" placeholder="Tìm thông số" aria-label="Tìm thông số">
+      <button class="chip" id="ts-all" aria-pressed="false">Tất cả thông số</button>
+      <button class="chip" id="ts-only" aria-pressed="false">Chỉ đã đổi</button>
     </div>
-    <div class="toolbar">
-      <div class="chips">
-        <button class="chip" id="ts-only" aria-pressed="false">Chỉ hiện thông số đã đổi</button>
-        <button class="chip" id="ts-expand" aria-pressed="false">Mở hết các nhóm</button>
-      </div>
-      <span class="muted" style="font-size:12px;margin-left:auto" id="ts-count"></span>
-    </div>
-    <div class="banner info" id="ts-loadnote" hidden></div>
+    <div class="ts-note" id="ts-note"></div>
   </section>
 
-  <section class="sec" id="ts-warn-sec" hidden>
-    <div class="sec-head"><h2>Cần chú ý</h2><span class="hint">Tự cập nhật khi bạn sửa</span></div>
-    <div id="ts-warn" class="ts-warns"></div>
-  </section>
-
-  <div id="ts-groups" class="ts-groups"></div>
+  <div class="ts-alerts" id="ts-alerts"></div>
+  <div id="ts-body" style="display:grid;gap:10px"></div>
 
   <section class="sec ts-save" id="ts-save">
-    <div class="sec-head"><h2>Lưu và dùng</h2><span class="hint" id="ts-diffn"></span></div>
     <div class="toolbar">
-      <label for="ts-name" class="muted" style="font-size:12px">Tên file</label>
-      <input type="text" id="ts-name" style="flex:1;min-width:200px" spellcheck="false" aria-describedby="ts-name-hint">
+      <input type="text" id="ts-name" style="flex:1;min-width:180px" spellcheck="false" aria-label="Tên file" title="Chữ không dấu, số, dấu - _ .">
       <span class="num muted">.set</span>
-      <button class="primary" id="ts-btn-save">Lưu</button>
+      <button class="primary" id="ts-btn-save">Lưu vào MT5</button>
     </div>
-    <div class="muted" style="font-size:12px" id="ts-name-hint">Chữ không dấu, số, dấu - _ . Lưu vào thư mục <span class="num">cai-dat-rieng</span> (không đưa lên GitHub) và chép vào MT5 (<span class="num">MQL5\Presets</span>).</div>
     <div id="ts-save-msg"></div>
-    <details class="tech"><summary>Backtest thử bộ này trong MT5</summary>
-      <div style="display:grid;gap:10px;margin-top:8px;max-width:80ch">
+    <details class="tech"><summary>Backtest thử bộ này</summary>
+      <div style="display:grid;gap:8px;margin-top:6px">
         <div class="toolbar">
           <label class="muted" style="font-size:12px" for="ts-von">Vốn (USD)</label>
-          <input type="number" id="ts-von" value="3000" min="10" step="1" style="width:110px">
-          <label class="muted" style="font-size:12px" for="ts-nam">Thời gian</label>
-          <select id="ts-nam"><option value="1">1 năm gần nhất</option><option value="3">3 năm gần nhất</option><option value="6">6 năm gần nhất</option></select>
+          <input type="number" id="ts-von" value="3000" min="10" step="1" style="width:100px">
+          <select id="ts-nam" aria-label="Thời gian"><option value="1">1 năm</option><option value="3">3 năm</option><option value="6">6 năm</option></select>
+          <label class="opt" style="font-size:12px"><input type="checkbox" id="ts-dong"> <span>Đóng MT5 nếu đang mở <span class="muted">(bot đang chạy cũng dừng)</span></span></label>
+          <button class="small" id="ts-btn-bt">Lưu rồi backtest</button>
         </div>
-        <label class="opt"><input type="checkbox" id="ts-dong"> <span>Đóng MT5 nếu đang mở. <span class="muted">Bot đang chạy trên tài khoản thật/demo cũng dừng theo. Không đóng thì MT5 chỉ được cài bot, bạn tự mở Tester.</span></span></label>
-        <div class="actions"><button id="ts-btn-bt">Lưu rồi backtest</button></div>
-        <div class="muted" style="font-size:12px">MT5 mở ra và chạy backtest chế độ chính xác (giá tick thật), kết quả xem ngay trong MT5. Một lần backtest không đủ để kết luận: muốn so với C thì cần chạy cả 2 giai đoạn qua nút "Mô phỏng nhanh".</div>
+        <div class="muted" style="font-size:12px">MT5 mở ra và chạy bằng giá tick thật. Một lần chạy chưa đủ để kết luận, cần so cả 2 giai đoạn bằng "Mô phỏng nhanh".</div>
       </div>
     </details>
-    <details class="tech"><summary>Xem nội dung file</summary>
-      <pre class="listbox" id="ts-preview" style="max-height:300px"></pre>
-    </details>
+    <details class="tech"><summary>Xem nội dung file</summary><pre class="listbox" id="ts-preview" style="max-height:260px"></pre></details>
+    <div class="muted" style="font-size:11px">Lưu vào <span class="num">cai-dat-rieng</span> (không lên GitHub) và <span class="num">MQL5\Presets</span>. Trong MT5: chart → F7 → Inputs → Load.</div>
   </section>
 </main>
 </div>
@@ -1073,7 +1071,7 @@ var SECRET = { InpTgToken: 1, InpTgChatId: 1 };
 var C_KEYS = ['InpStrategy', 'InpTF', 'InpDonchianPeriod', 'InpUseADX', 'InpADXMin', 'InpUseHTF', 'InpHTF', 'InpATRMult', 'InpRR', 'InpUseTrailing',
   'InpTrailStartR', 'InpTrailATRMult', 'InpPyramidMax', 'InpSLTFmin', 'InpReEntryMax', 'InpEntryPullATR', 'InpBreakMinVol', 'InpFastEMA', 'InpTrendEMA', 'InpATRPeriod'];
 
-var T = { params: [], byName: {}, groups: [], enums: {}, vals: {}, base: {}, baseName: '', ver: '', bo: [], only: false, q: '', ready: false, savedRef: '' };
+var T = { params: [], byName: {}, groups: [], enums: {}, vals: {}, base: {}, baseName: '', ver: '', bo: [], only: false, all: false, q: '', ready: false, savedRef: '', extra: 0, loadNote: '' };
 
 /* ---- Đọc code bot ---- */
 function parseMq5(src) {
@@ -1182,12 +1180,27 @@ function cBase() {
 }
 
 /* ---- Hiển thị ---- */
+// Thông số hay chỉnh nhất, hiện mặc định. Phần còn lại ở "Tất cả thông số".
+var MAIN = [
+  ['Vào lệnh', ['InpStrategy', 'InpTF', 'InpDonchianPeriod', 'InpUseADX', 'InpADXMin', 'InpUseHTF', 'InpAllowBuy', 'InpAllowSell']],
+  ['SL và khối lượng', ['InpATRMult', 'InpRR', 'InpUseTrailing', 'InpTrailATRMult', 'InpRiskPercent', 'InpMaxRiskRoundUp']],
+  ['Bảo vệ tài khoản', ['InpMaxDailyLossPct', 'InpMaxDrawdownPct', 'InpCapital', 'InpResetHalt', 'InpPushNotify']]
+];
+var LABEL_VI = { InpStrategy: 'Chiến lược', InpTF: 'Khung tín hiệu', InpDonchianPeriod: 'Kênh Donchian (số nến)', InpUseADX: 'Lọc đi ngang bằng ADX',
+  InpADXMin: 'ADX tối thiểu', InpUseHTF: 'Theo xu hướng khung lớn (D1)', InpAllowBuy: 'Cho phép Buy', InpAllowSell: 'Cho phép Sell',
+  InpATRMult: 'SL = ATR ×', InpRR: 'Chốt lời = SL × (0 = không đặt)', InpUseTrailing: 'Trailing stop', InpTrailATRMult: 'Khoảng trailing = ATR ×',
+  InpRiskPercent: 'Rủi ro mỗi lệnh (% vốn)', InpMaxRiskRoundUp: 'Vẫn vào lot tối thiểu nếu rủi ro thật ≤ (%)',
+  InpMaxDailyLossPct: 'Khóa lỗ trong ngày (%)', InpMaxDrawdownPct: 'Dừng hẳn khi sụt từ đỉnh (%)', InpCapital: 'Vốn dành cho bot (0 = cả tài khoản)',
+  InpResetHalt: 'Mở khóa và đặt lại mốc vốn (bật 1 lần)', InpPushNotify: 'Thông báo về app MT5 điện thoại' };
+var STRAT_VI = { 0: 'Hồi về EMA20', 1: 'Phá vỡ Donchian', 2: 'RSI (lướt sóng)', 3: 'ORB phiên Mỹ', 4: 'Đảo chiều sau cú chạy', 5: 'Khoảng trống FVG', 6: 'Wyckoff spring', 7: 'MACD', 8: 'Quán tính trong ngày' };
+function changed(p) { return !same(p, T.vals[p.name], p.def); }
+function nChanged() { return T.params.filter(changed).length; }
 function control(p) {
   var v = T.vals[p.name], id = 'tp-' + p.name;
-  if (p.kind === 'bool') return '<label class="ts-sw"><input type="checkbox" id="' + id + '" data-p="' + p.name + '"' + (norm(p, v) === 'true' ? ' checked' : '') + '><span>' + (norm(p, v) === 'true' ? 'Bật' : 'Tắt') + '</span></label>';
+  if (p.kind === 'bool') return '<label class="ts-sw"><input type="checkbox" id="' + id + '" data-p="' + p.name + '"' + (norm(p, v) === 'true' ? ' checked' : '') + '>' + (norm(p, v) === 'true' ? 'Bật' : 'Tắt') + '</label>';
   if (p.kind === 'enum') {
     var list = T.enums[p.type], cur = norm(p, v), found = false;
-    var opts = list.map(function (e) { var s = String(e[1]) === cur; if (s) found = true; return '<option value="' + e[1] + '"' + (s ? ' selected' : '') + '>' + esc(e[2]) + '</option>'; }).join('');
+    var opts = list.map(function (e) { var s = String(e[1]) === cur; if (s) found = true; return '<option value="' + e[1] + '"' + (s ? ' selected' : '') + ' title="' + esc(e[2]) + '">' + esc(p.type === 'ENUM_STRATEGY' && STRAT_VI[e[1]] ? STRAT_VI[e[1]] : e[2]) + '</option>'; }).join('');
     if (!found) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (?)</option>';
     return '<select id="' + id + '" data-p="' + p.name + '">' + opts + '</select>';
   }
@@ -1196,64 +1209,78 @@ function control(p) {
 }
 function defText(p) {
   if (p.kind === 'bool') return p.def === 'true' ? 'Bật' : 'Tắt';
-  if (p.kind === 'enum') { var e = T.enums[p.type].filter(function (x) { return String(x[1]) === p.def; })[0]; return e ? e[2] : p.def; }
+  if (p.kind === 'enum') { var e = T.enums[p.type].filter(function (x) { return String(x[1]) === p.def; })[0]; return e ? (p.type === 'ENUM_STRATEGY' && STRAT_VI[e[1]] ? STRAT_VI[e[1]] : e[2]) : p.def; }
   if (p.kind === 'string') return p.def === '' ? '(trống)' : p.def;
   return p.def;
 }
 function match(p) {
-  if (T.only && same(p, T.vals[p.name], p.def)) return false;
+  if (T.only && !changed(p)) return false;
   if (!T.q) return true;
   var q = slug(T.q).toLowerCase().replace(/-/g, ' ');
   return (p.name + ' ' + slug(p.desc).replace(/-/g, ' ') + ' ' + p.group).toLowerCase().indexOf(q) >= 0;
 }
+function row(p) {
+  var ch = changed(p);
+  return '<div class="ts-row' + (ch ? ' changed' : '') + '" data-row="' + p.name + '" title="' + esc(p.name + (p.desc ? ': ' + p.desc : '')) + '">' +
+    '<div class="ts-l"><label for="tp-' + p.name + '">' + esc(LABEL_VI[p.name] || p.desc || p.name) + (BT_ONLY[p.name] ? ' <span class="pill na">backtest</span>' : '') + '</label>' +
+    (ch ? '<div class="ts-def">mặc định: ' + esc(defText(p)) + '</div>' : '') + '</div>' +
+    '<div class="ts-c">' + control(p) + '</div>' +
+    (ch ? '<button class="ts-x" data-reset="' + p.name + '" title="Về mặc định" aria-label="Về mặc định">↺</button>' : '<span></span>') + '</div>';
+}
 function render() {
-  var open = JSON.parse(store('tb-ts-open') || '{}'), html = '', shown = 0;
-  T.groups.forEach(function (g, gi) {
-    var items = g.items.filter(match);
-    if (!items.length) return;
-    shown += items.length;
-    var nd = g.items.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
-    var isOpen = T.q || T.only || open[g.name] || $('ts-expand').getAttribute('aria-pressed') === 'true';
-    html += '<details class="sec ts-group" data-g="' + esc(g.name) + '"' + (isOpen ? ' open' : '') + '><summary><h2>' + esc(GROUP_VI[g.name] || g.name) + '</h2>' +
-      '<span class="muted">' + g.items.length + ' thông số' + (nd ? ' · <b class="ts-nd">' + nd + ' đã đổi</b>' : '') + '</span></summary><div class="ts-rows">' +
-      items.map(row).join('') + '</div></details>';
-  });
-  $('ts-groups').innerHTML = html || '<div class="sec empty">Không có thông số nào khớp.</div>';
-  var nd = T.params.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
-  $('ts-count').textContent = 'Hiện ' + shown + '/' + T.params.length + ' · ' + nd + ' khác mặc định';
+  var html = '', shown = 0;
+  if (!T.all && !T.q && !T.only) {
+    // Chế độ gọn: 1 thẻ, chia 3 mục nhỏ
+    html = '<section class="sec ts-card">' + MAIN.map(function (m) {
+      var items = m[1].map(function (k) { return T.byName[k]; }).filter(Boolean);
+      shown += items.length;
+      return '<h3>' + esc(m[0]) + '</h3><div class="ts-rows">' + items.map(row).join('') + '</div>';
+    }).join('') + '</section>';
+    var mainKeys = {}; MAIN.forEach(function (m) { m[1].forEach(function (k) { mainKeys[k] = 1; }); });
+    var other = T.params.filter(function (p) { return changed(p) && !mainKeys[p.name]; }).length;
+    T.extra = other;
+  } else {
+    var open = JSON.parse(store('tb-ts-open') || '{}');
+    T.groups.forEach(function (g) {
+      var items = g.items.filter(match);
+      if (!items.length) return;
+      shown += items.length;
+      var nd = g.items.filter(changed).length;
+      var isOpen = T.q || T.only || open[g.name];
+      html += '<details class="sec ts-group" data-g="' + esc(g.name) + '"' + (isOpen ? ' open' : '') + '><summary><h2>' + esc(GROUP_VI[g.name] || g.name) + '</h2>' +
+        '<span class="muted">' + g.items.length + (nd ? ' · <b class="ts-nd">' + nd + ' đã đổi</b>' : '') + '</span></summary><div class="ts-rows">' +
+        items.map(row).join('') + '</div></details>';
+    });
+    T.extra = 0;
+  }
+  $('ts-body').innerHTML = html || '<div class="sec empty">Không có thông số nào khớp.</div>';
   renderSide();
 }
-function row(p) {
-  var ch = !same(p, T.vals[p.name], p.def);
-  return '<div class="ts-row' + (ch ? ' changed' : '') + '" data-row="' + p.name + '">' +
-    '<div class="ts-l"><label for="tp-' + p.name + '">' + esc(p.desc || p.name) + '</label>' +
-    '<div class="ts-meta"><span class="num">' + p.name + '</span>' + (BT_ONLY[p.name] ? '<span class="pill na">chỉ khi backtest</span>' : '') + '</div></div>' +
-    '<div class="ts-c">' + control(p) + '</div>' +
-    '<div class="ts-d">' + (ch ? '<span class="muted">mặc định: ' + esc(defText(p)) + '</span> <button class="small ghost" data-reset="' + p.name + '" aria-label="Về mặc định">↺</button>' : '<span class="muted">mặc định</span>') + '</div></div>';
-}
 function renderSide() {
-  var w = warnings();
-  $('ts-warn-sec').hidden = !w.length;
-  $('ts-warn').innerHTML = w.map(function (x) {
-    return '<div class="banner ' + (x.lv === 'bad' ? 'bad' : x.lv === 'warn' ? 'warn' : 'info') + '">' + esc(x.t) + '</div>';
-  }).join('');
-  var nd = T.params.filter(function (p) { return !same(p, T.vals[p.name], p.def); }).length;
-  $('ts-diffn').textContent = nd + ' thông số khác mặc định';
+  var nd = nChanged();
+  var note = 'Bot ' + esc(T.ver) + ' · ' + (T.baseName ? 'từ <b>' + esc(T.baseName) + '</b> · ' : '') + nd + ' thông số khác mặc định';
+  if (T.extra) note += ' · <a id="ts-extra">' + T.extra + ' nằm ngoài phần chính, xem</a>';
+  if (T.loadNote) note += '<br>' + T.loadNote;
+  $('ts-note').innerHTML = note;
+  var ex = $('ts-extra'); if (ex) ex.onclick = function () { T.only = true; $('ts-only').setAttribute('aria-pressed', 'true'); render(); };
+  var w = warnings(), red = w.filter(function (x) { return x.lv !== 'info'; }), info = w.filter(function (x) { return x.lv === 'info'; });
+  $('ts-alerts').innerHTML = red.map(function (x) { return '<div class="banner ' + (x.lv === 'bad' ? 'bad' : 'warn') + '">' + esc(x.t) + '</div>'; }).join('') +
+    (info.length ? '<details' + (store('tb-ts-info') === '1' ? ' open' : '') + ' id="ts-info"><summary>' + info.length + ' ghi chú</summary><ul>' +
+      info.map(function (x) { return '<li>' + esc(x.t) + '</li>'; }).join('') + '</ul></details>' : '');
+  var inf = $('ts-info'); if (inf) inf.addEventListener('toggle', function () { store('tb-ts-info', inf.open ? '1' : '0'); });
   $('ts-preview').textContent = buildSet(slug($('ts-name').value) || 'cua-toi');
 }
 function setVal(name, v) {
   var p = T.byName[name]; if (!p) return;
   T.vals[name] = p.kind === 'bool' ? (v ? 'true' : 'false') : String(v);
   var r = document.querySelector('[data-row="' + name + '"]');
-  if (r) { var tmp = document.createElement('div'); tmp.innerHTML = row(p); var nr = tmp.firstChild; r.parentNode.replaceChild(nr, r); }
-  var nd = T.params.filter(function (x) { return !same(x, T.vals[x.name], x.def); }).length;
-  $('ts-count').textContent = $('ts-count').textContent.replace(/· \d+ khác/, '· ' + nd + ' khác');
+  if (r) { var tmp = document.createElement('div'); tmp.innerHTML = row(p); r.parentNode.replaceChild(tmp.firstChild, r); }
   document.querySelectorAll('.ts-group').forEach(function (d) {
     var g = T.groups.filter(function (x) { return x.name === d.dataset.g; })[0]; if (!g) return;
-    var n = g.items.filter(function (x) { return !same(x, T.vals[x.name], x.def); }).length;
-    d.querySelector('summary .muted').innerHTML = g.items.length + ' thông số' + (n ? ' · <b class="ts-nd">' + n + ' đã đổi</b>' : '');
+    var n = g.items.filter(changed).length;
+    d.querySelector('summary .muted').innerHTML = g.items.length + (n ? ' · <b class="ts-nd">' + n + ' đã đổi</b>' : '');
   });
-  T.savedRef = '';
+  T.savedRef = ''; T.dirty = true;
   renderSide();
 }
 
@@ -1268,13 +1295,12 @@ function fillSrc() {
 }
 function loadFrom(ref) {
   T.vals = {}; T.params.forEach(function (p) { T.vals[p.name] = p.def; });
-  var note = '', b = T.bo.filter(function (x) { return x.Ref === ref; })[0];
+  var b = T.bo.filter(function (x) { return x.Ref === ref; })[0];
+  T.loadNote = '';
   if (b) {
-    var s = parseSet(b.NoiDung), unk = [];
-    Object.keys(s).forEach(function (k) { if (T.byName[k]) T.vals[k] = norm(T.byName[k], s[k]); else unk.push(k); });
-    var c = (String(b.NoiDung).match(/^;.*$/gm) || []).map(function (l) { return l.replace(/^;\s?/, ''); }).slice(0, 4).join(' · ');
-    note = '<b>' + esc(b.Ten) + '</b>: ' + Object.keys(s).length + ' thông số, phần còn lại lấy mặc định của bot.' + (c ? '<br><span class="muted">' + esc(c) + '</span>' : '') +
-      (unk.length ? '<br>Bỏ qua (không có trong bản bot này): <span class="num">' + esc(unk.join(', ')) + '</span>' : '');
+    var st = parseSet(b.NoiDung), unk = [];
+    Object.keys(st).forEach(function (k) { if (T.byName[k]) T.vals[k] = norm(T.byName[k], st[k]); else unk.push(k); });
+    if (unk.length) T.loadNote = '<span class="muted">Bỏ qua ' + unk.length + ' thông số không có trong bản bot này: ' + esc(unk.join(', ')) + '</span>';
     T.baseName = b.Ten;
     $('ts-name').value = b.Nguon === 'rieng' ? b.Ten.replace(/\.set$/, '') : slug(b.Ten.replace(/\.set$/, '')) + '-sua';
     T.savedRef = b.Nguon === 'rieng' ? b.Ref : '';
@@ -1282,8 +1308,7 @@ function loadFrom(ref) {
     T.baseName = ''; $('ts-name').value = 'cua-toi-' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
     T.savedRef = '';
   }
-  $('ts-loadnote').innerHTML = note; $('ts-loadnote').hidden = !note;
-  store('tb-ts-src', ref || '');
+  store('tb-ts-src', ref || ''); T.srcRef = ref || ''; T.dirty = false;
   $('ts-save-msg').innerHTML = '';
   render();
 }
@@ -1292,7 +1317,7 @@ function fetchAll(keepVals) {
     var r = parseMq5(d.Mq5 || '');
     T.params = r.params; T.groups = r.groups; T.enums = r.enums; T.ver = r.ver; T.bo = d.Bo || [];
     T.byName = {}; T.params.forEach(function (p) { T.byName[p.name] = p; });
-    $('ts-ver').textContent = 'Bot ' + T.ver + ' · ' + T.params.length + ' thông số, đọc thẳng từ code';
+    $('ts-all').textContent = 'Tất cả ' + T.params.length + ' thông số';
     fillSrc();
     if (!keepVals) loadFrom($('ts-src').value);
     T.ready = true;
@@ -1316,7 +1341,7 @@ function save(overwrite) {
     msg('ok', 'Đã lưu <b class="num">' + esc(name) + '.set</b>.' + (r.MT5 ? ' Trong MT5: chart BTCUSDm, mở bot (F7) → tab <b>Inputs</b> → <b>Load</b> → chọn file này → <b>OK</b>.' :
       ' Chưa chép được vào MT5 (' + esc(r.MT5Loi) + '). File nằm ở <span class="num">' + esc(r.File) + '</span>, trong MT5 bấm Load rồi chọn file đó.') +
       '<br><span class="muted">Đổi thông số trên chart đang chạy: bot nạp lại ngay, lệnh đang mở vẫn giữ.</span>');
-    return fetchAll(true).then(function () { $('ts-src').value = r.Ref; store('tb-ts-src', r.Ref); return r; });
+    return fetchAll(true).then(function () { $('ts-src').value = r.Ref; store('tb-ts-src', r.Ref); T.srcRef = r.Ref; T.dirty = false; return r; });
   }).catch(function (e) { if (e) msg('bad', 'Không lưu được: ' + esc(e.message || e)); throw e; });
 }
 function msg(lv, h) { $('ts-save-msg').innerHTML = '<div class="banner ' + lv + '">' + h + '</div>'; }
@@ -1331,14 +1356,18 @@ function backtest() {
 
 /* ---- Khởi động ---- */
 function init() {
-  $('ts-load').onclick = function () { loadFrom($('ts-src').value); };
+  $('ts-src').addEventListener('change', function () {
+    if (T.dirty && !confirm('Bỏ các thay đổi chưa lưu để nạp bộ khác?')) { this.value = T.srcRef || ''; return; }
+    loadFrom(this.value);
+  });
   $('ts-q').addEventListener('input', function () { T.q = this.value.trim(); render(); });
   $('ts-only').onclick = function () { T.only = !T.only; this.setAttribute('aria-pressed', T.only); render(); };
-  $('ts-expand').onclick = function () { var v = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', v); if (!v) store('tb-ts-open', '{}'); render(); };
-  $('ts-name').addEventListener('input', function () { T.savedRef = ''; renderSide(); });
+  $('ts-all').onclick = function () { T.all = !T.all; this.setAttribute('aria-pressed', T.all); store('tb-ts-all', T.all ? '1' : '0'); render(); };
+  if (store('tb-ts-all') === '1') { T.all = true; $('ts-all').setAttribute('aria-pressed', 'true'); }
+  $('ts-name').addEventListener('input', function () { T.savedRef = ''; $('ts-preview').textContent = buildSet(slug(this.value) || 'cua-toi'); });
   $('ts-btn-save').onclick = function () { save(false).catch(function () {}); };
   $('ts-btn-bt').onclick = backtest;
-  var g = $('ts-groups');
+  var g = $('ts-body');
   g.addEventListener('change', function (e) {
     var el = e.target, n = el.dataset && el.dataset.p; if (!n) return;
     setVal(n, el.type === 'checkbox' ? el.checked : el.value);
@@ -1355,9 +1384,9 @@ var started = false;
 window.TB_ThongSo = function () {
   if (started) return; started = true;
   init();
-  if (location.protocol === 'file:' || window.__DU_LIEU_NHUNG__) { $('ts-static').hidden = false; $('ts-save').hidden = true; return; }
-  $('ts-groups').innerHTML = '<div class="sec empty">Đang đọc code bot…</div>';
-  fetchAll(false).catch(function (e) { $('ts-groups').innerHTML = ''; $('ts-static').hidden = false; $('ts-static').innerHTML = '<b>Không đọc được thông số:</b> ' + esc(e.message); $('ts-save').hidden = true; });
+  if (location.protocol === 'file:' || window.__DU_LIEU_NHUNG__) { $('ts-static').hidden = false; $('ts-save').hidden = true; $('ts-bar').hidden = true; return; }
+  $('ts-body').innerHTML = '<div class="sec empty">Đang đọc code bot…</div>';
+  fetchAll(false).catch(function (e) { $('ts-body').innerHTML = ''; $('ts-bar').hidden = true; $('ts-static').hidden = false; $('ts-static').innerHTML = '<b>Không đọc được thông số:</b> ' + esc(e.message); $('ts-save').hidden = true; });
 };
 if (location.hash === '#thong-so') window.TB_ThongSo();
 window.TB_ThongSoTest = { parseMq5: parseMq5, parseSet: parseSet, buildSet: buildSet, slug: slug, T: T, warnings: warnings, loadFrom: loadFrom };
