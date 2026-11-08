@@ -1,0 +1,226 @@
+//+------------------------------------------------------------------+
+//| TrendBot/ManualEntry.mqh: Ban tu bam vao lenh + bang xu huong moi khung
+//| - InpManualEntry = true: bot KHONG tu vao lenh. Tren chart co nut BUY / SELL / DONG HET.
+//|   Bam 1 lan -> nut doi thanh "Bam lan nua de ..." (5 giay) -> bam lan 2 moi gui lenh.
+//|   Lenh dung Magic cua bot: bot tu tinh lot (rui ro InpRiskPercent), dat SL x ATR,
+//|   doi SL ve hoa von, nhoi them, trailing... dung nhu lenh bot tu vao.
+//|   Van ton trong moi gioi han: lo ngay, sut giam, so lenh/ngay, nghi sau lenh thua, spread.
+//| - InpTrendBoard = true: bang xu huong M1 -> D1 o goc phai tren chart (chi chay that / demo).
+//+------------------------------------------------------------------+
+#define ME_PFX "TBME_"
+
+ENUM_TIMEFRAMES g_tbTF[9]   = { PERIOD_M1, PERIOD_M3, PERIOD_M5, PERIOD_M10, PERIOD_M15, PERIOD_M30, PERIOD_H1, PERIOD_H4, PERIOD_D1 };
+string          g_tbName[9] = { "M1", "M3", "M5", "M10", "M15", "M30", "H1", "H4", "D1" };
+int             g_tbE20[9], g_tbE50[9];
+bool            g_tbReady = false;
+string          g_meArmed = "";        // nut dang cho bam lan 2
+datetime        g_meArmedAt = 0;
+datetime        g_meLastDraw = 0;
+
+bool MEActive() { return !MQLInfoInteger(MQL_TESTER) || MQLInfoInteger(MQL_VISUAL_MODE); }
+
+void MELabel(const string name, const int x, const int y, const string text, const color c, const int size = 9, const string font = "Consolas")
+{
+   string n = ME_PFX + name;
+   if(ObjectFind(0, n) < 0)
+   {
+      ObjectCreate(0, n, OBJ_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, n, OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+      ObjectSetInteger(0, n, OBJPROP_ANCHOR, ANCHOR_RIGHT_UPPER);
+      ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
+   }
+   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
+   ObjectSetString(0, n, OBJPROP_TEXT, text);
+   ObjectSetString(0, n, OBJPROP_FONT, font);
+   ObjectSetInteger(0, n, OBJPROP_FONTSIZE, size);
+   ObjectSetInteger(0, n, OBJPROP_COLOR, c);
+}
+
+void MEButton(const string name, const int x, const int y, const int w, const int h, const string text, const color bg)
+{
+   string n = ME_PFX + name;
+   if(ObjectFind(0, n) < 0)
+   {
+      ObjectCreate(0, n, OBJ_BUTTON, 0, 0, 0);
+      ObjectSetInteger(0, n, OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+      ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
+      ObjectSetInteger(0, n, OBJPROP_COLOR, clrWhite);
+      ObjectSetString(0, n, OBJPROP_FONT, "Arial Bold");
+      ObjectSetInteger(0, n, OBJPROP_FONTSIZE, 9);
+   }
+   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, n, OBJPROP_XSIZE, w);
+   ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
+   ObjectSetString(0, n, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, n, OBJPROP_BGCOLOR, bg);
+   ObjectSetInteger(0, n, OBJPROP_STATE, false);
+}
+
+//--- Bang xu huong -------------------------------------------------
+bool TrendBoardInit()
+{
+   for(int i = 0; i < 9; i++)
+   {
+      g_tbE20[i] = iMA(_Symbol, g_tbTF[i], 20, 0, MODE_EMA, PRICE_CLOSE);
+      g_tbE50[i] = iMA(_Symbol, g_tbTF[i], 50, 0, MODE_EMA, PRICE_CLOSE);
+      if(g_tbE20[i] == INVALID_HANDLE || g_tbE50[i] == INVALID_HANDLE) return false;
+   }
+   g_tbReady = true;
+   return true;
+}
+
+// 1 = tang (gia > EMA20 > EMA50), -1 = giam (gia < EMA20 < EMA50), 0 = di ngang / chua ro
+int TrendOf(const int i)
+{
+   double e20, e50;
+   if(!GetValue(g_tbE20[i], 0, 1, e20) || !GetValue(g_tbE50[i], 0, 1, e50)) return 0;
+   double c = iClose(_Symbol, g_tbTF[i], 1);
+   if(c > e20 && e20 > e50) return 1;
+   if(c < e20 && e20 < e50) return -1;
+   return 0;
+}
+
+void DrawTrendBoard(int &y)
+{
+   if(!g_tbReady) return;
+   MELabel("tb_h", 12, y, "XU HUONG (nen da dong, EMA20/50)", clrSilver, 8, "Arial"); y += 16;
+   int up = 0, dn = 0;
+   for(int i = 0; i < 9; i++)
+   {
+      int t = TrendOf(i);
+      if(t > 0) up++; else if(t < 0) dn++;
+      string s = t > 0 ? "TANG  ^" : t < 0 ? "GIAM  v" : "NGANG -";
+      color  c = t > 0 ? clrLimeGreen : t < 0 ? clrTomato : clrDarkGray;
+      MELabel("tb_" + g_tbName[i], 12, y, StringFormat("%-4s %s", g_tbName[i], s), c, 9); y += 15;
+   }
+   string sum = StringFormat("Tang %d / Giam %d / Ngang %d", up, dn, 9 - up - dn);
+   MELabel("tb_sum", 12, y, sum, up >= 7 ? clrLimeGreen : dn >= 7 ? clrTomato : clrSilver, 8, "Arial"); y += 20;
+}
+
+//--- Nut vao lenh --------------------------------------------------
+double MEPreviewLots(const double slDist)
+{
+   double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tv <= 0) tv = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(ts <= 0 || tv <= 0 || slDist <= 0) return 0;
+   double lots = BotEquity() * P_RiskPercent / 100.0 / (slDist / ts * tv);
+   double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   return step > 0 ? MathFloor(lots / step) * step : lots;
+}
+
+double MESlDist()
+{
+   double atr;
+   if(!GetValue(hATR, 0, 1, atr) || atr <= 0) return 0;
+   return SLAtr(atr) * P_ATRMult;
+}
+
+int OwnDirection()    // 1 = dang giu Buy, -1 = Sell, 0 = khong giu
+{
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+      if(PositionGetTicket(i) != 0 && IsOwnSelected())
+         return PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
+   return 0;
+}
+
+void DrawManualButtons(int &y)
+{
+   if(!P_ManualEntry) return;
+   if(g_meArmed != "" && TimeCurrent() - g_meArmedAt > 5) g_meArmed = "";
+   double sl = MESlDist();
+   double lots = MEPreviewLots(sl);
+   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   string info = sl > 0 ? StringFormat("~%.2f lot | SL cach %s | rui ro %.1f%%", lots, DoubleToString(sl, 0), P_RiskPercent) : "Dang tai ATR...";
+   if(sl > 0 && lots < vmin) info = StringFormat("Lot tinh ra %.3f < %.2f: von qua nho cho SL nay", lots, vmin);
+   MELabel("me_info", 12, y, info, clrSilver, 8, "Arial"); y += 16;
+   int dir = OwnDirection();
+   string bt = g_meArmed == "buy"  ? "BAM LAN NUA DE BUY"  : (dir > 0 ? "BUY (nhoi them)" : "BUY");
+   string st = g_meArmed == "sell" ? "BAM LAN NUA DE SELL" : (dir < 0 ? "SELL (nhoi them)" : "SELL");
+   // Nut o goc phai: XDISTANCE tinh tu mep phai toi CANH TRAI cua nut
+   MEButton("buy",  12 + 124 + 120, y, 120, 30, bt, g_meArmed == "buy"  ? clrDarkOrange : clrSeaGreen);
+   MEButton("sell", 12 + 120,       y, 120, 30, st, g_meArmed == "sell" ? clrDarkOrange : clrFireBrick);
+   y += 34;
+   MEButton("close", 12 + 244, y, 244, 22, g_meArmed == "close" ? "BAM LAN NUA DE DONG HET" : "DONG HET LENH CUA BOT", g_meArmed == "close" ? clrDarkOrange : clrDimGray);
+   y += 28;
+}
+
+void ManualUI()
+{
+   if(!MEActive() || (!P_ManualEntry && !P_TrendBoard)) return;
+   if(TimeCurrent() - g_meLastDraw < 1 && g_meArmed == "") return;
+   g_meLastDraw = TimeCurrent();
+   int y = 20;
+   DrawManualButtons(y);
+   if(P_TrendBoard) DrawTrendBoard(y);
+   ChartRedraw();
+}
+
+void ManualUIDelete()
+{
+   ObjectsDeleteAll(0, ME_PFX);
+   if(g_tbReady) for(int i = 0; i < 9; i++) { IndicatorRelease(g_tbE20[i]); IndicatorRelease(g_tbE50[i]); }
+   g_tbReady = false;
+}
+
+// Bam BUY / SELL: kiem tra gioi han, roi gui lenh nhu bot tu vao (lot theo rui ro, SL x ATR)
+void ManualFire(const bool buy)
+{
+   if(IsHalted())   { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh."); return; }
+   int dir = OwnDirection();
+   if(dir != 0)
+   {
+      if((dir > 0) != buy) { Notify("[" + _Symbol + "] Dang giu lenh nguoc chieu. Bam DONG HET truoc neu muon dao chieu."); return; }
+      // Nhoi tay: chi khi cac lop cu da doi duoc SL ve hoa von (giong luat nhoi cua bot)
+      int cnt = 0;
+      for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsOwnSelected()) cnt++;
+      if(cnt >= MathMax(P_PyramidMax, 1)) { Notify(StringFormat("[%s] Da du %d lop (InpPyramidMax), khong nhoi them.", _Symbol, cnt)); return; }
+      for(int i = PositionsTotal() - 1; i >= 0; i--)
+      {
+         ulong tk = PositionGetTicket(i);
+         if(tk == 0 || !IsOwnSelected()) continue;
+         double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP);
+         double px = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+         if(buy ? px <= op : px >= op) { Notify("[" + _Symbol + "] Lop cu dang lo: KHONG nhoi vao lenh dang lo."); return; }
+         bool need = buy ? (sl < op) : (sl <= 0 || sl > op);
+         if(need) TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(op, _Digits), tp), "Sua SL", "#" + (string)tk);
+      }
+      double tol = _Point * 2;
+      for(int i = PositionsTotal() - 1; i >= 0; i--)
+      {
+         if(PositionGetTicket(i) == 0 || !IsOwnSelected()) continue;
+         double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL);
+         if(!(sl > 0 && (buy ? sl >= op - tol : sl <= op + tol))) { Notify("[" + _Symbol + "] Chua doi duoc SL lop cu ve hoa von, chua nhoi. Thu lai sau."); return; }
+      }
+   }
+   else if(!EntryGatesOk()) { Notify("[" + _Symbol + "] Chua vao lenh: " + g_status); return; }
+   double atr;
+   if(!GetValue(hATR, 0, 1, atr) || atr <= 0) { Notify("[" + _Symbol + "] Chua co ATR, thu lai sau."); return; }
+   g_sigSL = 0; g_sigTP = 0;
+   int r = SendEntry(buy, atr, true);
+   if(r <= 0) Notify("[" + _Symbol + "] Khong vao duoc lenh: " + g_status);
+}
+
+void ManualChartEvent(const int id, const string sparam)
+{
+   if(id != CHARTEVENT_OBJECT_CLICK || StringFind(sparam, ME_PFX) != 0 || !P_ManualEntry) return;
+   string b = StringSubstr(sparam, StringLen(ME_PFX));
+   if(b != "buy" && b != "sell" && b != "close") return;
+   ObjectSetInteger(0, sparam, OBJPROP_STATE, false);
+   if(g_meArmed != b || TimeCurrent() - g_meArmedAt > 5)
+   {
+      g_meArmed = b; g_meArmedAt = TimeCurrent();      // bam lan 1: chi "len co"
+   }
+   else
+   {
+      g_meArmed = "";
+      if(b == "close") { if(HasOwnPosition()) { g_status = "Ban bam dong het"; CloseAll(); } }
+      else ManualFire(b == "buy");
+   }
+   g_meLastDraw = 0;
+   ManualUI();
+}

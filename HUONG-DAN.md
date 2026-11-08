@@ -487,3 +487,11 @@ Mo GiaoDien.cmd -> tab "Thong so". Doc thang moi thong so tu code bot (luon khop
 - Luu: ghi file .set day du (UTF-16, dung dinh dang MT5) vao cai-dat-rieng/ (KHONG dua len git, co the chua token Telegram)
   va chep vao MQL5\Presets. Trong MT5: chart -> F7 -> Inputs -> Load -> chon file.
 - "Luu roi backtest": chay CaiDatBot.ps1 voi bo nay (chon von, 1/3/6 nam), MT5 mo ra va chay bang tick that.
+## Tu bam vao lenh + bang xu huong (v5.10)
+- InpManualEntry = true (preset 10-Tu-bam-H4-nhoi3): bot khong tu vao lenh. Goc phai chart co nut BUY / SELL / DONG HET LENH CUA BOT.
+  Bam 1 lan nut doi mau cam "BAM LAN NUA DE ..." trong 5 giay, bam lan 2 moi gui lenh (tranh bam nham).
+  Lenh dung Magic cua bot: lot theo rui ro InpRiskPercent, SL InpATRMult x ATR, doi SL ve hoa von, nhoi (InpPyramidMax), trailing.
+  Van bi chan boi: lo ngay, sut giam toi da, so lenh/ngay, nghi sau lenh thua, spread. Bam BUY khi dang giu Buy = nhoi them, chi khi lop cu
+  dang lai va da doi duoc SL ve hoa von; khong cho nhoi vao lenh dang lo; khong cho vao nguoc chieu khi dang giu lenh.
+- InpTrendBoard = true (mac dinh): bang xu huong M1, M3, M5, M10, M15, M30, H1, H4, D1. TANG = gia dong cua > EMA20 > EMA50,
+  GIAM = nguoc lai, NGANG = con lai. Dong cuoi dem so khung tang / giam. Chi hien khi chay that / demo (khong anh huong backtest).

@@ -5,7 +5,7 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.9.2"
+#define  BOT_VERSION "5.10"
 #property version   "5.92"
 #property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
 
@@ -124,6 +124,9 @@ input double          InpMaxDrawdownPct  = 15.0;      // Sut giam tu dinh toi da
 input bool            InpCloseOnHalt     = true;      // Dong het lenh khi cham sut giam toi da
 input bool            InpResetHalt       = false;     // Dat true 1 lan de mo khoa bot va dat lai moc von
 input double          InpCapital         = 0;         // Von danh cho bot (0 = toan bo balance luc dat moc). Dung khi chia von cho nhieu EA
+input group "=== Tu bam vao lenh + bang xu huong ==="
+input bool            InpManualEntry     = false;     // Ban tu bam BUY/SELL tren chart (bot KHONG tu vao lenh); bot tinh lot, dat SL, nhoi, trailing
+input bool            InpTrendBoard      = true;      // Hien bang xu huong M1 -> D1 o goc phai chart
 input group "=== Bao ve lenh vao tay (rut ra tu sao ke giao dich tay) ==="
 input bool            InpGuardManual     = false;     // Bat bao ve lenh tay (magic 0) tren ma cua chart nay
 input double          InpGuardSLPct      = 1.5;       // Lenh tay chua co SL: tu dat SL cach gia vao x% (0 = tat)
@@ -182,6 +185,8 @@ int             P_ReEntryMax;
 int             P_ReEntryBars;
 int             P_MTFAlign;
 int             P_ExportTFmin;
+bool            P_ManualEntry;
+bool            P_TrendBoard;
 double          P_EntryPullATR;
 int             P_EntryPullMode;
 bool            P_ExitOnEMA;
@@ -281,6 +286,8 @@ void LoadParams()
    P_ReEntryBars = InpReEntryBars;
    P_MTFAlign = InpMTFAlign;
    P_ExportTFmin = InpExportTFmin;
+   P_ManualEntry = InpManualEntry;
+   P_TrendBoard = InpTrendBoard;
    P_EntryPullATR = InpEntryPullATR;
    P_EntryPullMode = InpEntryPullMode;
    P_ExitOnEMA = InpExitOnEMA;
@@ -378,6 +385,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
    if(k == "InpEntryPullMode") { P_EntryPullMode = (int)StringToInteger(v); return true; }
+   if(k == "InpManualEntry") { P_ManualEntry = (v == "true" || v == "1"); return true; }
+   if(k == "InpTrendBoard") { P_TrendBoard = (v == "true" || v == "1"); return true; }
    if(k == "InpExportTFmin") { P_ExportTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpMTFAlign") { P_MTFAlign = (int)StringToInteger(v); return true; }
    if(k == "InpSLTFmin") { P_SLTFmin = (int)StringToInteger(v); return true; }
@@ -509,6 +518,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
+#include "TrendBot/ManualEntry.mqh"
 #include "TrendBot/Status.mqh"
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
@@ -569,6 +579,7 @@ int OnInit()
       Print("Khong tao duoc chi bao");
       return INIT_FAILED;
    }
+   if(P_TrendBoard && MEActive() && !TrendBoardInit()) Print("Khong tao duoc bang xu huong (EMA cac khung)");
    trade.SetExpertMagicNumber(P_Magic);
    trade.SetTypeFillingBySymbol(_Symbol);
    trade.SetDeviationInPoints(100);
@@ -642,8 +653,14 @@ void ExportBars()
    PrintFormat("Xuat du lieu: %d nen M%d -> Common\\Files\\%s", n, P_ExportTFmin, fn);
 }
 
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+{
+   ManualChartEvent(id, sparam);
+}
+
 void OnDeinit(const int reason)
 {
+   ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); }
    IndicatorRelease(hFast);
@@ -740,6 +757,7 @@ void OnTick()
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
+   ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);
@@ -782,6 +800,7 @@ void OnTick()
       if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar || P_Strategy == STRAT_IMOM) PyramidStep();
       return;
    }
+   if(P_ManualEntry) { g_status = "Cho ban bam BUY / SELL tren chart"; return; }
    if(!EntryGatesOk()) return;
 
    double fast, trend, atr, adx = 0, htfEma = 0;
