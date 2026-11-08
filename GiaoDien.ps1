@@ -15,6 +15,11 @@ $LogFile    = Join-Path $WorkDir "nhat-ky.txt"
 $SetDir     = Join-Path $ProjectDir "cai-dat"          # bo cai dat san (co trong git)
 $MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu tu tab "Thong so" (KHONG dua len git: co the chua token)
 . (Join-Path $ProjectDir "MT5Common.ps1")              # Find-MT5, $BotName
+# Phien ban cua chinh file nay luc mo. Cap nhat code xong ma file doi thi giao dien dang chay van la ban cu
+# (PowerShell da nap vao bo nho) -> bao nguoi dung dong cua so va mo lai GiaoDien.cmd.
+$SelfFile  = $MyInvocation.MyCommand.Path
+$SelfStamp = (Get-Item $SelfFile).LastWriteTimeUtc.Ticks
+$ApiVer    = 2   # tang khi them API moi; trang web so voi so nay
 $ErrFile    = Join-Path $WorkDir "loi.txt"
 
 # Viec dang chay (chi 1 viec mot luc, giong cac nut VS Code)
@@ -232,7 +237,8 @@ try {
                     Viec = (Get-JobState); Log = $log.Substring($offset); LogLen = $log.Length; Loi = $err;
                     Git = $script:Git; MT5Mo = (Test-MT5Running); Bot = @(Get-BotStatus);
                     ChiChay = @(Read-ListFile "chi-chay.txt"); ChinhXac = @(Read-ListFile "chinh-xac.txt");
-                    KetQua = @(Get-ResultFiles)
+                    KetQua = @(Get-ResultFiles);
+                    ApiVer = $ApiVer; CanMoLai = ((Get-Item $SelfFile).LastWriteTimeUtc.Ticks -ne $SelfStamp)
                 }
             }
             elseif ($path -eq "/api/kiemtragit" -and $method -eq "POST") {

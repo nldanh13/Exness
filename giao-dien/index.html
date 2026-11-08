@@ -226,6 +226,7 @@ main { gap: 14px; padding-block: 14px 40px; }
 
 <div class="wrap">
 <main id="view-chay">
+  <div class="banner warn" id="reopen-note" hidden><b>Giao diện vừa có bản mới.</b> Đóng cửa sổ PowerShell của giao diện rồi mở lại <span class="num">GiaoDien.cmd</span> để dùng đủ chức năng (cửa sổ đang chạy vẫn là bản cũ).</div>
   <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy của bạn.</div>
 
   <section class="sec" id="sec-status">
@@ -472,8 +473,10 @@ function renderOptions() {
   } else w.hidden = true;
 }
 
+var API_VER = 2;   // khớp $ApiVer trong GiaoDien.ps1
 function renderStatus(d) {
   S.last = d;
+  $('reopen-note').hidden = !(d.CanMoLai || (d.ApiVer || 1) < API_VER);
   var g = d.Git || {}, b = bots(d), j = d.Viec || {};
   // Phiên bản bot
   if (g.Error) { $('git-dot').className = 'dot bad'; $('git-val').textContent = /ket noi/.test(g.Error) ? 'Không kết nối được GitHub' : /git/.test(g.Error) ? 'Không thấy git trên máy' : g.Error; }
@@ -1386,7 +1389,12 @@ window.TB_ThongSo = function () {
   init();
   if (location.protocol === 'file:' || window.__DU_LIEU_NHUNG__) { $('ts-static').hidden = false; $('ts-save').hidden = true; $('ts-bar').hidden = true; return; }
   $('ts-body').innerHTML = '<div class="sec empty">Đang đọc code bot…</div>';
-  fetchAll(false).catch(function (e) { $('ts-body').innerHTML = ''; $('ts-bar').hidden = true; $('ts-static').hidden = false; $('ts-static').innerHTML = '<b>Không đọc được thông số:</b> ' + esc(e.message); $('ts-save').hidden = true; });
+  fetchAll(false).catch(function (e) {
+    $('ts-body').innerHTML = ''; $('ts-bar').hidden = true; $('ts-save').hidden = true; $('ts-static').hidden = false;
+    $('ts-static').innerHTML = /Khong thay trang|404/.test(e.message)
+      ? '<b>Cửa sổ giao diện đang chạy là bản cũ.</b> Đóng cửa sổ PowerShell của giao diện (dòng "Giao dien dang chay tai http://localhost:8765"), mở lại <span class="num">GiaoDien.cmd</span> rồi vào lại tab này.'
+      : '<b>Không đọc được thông số:</b> ' + esc(e.message);
+  });
 };
 if (location.hash === '#thong-so') window.TB_ThongSo();
 window.TB_ThongSoTest = { parseMq5: parseMq5, parseSet: parseSet, buildSet: buildSet, slug: slug, T: T, warnings: warnings, loadFrom: loadFrom };
