@@ -250,10 +250,16 @@ Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài 
 
 **Chọn nhóm khi bấm nút 1:** VS Code hiện menu: *Theo chi-chay.txt (Claude chọn)* (mặc định), *H4 và các bộ lọc*, *Lướt sóng (vốn 30.000)*, *Lướt sóng với vốn 1 triệu VNĐ*, *Chạy hết*.
 
-**Chọn chiến thuật khi gắn bot lên chart:** mỗi lần compile, các file cài đặt sẵn trong `cai-dat/` được chép vào MT5. Khi gắn bot, mở tab *Inputs*, bấm **Load** và chọn một file:
-- `1-Donchian-H4-khuyen-dung.set`: chiến lược chính (đã qua kiểm thử).
-- `2-Donchian-M30-khoiLuong.set`, `3-RSI-M15.set`, `4-ORB-M5-phien-My.set`: lướt sóng, **chưa đạt** kiểm thử, chỉ chạy demo.
-Vốn 1 triệu VNĐ: sau khi Load, đặt thêm `InpMaxRiskRoundUp = 5`. Mỗi chiến thuật tự có Magic riêng, nên gắn nhiều chiến thuật trên cùng `BTCUSDm` (mỗi cái một chart) không lẫn lệnh.
+**Chọn chiến thuật khi gắn bot lên chart:** mỗi lần cập nhật, các bộ cài đặt sẵn trong `cai-dat/` được chép vào MT5 (bộ tên cũ trước v5.10.1 tự bị xóa). Khi gắn bot, mở tab *Inputs*, bấm **Load** và chọn một file:
+
+| File | Nội dung | Trạng thái |
+|---|---|---|
+| `01-Chuan-Donchian-H4.set` | Cấu hình C: phá vỡ Donchian 20 nến H4, SL 2,5 ATR, trailing 3 ATR, rủi ro 1% | **Đã kiểm thử.** Cần vốn từ 3.000 USD |
+| `02-Tu-bam-lenh-H4.set` | Bạn tự bấm BUY/SELL, bot tính lot, đặt SL, nhồi tối đa 3 lớp, trailing | Công cụ hỗ trợ |
+| `03-Bao-ve-lenh-tay.set` | Bot không vào lệnh, chỉ canh lệnh vào tay (tự đặt SL, giới hạn rủi ro và lỗ ngày) | Công cụ hỗ trợ |
+| `TN1` … `TN7` | Nhồi lệnh, M30, RSI, ORB, Wyckoff, demo 1 triệu (M5 và SL M5) | **Chưa đạt** kiểm thử, chỉ chạy demo |
+
+Mỗi file ghi đủ thông số giao dịch, nên Load một bộ không còn sót giá trị của bộ nạp trước (trước đây file chỉ ghi một phần, và MT5 giữ nguyên các thông số không có trong file). Cài đặt riêng của bạn (thông báo, Telegram, nhật ký, vốn dành cho bot, mã nhận diện) không nằm trong file nên Load giữ nguyên. Mỗi chiến thuật tự có mã nhận diện riêng, nên gắn nhiều chiến thuật trên cùng `BTCUSDm` (mỗi cái một chart) không lẫn lệnh.
 
 **Chỉ chạy một phần:** nếu có file `chi-chay.txt` với các mẫu tên (ví dụ `*-von1tr*`), nút 1 chỉ chạy các cấu hình khớp. Xóa hết các dòng trong file để chạy toàn bộ.
 
@@ -488,10 +494,21 @@ Mo GiaoDien.cmd -> tab "Thong so". Doc thang moi thong so tu code bot (luon khop
   va chep vao MQL5\Presets. Trong MT5: chart -> F7 -> Inputs -> Load -> chon file.
 - "Luu roi backtest": chay CaiDatBot.ps1 voi bo nay (chon von, 1/3/6 nam), MT5 mo ra va chay bang tick that.
 ## Tu bam vao lenh + bang xu huong (v5.10)
-- InpManualEntry = true (preset 10-Tu-bam-H4-nhoi3): bot khong tu vao lenh. Goc phai chart co nut BUY / SELL / DONG HET LENH CUA BOT.
+- InpManualEntry = true (bo 02-Tu-bam-lenh-H4): bot khong tu vao lenh. Goc phai chart co nut BUY / SELL / DONG HET LENH CUA BOT.
   Bam 1 lan nut doi mau cam "BAM LAN NUA DE ..." trong 5 giay, bam lan 2 moi gui lenh (tranh bam nham).
   Lenh dung Magic cua bot: lot theo rui ro InpRiskPercent, SL InpATRMult x ATR, doi SL ve hoa von, nhoi (InpPyramidMax), trailing.
   Van bi chan boi: lo ngay, sut giam toi da, so lenh/ngay, nghi sau lenh thua, spread. Bam BUY khi dang giu Buy = nhoi them, chi khi lop cu
   dang lai va da doi duoc SL ve hoa von; khong cho nhoi vao lenh dang lo; khong cho vao nguoc chieu khi dang giu lenh.
 - InpTrendBoard = true (mac dinh): bang xu huong M1, M3, M5, M10, M15, M30, H1, H4, D1. TANG = gia dong cua > EMA20 > EMA50,
   GIAM = nguoc lai, NGANG = con lai. Dong cuoi dem so khung tang / giam. Chi hien khi chay that / demo (khong anh huong backtest).
+
+## Viết lại toàn bộ cài đặt (v5.10.1, 8/11/2026)
+- Bảng Inputs trong MT5: 114 thông số có nhãn tiếng Việt có dấu, kèm đơn vị, chia 14 nhóm theo thứ tự dùng
+  (chiến lược → Donchian → thử nghiệm → bộ lọc → vào lệnh → SL/TP → rủi ro → giờ → bảo vệ tài khoản → ...).
+  Chỉ đổi nhãn, nhóm và thứ tự: tên, kiểu, giá trị mặc định giữ nguyên, file .set và backtest cũ vẫn dùng được.
+  File .mq5 nay lưu dạng UTF-8 có BOM để MetaEditor đọc đúng dấu.
+- Nguồn nhãn duy nhất: `cong-cu/nhan_thong_so.py` (nhãn + giải thích). Thêm thông số mới vào bot thì thêm vào bảng này rồi chạy
+  `python cong-cu/viet_lai_nhan.py` (ghi lại nhãn trong .mq5 và `giao-dien/giai-thich-thong-so.json`)
+  và `python cong-cu/tao_cai_dat.py` (tạo lại các bộ cài đặt sẵn). Thiếu nhãn thì script báo lỗi.
+- Tab Thông số lấy nhãn từ code bot, hiện thêm dòng giải thích, chia bộ cài đặt sẵn thành "Cài đặt sẵn" và "Thử nghiệm",
+  và hiện trạng thái (đã kiểm thử / chưa đạt) khi nạp một bộ.

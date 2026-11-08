@@ -178,7 +178,7 @@ main { gap: 14px; padding-block: 14px 40px; }
 /* Tab Thông số */
 .ts-bar { position: sticky; top: 53px; z-index: 4; padding: 10px 12px; gap: 8px; }
 .ts-bar .toolbar { gap: 8px; }
-.ts-bar select { min-width: 0; max-width: 300px; }
+.ts-bar select { min-width: 0; max-width: 460px; }
 .ts-bar input[type="text"] { flex: 1; min-width: 140px; }
 .ts-note { font-size: 12px; color: var(--ink2); }
 .ts-note a { color: var(--accent); font-weight: 600; cursor: pointer; }
@@ -198,11 +198,13 @@ main { gap: 14px; padding-block: 14px 40px; }
 .ts-group[open] > .ts-rows { padding: 0 14px 8px; border-top: 1px solid var(--line); }
 .ts-nd { color: var(--accent); }
 .ts-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); column-gap: 28px; }
-.ts-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 24px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); min-height: 38px; }
+.ts-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 200px) 24px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); min-height: 38px; }
 .ts-row.changed .ts-l label { color: var(--accent); font-weight: 600; }
 .ts-l { min-width: 0; }
 .ts-l label { display: block; font-size: 13px; line-height: 1.35; }
-.ts-l .ts-def { font-size: 11px; color: var(--ink3); }
+.ts-l .ts-def { font-size: 11px; color: var(--accent); }
+.ts-l .ts-help { font-size: 11.5px; color: var(--ink3); line-height: 1.35; margin-top: 1px; }
+.ts-status { font-weight: 600; } .ts-status.ok { color: var(--gain); } .ts-status.no { color: var(--warn); }
 .ts-c select, .ts-c input { width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 .ts-row.changed .ts-c select, .ts-row.changed .ts-c input:not([type="checkbox"]) { border-color: var(--accent); background: var(--accent-soft); }
 .ts-c input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); padding: 0; }
@@ -211,7 +213,7 @@ main { gap: 14px; padding-block: 14px 40px; }
 .ts-x:hover { color: var(--accent); background: var(--accent-soft); }
 .ts-save { padding: 12px 14px; gap: 8px; }
 .ts-save .toolbar { gap: 8px; }
-@media (max-width: 720px) { .ts-rows { grid-template-columns: 1fr; } .ts-row { grid-template-columns: minmax(0, 1fr) 120px 24px; } .ts-bar { top: 97px; } }
+@media (max-width: 720px) { .ts-rows { grid-template-columns: 1fr; } .ts-row { grid-template-columns: minmax(0, 1fr) minmax(120px, 160px) 24px; } .ts-bar { top: 97px; } }
 </style>
 </head>
 <body>
@@ -1064,17 +1066,13 @@ var TF = [['PERIOD_M1', 1, 'M1 (1 phút)'], ['PERIOD_M2', 2, 'M2'], ['PERIOD_M3'
   ['PERIOD_M6', 6, 'M6'], ['PERIOD_M10', 10, 'M10'], ['PERIOD_M12', 12, 'M12'], ['PERIOD_M15', 15, 'M15 (15 phút)'], ['PERIOD_M20', 20, 'M20'],
   ['PERIOD_M30', 30, 'M30 (30 phút)'], ['PERIOD_H1', 16385, 'H1 (1 giờ)'], ['PERIOD_H2', 16386, 'H2'], ['PERIOD_H3', 16387, 'H3'], ['PERIOD_H4', 16388, 'H4 (4 giờ)'],
   ['PERIOD_H6', 16390, 'H6'], ['PERIOD_H8', 16392, 'H8'], ['PERIOD_H12', 16396, 'H12'], ['PERIOD_D1', 16408, 'D1 (ngày)'], ['PERIOD_W1', 32769, 'W1 (tuần)'], ['PERIOD_MN1', 49153, 'MN1 (tháng)']];
-var GROUP_VI = { 'Tin hieu': 'Tín hiệu vào lệnh', 'Bo loc thi truong': 'Bộ lọc thị trường', 'SL / TP / Khoi luong': 'SL / TP / Khối lượng',
-  'Quan ly lenh': 'Quản lý lệnh', 'Bo loc thoi gian (gio server)': 'Bộ lọc thời gian (giờ server)', 'Gioi han vao lenh': 'Giới hạn vào lệnh',
-  'Bao ve tai khoan': 'Bảo vệ tài khoản', 'Bao ve lenh vao tay (rut ra tu sao ke giao dich tay)': 'Bảo vệ lệnh vào tay',
-  'Nhat ky & canh bao ky luat (tai khoan that)': 'Nhật ký và cảnh báo kỷ luật (tài khoản thật)', 'Thong bao': 'Thông báo', 'Khac': 'Khác' };
 var BT_ONLY = { InpPreset: 1, InpTestLabel: 1, InpExportTFmin: 1 };
 var SECRET = { InpTgToken: 1, InpTgChatId: 1 };
 // Cấu hình C đã kiểm thử (preset 1). Đổi các thông số này là ra chiến lược khác, kết quả backtest cũ không còn đúng.
 var C_KEYS = ['InpStrategy', 'InpTF', 'InpDonchianPeriod', 'InpUseADX', 'InpADXMin', 'InpUseHTF', 'InpHTF', 'InpATRMult', 'InpRR', 'InpUseTrailing',
   'InpTrailStartR', 'InpTrailATRMult', 'InpPyramidMax', 'InpSLTFmin', 'InpReEntryMax', 'InpEntryPullATR', 'InpBreakMinVol', 'InpFastEMA', 'InpTrendEMA', 'InpATRPeriod'];
 
-var T = { params: [], byName: {}, groups: [], enums: {}, vals: {}, base: {}, baseName: '', ver: '', bo: [], only: false, all: false, q: '', ready: false, savedRef: '', extra: 0, loadNote: '' };
+var T = { params: [], byName: {}, groups: [], enums: {}, vals: {}, base: {}, baseName: '', ver: '', bo: [], only: false, all: false, q: '', ready: false, savedRef: '', extra: 0, loadNote: '', help: {} };
 
 /* ---- Đọc code bot ---- */
 function parseMq5(src) {
@@ -1178,7 +1176,7 @@ function warnings() {
   return w;
 }
 function cBase() {
-  var b = T.bo.filter(function (x) { return /^1-Donchian-H4/.test(x.Ten); })[0];
+  var b = T.bo.filter(function (x) { return /^01-/.test(x.Ten); })[0];
   return b ? parseSet(b.NoiDung) : null;
 }
 
@@ -1189,13 +1187,6 @@ var MAIN = [
   ['SL và khối lượng', ['InpATRMult', 'InpRR', 'InpUseTrailing', 'InpTrailATRMult', 'InpRiskPercent', 'InpMaxRiskRoundUp']],
   ['Bảo vệ tài khoản', ['InpMaxDailyLossPct', 'InpMaxDrawdownPct', 'InpCapital', 'InpResetHalt', 'InpPushNotify']]
 ];
-var LABEL_VI = { InpStrategy: 'Chiến lược', InpTF: 'Khung tín hiệu', InpDonchianPeriod: 'Kênh Donchian (số nến)', InpUseADX: 'Lọc đi ngang bằng ADX',
-  InpADXMin: 'ADX tối thiểu', InpUseHTF: 'Theo xu hướng khung lớn (D1)', InpAllowBuy: 'Cho phép Buy', InpAllowSell: 'Cho phép Sell',
-  InpATRMult: 'SL = ATR ×', InpRR: 'Chốt lời = SL × (0 = không đặt)', InpUseTrailing: 'Trailing stop', InpTrailATRMult: 'Khoảng trailing = ATR ×',
-  InpRiskPercent: 'Rủi ro mỗi lệnh (% vốn)', InpMaxRiskRoundUp: 'Vẫn vào lot tối thiểu nếu rủi ro thật ≤ (%)',
-  InpMaxDailyLossPct: 'Khóa lỗ trong ngày (%)', InpMaxDrawdownPct: 'Dừng hẳn khi sụt từ đỉnh (%)', InpCapital: 'Vốn dành cho bot (0 = cả tài khoản)',
-  InpResetHalt: 'Mở khóa và đặt lại mốc vốn (bật 1 lần)', InpPushNotify: 'Thông báo về app MT5 điện thoại' };
-var STRAT_VI = { 0: 'Hồi về EMA20', 1: 'Phá vỡ Donchian', 2: 'RSI (lướt sóng)', 3: 'ORB phiên Mỹ', 4: 'Đảo chiều sau cú chạy', 5: 'Khoảng trống FVG', 6: 'Wyckoff spring', 7: 'MACD', 8: 'Quán tính trong ngày' };
 function changed(p) { return !same(p, T.vals[p.name], p.def); }
 function nChanged() { return T.params.filter(changed).length; }
 function control(p) {
@@ -1203,7 +1194,7 @@ function control(p) {
   if (p.kind === 'bool') return '<label class="ts-sw"><input type="checkbox" id="' + id + '" data-p="' + p.name + '"' + (norm(p, v) === 'true' ? ' checked' : '') + '>' + (norm(p, v) === 'true' ? 'Bật' : 'Tắt') + '</label>';
   if (p.kind === 'enum') {
     var list = T.enums[p.type], cur = norm(p, v), found = false;
-    var opts = list.map(function (e) { var s = String(e[1]) === cur; if (s) found = true; return '<option value="' + e[1] + '"' + (s ? ' selected' : '') + ' title="' + esc(e[2]) + '">' + esc(p.type === 'ENUM_STRATEGY' && STRAT_VI[e[1]] ? STRAT_VI[e[1]] : e[2]) + '</option>'; }).join('');
+    var opts = list.map(function (e) { var s = String(e[1]) === cur; if (s) found = true; return '<option value="' + e[1] + '"' + (s ? ' selected' : '') + '>' + esc(e[2]) + '</option>'; }).join('');
     if (!found) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (?)</option>';
     return '<select id="' + id + '" data-p="' + p.name + '">' + opts + '</select>';
   }
@@ -1212,7 +1203,7 @@ function control(p) {
 }
 function defText(p) {
   if (p.kind === 'bool') return p.def === 'true' ? 'Bật' : 'Tắt';
-  if (p.kind === 'enum') { var e = T.enums[p.type].filter(function (x) { return String(x[1]) === p.def; })[0]; return e ? (p.type === 'ENUM_STRATEGY' && STRAT_VI[e[1]] ? STRAT_VI[e[1]] : e[2]) : p.def; }
+  if (p.kind === 'enum') { var e = T.enums[p.type].filter(function (x) { return String(x[1]) === p.def; })[0]; return e ? e[2] : p.def; }
   if (p.kind === 'string') return p.def === '' ? '(trống)' : p.def;
   return p.def;
 }
@@ -1224,9 +1215,10 @@ function match(p) {
 }
 function row(p) {
   var ch = changed(p);
-  return '<div class="ts-row' + (ch ? ' changed' : '') + '" data-row="' + p.name + '" title="' + esc(p.name + (p.desc ? ': ' + p.desc : '')) + '">' +
-    '<div class="ts-l"><label for="tp-' + p.name + '">' + esc(LABEL_VI[p.name] || p.desc || p.name) + (BT_ONLY[p.name] ? ' <span class="pill na">backtest</span>' : '') + '</label>' +
-    (ch ? '<div class="ts-def">mặc định: ' + esc(defText(p)) + '</div>' : '') + '</div>' +
+  return '<div class="ts-row' + (ch ? ' changed' : '') + '" data-row="' + p.name + '" title="' + esc(p.name) + '">' +
+    '<div class="ts-l"><label for="tp-' + p.name + '">' + esc(p.desc || p.name) + (BT_ONLY[p.name] ? ' <span class="pill na">backtest</span>' : '') + '</label>' +
+    (T.help[p.name] ? '<div class="ts-help">' + esc(T.help[p.name]) + '</div>' : '') +
+    (ch ? '<div class="ts-def">Mặc định: ' + esc(defText(p)) + '</div>' : '') + '</div>' +
     '<div class="ts-c">' + control(p) + '</div>' +
     (ch ? '<button class="ts-x" data-reset="' + p.name + '" title="Về mặc định" aria-label="Về mặc định">↺</button>' : '<span></span>') + '</div>';
 }
@@ -1250,7 +1242,7 @@ function render() {
       shown += items.length;
       var nd = g.items.filter(changed).length;
       var isOpen = T.q || T.only || open[g.name];
-      html += '<details class="sec ts-group" data-g="' + esc(g.name) + '"' + (isOpen ? ' open' : '') + '><summary><h2>' + esc(GROUP_VI[g.name] || g.name) + '</h2>' +
+      html += '<details class="sec ts-group" data-g="' + esc(g.name) + '"' + (isOpen ? ' open' : '') + '><summary><h2>' + esc(g.name) + '</h2>' +
         '<span class="muted">' + g.items.length + (nd ? ' · <b class="ts-nd">' + nd + ' đã đổi</b>' : '') + '</span></summary><div class="ts-rows">' +
         items.map(row).join('') + '</div></details>';
     });
@@ -1291,11 +1283,19 @@ function setVal(name, v) {
 function fillSrc() {
   var sel = $('ts-src'), cur = sel.value || store('tb-ts-src') || '';
   var mine = T.bo.filter(function (b) { return b.Nguon === 'rieng'; }), preset = T.bo.filter(function (b) { return b.Nguon !== 'rieng'; });
+  var good = preset.filter(function (b) { return !/^TN/.test(b.Ten); }), tn = preset.filter(function (b) { return /^TN/.test(b.Ten); });
   sel.innerHTML = '<option value="">Mặc định trong code bot</option>' +
     (mine.length ? '<optgroup label="Bộ của bạn">' + mine.map(function (b) { return '<option value="' + esc(b.Ref) + '">' + esc(b.Ten) + ' · ' + esc(b.Sua) + '</option>'; }).join('') + '</optgroup>' : '') +
-    (preset.length ? '<optgroup label="Cài đặt sẵn (cai-dat)">' + preset.map(function (b) { return '<option value="' + esc(b.Ref) + '">' + esc(b.Ten) + '</option>'; }).join('') + '</optgroup>' : '');
+    (good.length ? '<optgroup label="Cài đặt sẵn">' + good.map(presetOpt).join('') + '</optgroup>' : '') +
+    (tn.length ? '<optgroup label="Thử nghiệm (chưa đạt kiểm thử)">' + tn.map(presetOpt).join('') + '</optgroup>' : '');
   if ([].some.call(sel.options, function (o) { return o.value === cur; })) sel.value = cur;
 }
+// Dòng đầu file cài đặt sẵn: "; TrendBot – 01. Cấu hình chuẩn: ..." -> tên hiển thị
+function presetTitle(b) {
+  var m = /^;\s*TrendBot\s*[–-]\s*(.+)$/m.exec(String(b.NoiDung || ''));
+  return m ? m[1].trim() : b.Ten.replace(/\.set$/, '');
+}
+function presetOpt(b) { return '<option value="' + esc(b.Ref) + '">' + esc(presetTitle(b)) + '</option>'; }
 function loadFrom(ref) {
   T.vals = {}; T.params.forEach(function (p) { T.vals[p.name] = p.def; });
   var b = T.bo.filter(function (x) { return x.Ref === ref; })[0];
@@ -1303,7 +1303,9 @@ function loadFrom(ref) {
   if (b) {
     var st = parseSet(b.NoiDung), unk = [];
     Object.keys(st).forEach(function (k) { if (T.byName[k]) T.vals[k] = norm(T.byName[k], st[k]); else unk.push(k); });
-    if (unk.length) T.loadNote = '<span class="muted">Bỏ qua ' + unk.length + ' thông số không có trong bản bot này: ' + esc(unk.join(', ')) + '</span>';
+    var st2 = /^;\s*Trạng thái:\s*(.+)$/m.exec(String(b.NoiDung || ''));
+    if (st2) T.loadNote = '<span class="ts-status' + (/ĐÃ KIỂM THỬ/.test(st2[1]) ? ' ok' : /CHƯA/.test(st2[1]) ? ' no' : '') + '">' + esc(st2[1]) + '</span>';
+    if (unk.length) T.loadNote += (T.loadNote ? '<br>' : '') + '<span class="muted">Bỏ qua ' + unk.length + ' thông số không có trong bản bot này: ' + esc(unk.join(', ')) + '</span>';
     T.baseName = b.Ten;
     $('ts-name').value = b.Nguon === 'rieng' ? b.Ten.replace(/\.set$/, '') : slug(b.Ten.replace(/\.set$/, '')) + '-sua';
     T.savedRef = b.Nguon === 'rieng' ? b.Ref : '';
@@ -1316,6 +1318,7 @@ function loadFrom(ref) {
   render();
 }
 function fetchAll(keepVals) {
+  fetch('/giai-thich-thong-so.json').then(function (r) { return r.ok ? r.json() : {}; }).then(function (h) { T.help = h || {}; if (T.ready) render(); }).catch(function () {});
   return api('/api/thongso').then(function (d) {
     var r = parseMq5(d.Mq5 || '');
     T.params = r.params; T.groups = r.groups; T.enums = r.enums; T.ver = r.ver; T.bo = d.Bo || [];

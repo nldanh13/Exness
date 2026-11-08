@@ -10,3 +10,4 @@ ket-qua-so-sanh.csv
 
 # Bo thong so tu luu tu giao dien (tab "Thong so"): co the chua token Telegram
 cai-dat-rieng/
+__pycache__/

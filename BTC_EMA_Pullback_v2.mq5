@@ -1,163 +1,170 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //| BTC_EMA_Pullback_v2.mq5 (TrendBot)                               |
 //| EA theo xu huong: Donchian breakout (mac dinh) hoac EMA pullback |
 //| File nay chi chua tham so va thu tu chay; logic nam trong        |
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10"
-#property version   "5.92"
-#property description "Donchian breakout (mac dinh) hoac EMA pullback, ATR stop, trailing, bo loc, canh bao"
+#define  BOT_VERSION "5.10.1"
+#property version   "5.101"
+#property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
 
 enum ENUM_STRATEGY
 {
-   STRAT_EMA_PULLBACK = 0,   // Hoi ve EMA20 theo xu huong
-   STRAT_DONCHIAN     = 1,   // Pha vo kenh Donchian (breakout)
-   STRAT_RSI_REVERT   = 2,   // Luot song: RSI qua ban/qua mua, vao theo xu huong lon (an hoi)
-   STRAT_ORB          = 3,   // Luot song: pha vo vung gia dau phien My (opening range breakout)
-   STRAT_EXHAUST      = 4,   // Luot song: dao chieu sau cu chay manh >= x% ATR ngay, TP o dai Bollinger
-   STRAT_FVG          = 5,   // Luot song: gia quay lai khoang trong (FVG) cua nen lon, khoi luong cao
-   STRAT_SPRING       = 6,   // Luot song: pha vo gia vung di ngang (Wyckoff spring / upthrust)
-   STRAT_MACD         = 7,   // MACD(12,26,9) cat len/xuong (da khung theo Quantpedia: D1 loc huong, H1 vao lenh)
-   STRAT_IMOM         = 8    // Quan tinh trong ngay (Shen, Urquhart & Wang 2022): vao 16:30, dong 17:00 gio New York
+   STRAT_EMA_PULLBACK = 0,   // Hồi về EMA20 theo xu hướng
+   STRAT_DONCHIAN     = 1,   // Phá vỡ kênh Donchian (chiến lược chính)
+   STRAT_RSI_REVERT   = 2,   // Thử nghiệm: RSI quá mua / quá bán
+   STRAT_ORB          = 3,   // Thử nghiệm: phá vỡ vùng giá đầu phiên Mỹ (ORB)
+   STRAT_EXHAUST      = 4,   // Thử nghiệm: đảo chiều sau cú chạy mạnh
+   STRAT_FVG          = 5,   // Thử nghiệm: khoảng trống giá (FVG)
+   STRAT_SPRING       = 6,   // Thử nghiệm: Wyckoff spring / upthrust
+   STRAT_MACD         = 7,   // Thử nghiệm: MACD đa khung
+   STRAT_IMOM         = 8    // Thử nghiệm: quán tính trong ngày
 };
 
-input group "=== Tin hieu ==="
-input ENUM_STRATEGY   InpStrategy        = STRAT_DONCHIAN;     // Chien luoc vao lenh
-input int             InpDonchianPeriod  = 20;        // So nen cua kenh Donchian (breakout)
-input double          InpBreakMinATR     = 0.0;       // Donchian: gia dong cua phai vuot kenh it nhat x ATR (0 = tat)
-input double          InpBreakMinBody    = 0.0;       // Donchian: than nen pha vo >= % bien do nen, cung chieu (0 = tat)
-input bool            InpBreakConfirm    = false;     // Donchian: cho them 1 nen, gia van giu ngoai kenh moi vao
-input double          InpBreakMinVol     = 0.0;       // Donchian: khoi luong (tick) nen pha vo >= x lan TB 20 nen truoc (0 = tat)
-input double          InpBreakMaxATR     = 0.0;       // Donchian: bo qua nen pha vo dai hon x ATR (nen thanh ly day chuyen, 0 = tat)
-input int             InpRsiPeriod       = 2;         // RSI: so nen
-input double          InpRsiLow          = 10.0;      // RSI: Buy khi RSI < muc nay (va gia tren EMA xu huong)
-input double          InpRsiHigh         = 90.0;      // RSI: Sell khi RSI > muc nay (va gia duoi EMA xu huong)
-input bool            InpOrbNewYork      = true;      // ORB: tu tinh gio mo cua New York 9:30 theo mua he/dong (server = UTC)
-input int             InpOrbStartMin     = 810;       // ORB: khi tat dong tren: phut bat dau vung gia tu 00:00 gio server (810 = 13:30)
-input int             InpOrbMinutes      = 30;        // ORB: do dai vung gia (phut)
-input double          InpExhaustATR      = 0.75;      // Dao chieu: cu chay trong ngay >= x ATR(20) D1
-input double          InpFvgBigATR       = 2.0;       // FVG: nen giua dai >= x ATR va tick >= 1,5 lan TB 20 nen
-input int             InpFvgLookback     = 20;        // FVG: tim khoang trong trong N nen gan nhat
-input int             InpRangeBars       = 20;        // Spring: so nen cua vung di ngang
-input double          InpRangeMaxATR     = 4.0;       // Spring: vung di ngang rong toi da x ATR
-input ENUM_TIMEFRAMES InpTF              = PERIOD_H4; // Khung tin hieu
-input int             InpFastEMA         = 20;        // EMA nhanh (vung hoi)
-input int             InpTrendEMA        = 200;       // EMA xu huong
-input int             InpATRPeriod       = 14;        // Chu ky ATR
+input group "1. Chiến lược và khung thời gian"
+input ENUM_STRATEGY   InpStrategy         = STRAT_DONCHIAN; // Chiến lược vào lệnh
+input ENUM_TIMEFRAMES InpTF               = PERIOD_H4;  // Khung thời gian tín hiệu
+input int             InpFastEMA          = 20;         // EMA nhanh (số nến)
+input int             InpTrendEMA         = 200;        // EMA xu hướng (số nến)
+input int             InpATRPeriod        = 14;         // Chu kỳ ATR (số nến)
 
-input group "=== Bo loc thi truong ==="
-input bool            InpUseFunding      = false;     // Loc funding rate Binance Futures (dam dong dung don bay qua lech)
-input double          InpFundingMax      = 0.03;      // Bo Buy khi funding > X% / 8 gio, bo Sell khi funding < -X%
-input string          InpFundingSymbol   = "";        // Ma hop dong Binance cho funding (de trong = tu doan: BTC -> BTCUSDT, ETH -> ETHUSDT)
-input bool            InpUseFearGreed    = false;     // Loc Fear & Greed Index (tam ly dam dong, alternative.me)
-input int             InpFngGreedMax     = 76;        // Bo Buy khi chi so hom qua >= muc nay (tham lam cuc do)
-input int             InpFngFearMin      = 24;        // Bo Sell khi chi so hom qua <= muc nay (so hai cuc do)
-input bool            InpUseAttention    = false;     // Chi vao lenh khi luot xem Wikipedia TB 7 ngay > TB 30 ngay (su chu y tang)
-input string          InpWikiArticle     = "";        // Bai Wikipedia tieng Anh (de trong = tu doan: BTC -> Bitcoin, ETH -> Ethereum)
-input bool            InpUseMarketFilter = false;     // Chi Buy khi Nasdaq tren EMA200 D1, chi Sell khi duoi
-input string          InpMarketSymbol    = "USTEC";   // Ma Nasdaq tren san (tu thu them duoi "m" neu khong co)
-input bool            InpAvoidUSNews     = false;     // Khong vao lenh gan tin My quan trong (lich kinh te MT5, chi khi chay that)
-input int             InpNewsHours       = 2;         // So gio truoc/sau tin
-input bool            InpUseHTF          = true;      // Xac nhan xu huong khung lon
-input ENUM_TIMEFRAMES InpHTF             = PERIOD_D1; // Khung lon
-input int             InpHTFEMA          = 200;       // EMA khung lon
-input bool            InpUseADX          = true;      // Loc thi truong di ngang bang ADX
-input int             InpADXPeriod       = 14;        // Chu ky ADX
-input double          InpADXMin          = 20.0;      // ADX toi thieu de vao lenh
-input bool            InpUseCandle       = false;     // Bat buoc mau nen (pin bar / engulfing)
+input group "2. Phá vỡ kênh Donchian"
+input int             InpDonchianPeriod   = 20;         // Độ dài kênh (số nến)
+input double          InpBreakMinATR      = 0.0;        // Vượt kênh tối thiểu (× ATR, 0 = tắt)
+input double          InpBreakMinBody     = 0.0;        // Thân nến phá vỡ tối thiểu (% biên độ nến, 0 = tắt)
+input bool            InpBreakConfirm     = false;      // Chờ thêm 1 nến xác nhận
+input double          InpBreakMinVol      = 0.0;        // Khối lượng nến phá vỡ tối thiểu (× TB 20 nến, 0 = tắt)
+input double          InpBreakMaxATR      = 0.0;        // Bỏ nến phá vỡ dài hơn (× ATR, 0 = tắt)
 
-input group "=== SL / TP / Khoi luong ==="
-input double          InpATRMult         = 2.5;       // SL = ATR x he so
-input double          InpRR              = 0.0;       // TP = SL x RR (0 = khong dat TP, de trailing thoat)
-input double          InpRiskPercent     = 1.0;       // % von rui ro moi lenh
-input int             InpPyramidMax      = 1;         // Nhoi lenh theo da: toi da bao nhieu lenh cung chieu (1 = tat)
-input double          InpEntryPullATR    = 0;         // Vao lenh: cho gia hoi ve x ATR trong 1 nen sau tin hieu thay vi vao ngay (0 = vao ngay)
-input int             InpEntryPullMode   = 0;         // Het nen ma gia chua hoi: 0 = bo tin hieu, 1 = vao gia thi truong
-input int             InpPyramidTFmin    = 0;         // Kiem tra nhoi moi x phut (vd 15) thay vi moi nen khung chinh; buoc van tinh theo ATR khung chinh (0 = khung chinh)
-input double          InpPyramidStepATR  = 1.0;       // Nhoi them khi gia di them x ATR tu lenh gan nhat (lenh cu doi SL ve hoa von)
-input int             InpSLTFmin         = 0;         // SL / buoc nhoi / trailing tinh theo ATR khung x phut (vd 5 = M5) thay vi khung chinh (0 = khung chinh)
-input int             InpReEntryMax      = 0;         // Bi cat lo thi vao lai toi da x lan cho cung 1 tin hieu, khi gia vuot lai muc vao dau (0 = tat)
-input int             InpReEntryBars     = 6;         // Chi vao lai trong x nen khung chinh tinh tu tin hieu
-input bool            InpExitOnEMA       = false;     // Dong het khi nen dong cat EMA nhanh nguoc chieu (dau hieu het da)
-input int             InpImomMode        = 0;         // Quan tinh trong ngay: 0 = ket hop 2 tin hieu, 1 = nua gio dau, 2 = nua gio ke cuoi (dao chieu)
-input bool            InpExitOnBar       = false;     // Dong het o nen dau tien dong nguoc chieu (Buy: nen do; Sell: nen xanh)
-input int             InpMTFAlign        = 0;         // Dong thuan da khung: can it nhat x/8 khung (M1,M3,M5,M10,M15,M30,H1,H4) cung phia EMA20 moi vao / nhoi (0 = tat)
-input bool            InpHTFMacd         = false;     // Loc huong khung lon bang MACD (dong > tin hieu = tang) thay vi EMA
-input bool            InpDDScale         = false;     // Giam rui ro khi sut giam: 5-10% -> 50%, >10% -> 25% (ve 100% khi lap dinh moi)
-input double          InpMaxRiskRoundUp  = 0.0;       // Lot tinh ra < lot toi thieu: van vao lot toi thieu neu rui ro that <= X% (0 = tat, bo qua lenh)
-input string          InpCorrSymbols     = "BTCUSDm,ETHUSDm"; // Cac ma di cung nhau (BTC/ETH): dang co lenh ma khac thi giam rui ro
-input double          InpCorrRiskScale   = 0.5;       // He so rui ro khi ma cung nhom dang co lenh (1 = tat)
-input double          InpMaxGroupRiskPct = 1.5;       // Tong rui ro toi da % cua ca nhom (lenh dang mo + lenh moi), 0 = tat
+input group "3. Chiến lược thử nghiệm (chưa đạt kiểm thử)"
+input int             InpRsiPeriod        = 2;          // RSI: chu kỳ (số nến)
+input double          InpRsiLow           = 10.0;       // RSI: mua khi dưới mức
+input double          InpRsiHigh          = 90.0;       // RSI: bán khi trên mức
+input bool            InpOrbNewYork       = true;       // ORB: tự tính giờ mở cửa New York
+input int             InpOrbStartMin      = 810;        // ORB: giờ bắt đầu vùng giá (phút tính từ 00:00 server)
+input int             InpOrbMinutes       = 30;         // ORB: độ dài vùng giá (phút)
+input double          InpExhaustATR       = 0.75;       // Đảo chiều: cú chạy trong ngày tối thiểu (× ATR ngày)
+input double          InpFvgBigATR        = 2.0;        // FVG: nến lớn tối thiểu (× ATR)
+input int             InpFvgLookback      = 20;         // FVG: tìm khoảng trống trong (số nến)
+input int             InpRangeBars        = 20;         // Spring: độ dài vùng đi ngang (số nến)
+input double          InpRangeMaxATR      = 4.0;        // Spring: vùng đi ngang rộng tối đa (× ATR)
+input int             InpImomMode         = 0;          // Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối
 
-input group "=== Quan ly lenh ==="
-input bool            InpUsePartial      = false;     // Chot loi mot phan
-input double          InpPartialR        = 1.0;       // Chot khi lai dat (R)
-input double          InpPartialPct      = 50.0;      // % khoi luong chot
-input bool            InpUseBreakeven    = false;     // Doi SL ve hoa von
-input double          InpBreakevenR      = 1.0;       // Khi lai dat (R)
-input double          InpBEBufferR       = 0.05;      // Cong them vao muc hoa von (tinh theo R), ngoai phi + swap
-input bool            InpUseTrailing     = true;      // Trailing stop theo ATR
-input double          InpTrailStartR     = 0.0;       // Bat dau trailing khi lai dat (R)
-input double          InpTrailATRMult    = 3.0;       // Khoang trailing = ATR x he so
+input group "4. Bộ lọc xu hướng"
+input bool            InpUseHTF           = true;       // Chỉ giao dịch theo xu hướng khung lớn
+input ENUM_TIMEFRAMES InpHTF              = PERIOD_D1;  // Khung lớn
+input int             InpHTFEMA           = 200;        // EMA khung lớn (số nến)
+input bool            InpHTFMacd          = false;      // Xác định xu hướng khung lớn bằng MACD thay cho EMA
+input bool            InpUseADX           = true;       // Lọc thị trường đi ngang bằng ADX
+input int             InpADXPeriod        = 14;         // Chu kỳ ADX (số nến)
+input double          InpADXMin           = 20.0;       // ADX tối thiểu để vào lệnh
+input int             InpMTFAlign         = 0;          // Đồng thuận đa khung: số khung tối thiểu (trên 8, 0 = tắt)
+input bool            InpUseCandle        = false;      // Bắt buộc mẫu nến (pin bar / nhấn chìm)
 
-input group "=== Bo loc thoi gian (gio server) ==="
-input bool            InpSkipWeekend     = false;     // Khong vao lenh moi Thu 7, Chu nhat
-input int             InpBlock1Start     = -1;        // Khung nghi 1: tu gio (-1 = tat)
-input int             InpBlock1End       = 14;        // Khung nghi 1: den gio
-input int             InpBlock2Start     = -1;        // Khung nghi 2: tu gio (-1 = tat)
-input int             InpBlock2End       = 20;        // Khung nghi 2: den gio
-input int             InpMaxSpreadPoints = 0;         // Spread toi da (point, 0 = tat)
+input group "5. Bộ lọc dữ liệu bên ngoài"
+input bool            InpUseFunding       = false;      // Lọc theo funding rate Binance Futures
+input double          InpFundingMax       = 0.03;       // Ngưỡng funding (% mỗi 8 giờ)
+input string          InpFundingSymbol    = "";         // Mã hợp đồng Binance (trống = tự nhận)
+input bool            InpUseFearGreed     = false;      // Lọc theo chỉ số Fear & Greed
+input int             InpFngGreedMax      = 76;         // Bỏ mua khi chỉ số từ mức (tham lam cực độ)
+input int             InpFngFearMin       = 24;         // Bỏ bán khi chỉ số đến mức (sợ hãi cực độ)
+input bool            InpUseAttention     = false;      // Chỉ vào lệnh khi lượt xem Wikipedia đang tăng
+input string          InpWikiArticle      = "";         // Bài Wikipedia tiếng Anh (trống = tự nhận)
+input bool            InpUseMarketFilter  = false;      // Theo xu hướng Nasdaq (EMA200 khung ngày)
+input string          InpMarketSymbol     = "USTEC";    // Mã Nasdaq trên sàn
+input bool            InpAvoidUSNews      = false;      // Tránh tin kinh tế Mỹ quan trọng
+input int             InpNewsHours        = 2;          // Khoảng tránh tin (giờ trước và sau)
 
-input group "=== Gioi han vao lenh ==="
-input bool            InpAllowBuy        = true;      // Cho phep Buy
-input bool            InpAllowSell       = true;      // Cho phep Sell
-input int             InpMaxTradesPerDay = 0;         // So lenh toi da moi ngay (0 = khong gioi han)
-input int             InpCooldownBars    = 0;         // Nghi bao nhieu nen sau 1 lenh thua (0 = tat)
+input group "6. Cách vào lệnh"
+input bool            InpManualEntry      = false;      // Tự bấm BUY / SELL trên chart (bot không tự vào)
+input double          InpEntryPullATR     = 0;          // Chờ giá hồi trước khi vào (× ATR, 0 = vào ngay)
+input int             InpEntryPullMode    = 0;          // Hết nến mà giá chưa hồi: 0 = bỏ, 1 = vào giá thị trường
+input int             InpReEntryMax       = 0;          // Vào lại sau khi dính SL: tối đa (lần, 0 = tắt)
+input int             InpReEntryBars      = 6;          // Chỉ vào lại trong vòng (số nến khung chính)
+input int             InpPyramidMax       = 1;          // Nhồi lệnh: tổng số lớp tối đa (1 = tắt)
+input double          InpPyramidStepATR   = 1.0;        // Nhồi thêm khi giá đi tiếp (× ATR)
+input int             InpPyramidTFmin     = 0;          // Kiểm tra nhồi mỗi (phút, 0 = mỗi nến khung chính)
 
-input group "=== Bao ve tai khoan ==="
-input double          InpMaxDailyLossPct = 3.0;       // Lo trong ngay toi da % (0 = tat), chi tinh lai/lo cua bot
-input bool            InpCloseOnDailyLoss = true;     // Dong lenh dang mo khi cham lo ngay
-input double          InpMaxDrawdownPct  = 15.0;      // Sut giam tu dinh toi da % (0 = tat), chi tinh lai/lo cua bot
-input bool            InpCloseOnHalt     = true;      // Dong het lenh khi cham sut giam toi da
-input bool            InpResetHalt       = false;     // Dat true 1 lan de mo khoa bot va dat lai moc von
-input double          InpCapital         = 0;         // Von danh cho bot (0 = toan bo balance luc dat moc). Dung khi chia von cho nhieu EA
-input group "=== Tu bam vao lenh + bang xu huong ==="
-input bool            InpManualEntry     = false;     // Ban tu bam BUY/SELL tren chart (bot KHONG tu vao lenh); bot tinh lot, dat SL, nhoi, trailing
-input bool            InpTrendBoard      = true;      // Hien bang xu huong M1 -> D1 o goc phai chart
-input group "=== Bao ve lenh vao tay (rut ra tu sao ke giao dich tay) ==="
-input bool            InpGuardManual     = false;     // Bat bao ve lenh tay (magic 0) tren ma cua chart nay
-input double          InpGuardSLPct      = 1.5;       // Lenh tay chua co SL: tu dat SL cach gia vao x% (0 = tat)
-input double          InpGuardMaxRiskPct = 3.0;       // Lenh tay cham SL lo hon x% von thi giam lot / dong (0 = tat)
-input bool            InpGuardNoAverage  = true;      // Dong ngay lenh tay moi neu nhoi vao lenh cung chieu dang lo
-input int             InpGuardMaxHoldH   = 24;        // Dong lenh tay dang lo sau x gio (0 = tat)
-input double          InpGuardDayLossPct = 5.0;       // Lenh tay lo phat sinh qua x% trong ngay: dong het, khoa lenh tay toi het ngay (0 = tat)
-input bool            InpGuardOldTrades  = false;     // Ap dung ca cho lenh tay da mo TRUOC khi bat bao ve (mac dinh: chi canh bao)
-input group "=== Nhat ky & canh bao ky luat (tai khoan that) ==="
-input bool            InpJournal         = true;      // Ghi moi giao dich cua tai khoan (bot, lenh tay, nap/rut) vao Common\Files\TrendBot_nhatky.csv
-input double          InpWarnProfitPct   = 20.0;      // Lai trong thang dat moi x% thi nhac rut tien (0 = tat)
-input double          InpWarnBigWinPct   = 10.0;      // 1 lenh lai > x% so du: nhac rut tien, nghi 1-2 ngay, khong tang lot (0 = tat)
-input int             InpWarnRedepositDays = 7;       // Nap tien trong x ngay sau khi rut: canh bao (0 = tat)
-input double          InpMonthDepositCap = 0;         // Tong nap trong thang vuot muc nay (tien tai khoan, vd 2000000 VND) thi canh bao (0 = tat)
-input double          InpWarnLotJump     = 2.0;       // Lenh tay co lot > x lan lot thuong dung (trung vi 20 lenh gan nhat): canh bao (0 = tat)
-input int             InpWarnMaxTradesDay = 10;       // Vao qua x lenh tay trong ngay: canh bao (0 = tat)
-input int             InpWarnLossStreak  = 3;         // Thua tay x lenh lien tiep: nhac nghi (0 = tat)
+input group "7. Dừng lỗ và chốt lời"
+input double          InpATRMult          = 2.5;        // Dừng lỗ (SL) = ATR ×
+input int             InpSLTFmin          = 0;          // Tính SL theo ATR khung (phút, 0 = khung chính)
+input double          InpRR               = 0.0;        // Chốt lời (TP) = SL × (0 = không đặt TP)
+input bool            InpUseTrailing      = true;       // Trailing stop theo ATR
+input double          InpTrailStartR      = 0.0;        // Bắt đầu trailing khi lãi đạt (R)
+input double          InpTrailATRMult     = 3.0;        // Khoảng cách trailing = ATR ×
+input bool            InpUseBreakeven     = false;      // Dời SL về hòa vốn
+input double          InpBreakevenR       = 1.0;        // Dời về hòa vốn khi lãi đạt (R)
+input double          InpBEBufferR        = 0.05;       // Cộng thêm vào mức hòa vốn (R)
+input bool            InpUsePartial       = false;      // Chốt lời một phần
+input double          InpPartialR         = 1.0;        // Chốt một phần khi lãi đạt (R)
+input double          InpPartialPct       = 50.0;       // Tỷ lệ khối lượng chốt (%)
+input bool            InpExitOnEMA        = false;      // Đóng hết khi nến cắt EMA nhanh ngược chiều
+input bool            InpExitOnBar        = false;      // Đóng hết ở nến đầu tiên đóng ngược chiều
 
-input group "=== Thong bao ==="
-input bool            InpPushNotify      = true;      // Push ve app MT5 tren dien thoai
-input bool            InpTelegram        = false;     // Gui Telegram
-input string          InpTgToken         = "";        // Telegram bot token
-input string          InpTgChatId        = "";        // Telegram chat id
+input group "8. Khối lượng và rủi ro"
+input double          InpRiskPercent      = 1.0;        // Rủi ro mỗi lệnh (% vốn)
+input double          InpMaxRiskRoundUp   = 0.0;        // Vào lot tối thiểu nếu rủi ro thật ≤ (%, 0 = bỏ lệnh)
+input bool            InpDDScale          = false;      // Giảm rủi ro khi đang sụt giảm
+input string          InpCorrSymbols      = "BTCUSDm,ETHUSDm"; // Nhóm mã đi cùng nhau
+input double          InpCorrRiskScale    = 0.5;        // Hệ số rủi ro khi mã cùng nhóm đang có lệnh (1 = tắt)
+input double          InpMaxGroupRiskPct  = 1.5;        // Tổng rủi ro tối đa của cả nhóm (%, 0 = tắt)
 
-input group "=== Khac ==="
-input bool            InpShowPanel       = true;      // Hien bang thong tin
-input ulong           InpMagic           = 20261105;  // Magic number
-input int             InpExportTFmin     = 0;         // Chi dung khi backtest: cuoi lan chay, xuat nen x phut (vd 10) ra Common\Files\TrendBot_bars_Mx.csv (0 = tat)
-input string          InpTestLabel       = "";        // Ten lan chay backtest (ghi vao file ket qua)
-input int             InpManageEverySec  = 0;         // Kiem tra lenh dang mo / gioi han lo moi X giay (0 = moi tick, mac dinh: tick that cho thay 1 giay lam lech 1 lenh)
-input int             InpPreset          = 0;         // Backtest: so thu tu cau hinh trong file TrendBot_presets.csv (0 = dung tham so tren)
+input group "9. Giờ giao dịch và giới hạn"
+input bool            InpAllowBuy         = true;       // Cho phép mua (Buy)
+input bool            InpAllowSell        = true;       // Cho phép bán (Sell)
+input int             InpMaxTradesPerDay  = 0;          // Số lệnh tối đa mỗi ngày (0 = không giới hạn)
+input int             InpCooldownBars     = 0;          // Nghỉ sau lệnh thua (số nến, 0 = tắt)
+input int             InpMaxSpreadPoints  = 0;          // Spread tối đa (point, 0 = tắt)
+input bool            InpSkipWeekend      = false;      // Không vào lệnh mới vào thứ Bảy và Chủ nhật
+input int             InpBlock1Start      = -1;         // Khung nghỉ 1: từ giờ (giờ server, −1 = tắt)
+input int             InpBlock1End        = 14;         // Khung nghỉ 1: đến giờ
+input int             InpBlock2Start      = -1;         // Khung nghỉ 2: từ giờ (giờ server, −1 = tắt)
+input int             InpBlock2End        = 20;         // Khung nghỉ 2: đến giờ
+
+input group "10. Bảo vệ tài khoản"
+input double          InpMaxDailyLossPct  = 3.0;        // Khóa lỗ trong ngày (% vốn bot, 0 = tắt)
+input bool            InpCloseOnDailyLoss = true;       // Đóng lệnh đang mở khi chạm khóa lỗ ngày
+input double          InpMaxDrawdownPct   = 15.0;       // Dừng hẳn khi sụt từ đỉnh (% vốn bot, 0 = tắt)
+input bool            InpCloseOnHalt      = true;       // Đóng hết lệnh khi dừng hẳn
+input bool            InpResetHalt        = false;      // Mở khóa và đặt lại mốc vốn (bật 1 lần rồi tắt)
+input double          InpCapital          = 0;          // Vốn dành cho bot (0 = cả tài khoản)
+
+input group "11. Bảo vệ lệnh vào tay"
+input bool            InpGuardManual      = false;      // Bật bảo vệ lệnh vào tay trên mã của chart này
+input double          InpGuardSLPct       = 1.5;        // Lệnh chưa có SL: tự đặt SL cách giá vào (%, 0 = tắt)
+input double          InpGuardMaxRiskPct  = 3.0;        // Rủi ro tối đa mỗi lệnh tay (% vốn, 0 = tắt)
+input bool            InpGuardNoAverage   = true;       // Đóng ngay lệnh nhồi vào lệnh cùng chiều đang lỗ
+input int             InpGuardMaxHoldH    = 24;         // Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)
+input double          InpGuardDayLossPct  = 5.0;        // Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)
+input bool            InpGuardOldTrades   = false;      // Áp dụng cả cho lệnh đã mở trước khi bật
+
+input group "12. Nhật ký và kỷ luật giao dịch"
+input bool            InpJournal          = true;       // Ghi nhật ký mọi giao dịch của tài khoản
+input double          InpWarnProfitPct    = 20.0;       // Nhắc rút tiền khi lãi trong tháng đạt (%, 0 = tắt)
+input double          InpWarnBigWinPct    = 10.0;       // Nhắc khi một lệnh lãi trên (% số dư, 0 = tắt)
+input int             InpWarnRedepositDays = 7;         // Cảnh báo nạp lại trong (ngày sau khi rút, 0 = tắt)
+input double          InpMonthDepositCap  = 0;          // Cảnh báo khi tổng nạp trong tháng vượt (tiền tài khoản, 0 = tắt)
+input double          InpWarnLotJump      = 2.0;        // Cảnh báo lot tay lớn hơn (× lot thường dùng, 0 = tắt)
+input int             InpWarnMaxTradesDay = 10;         // Cảnh báo khi vào quá (lệnh tay mỗi ngày, 0 = tắt)
+input int             InpWarnLossStreak   = 3;          // Nhắc nghỉ sau (lệnh tay thua liên tiếp, 0 = tắt)
+
+input group "13. Hiển thị và thông báo"
+input bool            InpShowPanel        = true;       // Hiện bảng thông tin trên chart
+input bool            InpTrendBoard       = true;       // Hiện bảng xu hướng M1 → D1
+input bool            InpPushNotify       = true;       // Gửi thông báo về app MT5 trên điện thoại
+input bool            InpTelegram         = false;      // Gửi thông báo qua Telegram
+input string          InpTgToken          = "";         // Telegram: bot token
+input string          InpTgChatId         = "";         // Telegram: chat id
+
+input group "14. Hệ thống và backtest"
+input ulong           InpMagic            = 20261105;   // Mã nhận diện lệnh của bot (magic number)
+input int             InpManageEverySec   = 0;          // Kiểm tra lệnh mỗi (giây, 0 = mỗi tick)
+input int             InpPreset           = 0;          // Backtest: số thứ tự cấu hình (0 = dùng thông số trên)
+input string          InpTestLabel        = "";         // Backtest: tên lần chạy
+input int             InpExportTFmin      = 0;          // Backtest: xuất dữ liệu nến (phút, 0 = tắt)
 
 
 //--- Ban sao co the doi cua cac tham so (code dung P_..., khong dung Inp... truc tiep) ----

@@ -217,7 +217,7 @@ Write-Host "Giao dien dang chay tai $prefix  (dong cua so nay de tat)" -Foregrou
 $script:Git = Get-GitStatus -Fetch
 if (-not $KhongMoTrinhDuyet) { Start-Process $prefix }
 
-$types = @{ ".html" = "text/html; charset=utf-8"; ".js" = "text/javascript; charset=utf-8"; ".css" = "text/css; charset=utf-8"; ".svg" = "image/svg+xml" }
+$types = @{ ".json" = "application/json; charset=utf-8"; ".html" = "text/html; charset=utf-8"; ".js" = "text/javascript; charset=utf-8"; ".css" = "text/css; charset=utf-8"; ".svg" = "image/svg+xml" }
 try {
     while ($listener.IsListening) {
         $ctx = $listener.GetContext()

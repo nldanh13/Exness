@@ -66,6 +66,13 @@ function Invoke-BotCompile($mt5, [string]$src) {
         $setDst = Join-Path $mt5.DataDir "MQL5\Presets"
         if (-not (Test-Path $setDst)) { New-Item -ItemType Directory -Path $setDst | Out-Null }
         Copy-Item (Join-Path $setSrc "*.set") $setDst -Force
+        # Bo cai dat ten cu (truoc ban 5.10.1) da doi ten: xoa khoi MT5 de danh sach Load khong lan bo cu
+        foreach ($old in @("1-Donchian-H4-khuyen-dung", "2-Donchian-M30-khoiLuong", "3-RSI-M15", "4-ORB-M5-phien-My",
+                           "5-Luot-song-1trieu-THU-NGHIEM", "6-Donchian-H4-nhoi3", "7-Bao-ve-lenh-tay", "8-Demo-1trieu-tinHieuM5",
+                           "9-Demo-1trieu-H4-slM5", "10-Tu-bam-H4-nhoi3")) {
+            $f = Join-Path $setDst "$old.set"
+            if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+        }
     }
     if (Test-Path $log) { Remove-Item $log -Force }
     # Giu ban .ex5 cu: compile loi thi tra lai, bot tren chart khong bi mat file chay
