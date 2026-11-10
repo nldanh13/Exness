@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //| TrendBot/ManualEntry.mqh: Ban tu bam vao lenh + bang xu huong moi khung
 //| - InpManualEntry = true: bot KHONG tu vao lenh. Tren chart co nut BUY / SELL / DONG HET.
 //|   Bam 1 lan -> nut doi thanh "Bam lan nua de ..." (5 giay) -> bam lan 2 moi gui lenh.
@@ -84,21 +84,46 @@ int TrendOf(const int i)
    return 0;
 }
 
+void MEBox(const string name, const int x, const int y, const int w, const int h)
+{
+   string n = ME_PFX + name;
+   if(ObjectFind(0, n) < 0)
+   {
+      ObjectCreate(0, n, OBJ_RECTANGLE_LABEL, 0, 0, 0);
+      ObjectSetInteger(0, n, OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+      ObjectSetInteger(0, n, OBJPROP_BORDER_TYPE, BORDER_FLAT);
+      ObjectSetInteger(0, n, OBJPROP_BGCOLOR, C'24,28,36');
+      ObjectSetInteger(0, n, OBJPROP_COLOR, C'60,66,80');
+      ObjectSetInteger(0, n, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, n, OBJPROP_HIDDEN, true);
+      ObjectSetInteger(0, n, OBJPROP_BACK, false);
+   }
+   // goc phai: XDISTANCE tinh tu mep phai toi CANH TRAI cua hop
+   ObjectSetInteger(0, n, OBJPROP_XDISTANCE, x + w);
+   ObjectSetInteger(0, n, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, n, OBJPROP_XSIZE, w);
+   ObjectSetInteger(0, n, OBJPROP_YSIZE, h);
+}
+
 void DrawTrendBoard(int &y)
 {
    if(!g_tbReady) return;
-   MELabel("tb_h", 12, y, "XU HUONG (nen da dong, EMA20/50)", clrSilver, 8, "Arial"); y += 16;
+   int w = 210, lh = 16;
+   MEBox("tb_bg", 8, y, w, 26 + 9 * lh + 22);          // tao truoc cac nhan de nam duoi chu
+   y += 6;
+   MELabel("tb_h", 18, y, "XU HƯỚNG  (nến đã đóng, EMA20/50)", C'130,138,152', 8, "Segoe UI"); y += 20;
    int up = 0, dn = 0;
    for(int i = 0; i < 9; i++)
    {
       int t = TrendOf(i);
       if(t > 0) up++; else if(t < 0) dn++;
-      string s = t > 0 ? "TANG  ^" : t < 0 ? "GIAM  v" : "NGANG -";
-      color  c = t > 0 ? clrLimeGreen : t < 0 ? clrTomato : clrDarkGray;
-      MELabel("tb_" + g_tbName[i], 12, y, StringFormat("%-4s %s", g_tbName[i], s), c, 9); y += 15;
+      string s = t > 0 ? "TĂNG   ▲" : t < 0 ? "GIẢM   ▼" : "NGANG  –";
+      color  c = t > 0 ? C'90,200,120' : t < 0 ? C'235,95,85' : C'130,138,152';
+      MELabel("tb_" + g_tbName[i], 18, y, StringFormat("%-4s %s", g_tbName[i], s), c, 9, "Consolas"); y += lh;
    }
-   string sum = StringFormat("Tang %d / Giam %d / Ngang %d", up, dn, 9 - up - dn);
-   MELabel("tb_sum", 12, y, sum, up >= 7 ? clrLimeGreen : dn >= 7 ? clrTomato : clrSilver, 8, "Arial"); y += 20;
+   y += 4;
+   string sum = StringFormat("Tăng %d · Giảm %d · Ngang %d", up, dn, 9 - up - dn);
+   MELabel("tb_sum", 18, y, sum, up >= 7 ? C'90,200,120' : dn >= 7 ? C'235,95,85' : C'205,210,220', 8, "Segoe UI"); y += 24;
 }
 
 //--- Nut vao lenh --------------------------------------------------
