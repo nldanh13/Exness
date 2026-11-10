@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.7
+# Hướng dẫn bot BTC (MT5) v5.10.8
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -577,3 +577,11 @@ Trong bộ 05, `InpAllowBuy` và `InpAllowSell` bằng false nhưng `InpGuardAut
 - Nhãn các thông số và đầu file `05-...set` ghi rõ điều này.
 
 Muốn bot chỉ canh lệnh, không tự mở lệnh: dùng bộ 04, hoặc đặt `InpGuardAutoEntry = false`.
+
+## Chốt lời theo khung vào lệnh (v5.10.8)
+Vào lệnh ở khung nhỏ thì giá đảo chiều nhanh, để lâu dễ ôm lỗ. Trước đây bot luôn kéo SL theo ATR M15, quá lỏng với lệnh vào ở M1. Ba thông số mới:
+- `InpGuardTrailTFmin = 0`: kéo SL theo ATR của chính khung vào lệnh (`InpGuardAutoTFmin`). Vào M1 thì kéo theo ATR M1, sát hơn nhiều.
+- `InpGuardTPR`: đặt TP cố định ở x R cho lệnh chưa có TP. TP nằm trên máy chủ nên vẫn chốt khi bot tắt. TP bạn tự đặt được giữ nguyên.
+- `InpGuardMaxBars`: lệnh chưa tới hòa vốn sau x nến của khung vào lệnh thì đóng, không ôm.
+
+Bộ 05: điểm vào chuyển từ M1 sang M5 (M1 bị quét liên tục trong ngày giằng co 10/11), kéo SL 2 × ATR M5, TP 2R, đóng lệnh chưa hòa vốn sau 12 nến M5 (1 giờ). Bộ 04 giữ như cũ (M15, không TP, không đóng theo nến), vì lệnh bạn tự vào thường theo khung lớn hơn.
