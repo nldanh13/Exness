@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.4"
-#property version   "5.104"
+#define  BOT_VERSION "5.10.5"
+#property version   "5.105"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -147,6 +147,12 @@ input int             InpGuardTrailTFmin  = 15;         // Khung ATR để kéo 
 input int             InpGuardPyramidMax  = 1;          // Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)
 input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)
 input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
+input bool            InpGuardAutoEntry   = false;      // Thử nghiệm: bot tự vào lệnh đầu tiên (lot nhỏ nhất)
+input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
+input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
+input int             InpGuardAutoTFmin   = 5;          // Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)
+input int             InpGuardAutoMaxDay  = 5;          // Số lệnh tự vào tối đa mỗi ngày (0 = không giới hạn)
+input int             InpGuardAutoCooldownMin = 30;     // Nghỉ sau lệnh thua (phút, 0 = tắt)
 
 input group "12. Nhật ký và kỷ luật giao dịch"
 input bool            InpJournal          = true;       // Ghi nhật ký mọi giao dịch của tài khoản
@@ -775,6 +781,7 @@ void OnTick()
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
    GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
+   GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);

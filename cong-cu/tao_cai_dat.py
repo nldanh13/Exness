@@ -59,6 +59,17 @@ PRESETS = [
         "Gắn vào một chart BTCUSDm bất kỳ. Rủi ro 5–6% mỗi lệnh là cao: 5 lệnh thua liên tiếp mất ~25% vốn.",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
         "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3"}),
+    ("05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM.set", [
+        "05. THỬ NGHIỆM: bot tự vào lệnh + bảo vệ, cho vốn khoảng 1 triệu VND",
+        "Trạng thái: CHƯA BACKTEST. Chỉ chạy demo để xem kết quả trên số liệu hiện tại.",
+        "Như bộ 04 (SL 0,25%, rủi ro tối đa 6%, khóa lỗ ngày 10%, hòa vốn ở 1R, kéo SL 2 × ATR M15, nhồi tối đa 3 lớp),",
+        "thêm: bot tự vào 0,01 lot khi ≥ 6/9 khung cùng chiều (bắt buộc có H1 và H4) và nến M1 vừa hồi về EMA20 rồi bật lại.",
+        "Chế độ nhanh: không giới hạn số lệnh, không nghỉ sau lệnh thua. Chỉ dừng khi lỗ 10% trong ngày.",
+        "Spread ~6 USD mỗi lệnh so với SL ~180 USD: càng nhiều lệnh, phí spread càng ăn vào lãi.",
+    ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
+        "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3",
+        "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "1",
+        "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0"}),
     ("TN1-Donchian-H4-nhoi-3-lop.set", [
         "TN1. Thử nghiệm: Donchian H4, nhồi tối đa 3 lớp",
         "Trạng thái: CHƯA ĐẠT. Vốn 3.000 USD: +1.740 / +1.926 USD (2023–2026 / 2020–2023), sụt giảm 12% / 9%.",

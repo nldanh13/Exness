@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.4
+# Hướng dẫn bot BTC (MT5) v5.10.5
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -548,3 +548,15 @@ bot tự thêm một lớp cùng chiều với lệnh tay của bạn, cùng lot
 3. Ít nhất `InpGuardPyramidTrend` (5) / 9 khung trong bảng xu hướng cùng chiều. Mua ngược khi đa số khung GIẢM thì không nhồi.
 4. Chưa khóa lỗ ngày, spread dưới 20% R, không có lệnh chờ tay, tài khoản hedging.
 Lớp mới vẫn là lệnh tay (ghi chú "TB nhoi tay"): hòa vốn, kéo SL, giới hạn lỗ ngày đều áp dụng. Mỗi lần nhồi có thông báo.
+
+## Thử nghiệm: bot tự vào lệnh với vốn nhỏ (v5.10.5, bộ 05)
+Theo yêu cầu: chạy thẳng trên demo với số liệu hiện tại, không backtest trước. `InpGuardAutoEntry = true` (bộ
+`05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM.set`): khi không có lệnh tay nào trên mã, bot tự vào 0,01 lot (magic 0, ghi chú "TB tu vao") nếu
+- ít nhất `InpGuardAutoTrend` (8) / 9 khung trong bảng xu hướng cùng chiều, và
+- nến M5 vừa đóng chạm EMA20 M5 rồi đóng cửa trở lại về phía xu hướng (giá hồi rồi bật lại).
+Giới hạn: tối đa `InpGuardAutoMaxDay` (5) lệnh tự vào mỗi ngày, nghỉ `InpGuardAutoCooldownMin` (30) phút sau lệnh tay thua, không vào khi
+đã khóa lỗ ngày. Sau khi vào, lệnh được xử lý như lệnh tay của bộ 04 (SL 0,25%, hòa vốn 1R, kéo SL, nhồi tối đa 3 lớp).
+Ghi lại kết quả sau 1–2 tuần (nút Gửi nhật ký) rồi mới quyết định có giữ hay không.
+Cập nhật cùng ngày theo yêu cầu "nhiều, nhanh, không nghỉ": bộ 05 giờ dùng 6/9 khung, điểm vào trên nến M1
+(`InpGuardAutoTFmin = 1`), không giới hạn số lệnh/ngày, không nghỉ sau lệnh thua. Khóa lỗ ngày 10% vẫn giữ.
+Thêm `InpGuardAutoNeedHTF` (mặc định bật): ngoài 6/9 khung, H1 và H4 bắt buộc cùng chiều, để 6 khung nhỏ quay đầu không kéo bot vào ngược xu hướng lớn.
