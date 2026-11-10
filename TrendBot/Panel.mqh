@@ -39,7 +39,7 @@ void CheckManualTrades()
 
 //--- Bang thong tin: hop nen toi o goc trai tren, chu tieng Viet co dau (thay Comment() de khong de len nen)
 #define PN_PFX "TBPN_"
-#define PN_W   410
+#define PN_W   440
 
 string PNMoney(const double v, const string cur)
 {
@@ -51,6 +51,15 @@ string PNMoney(const double v, const string cur)
    string out = "";
    for(int k = StringLen(ip); k > 0; k -= 3) out = StringSubstr(ip, MathMax(0, k - 3), MathMin(3, k)) + (out == "" ? "" : "." + out);
    return (v < 0 ? "-" : "") + out + fp + " " + cur;
+}
+
+// Tien lai/lo cua lot nho nhat khi gia di mot doan dist (don vi gia), theo tien te tai khoan
+double PNMinLotMoney(const double dist)
+{
+   double lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), px = SymbolInfoDouble(_Symbol, SYMBOL_ASK), pl = 0;
+   if(lot <= 0 || px <= 0 || dist <= 0) return 0;
+   if(!OrderCalcProfit(ORDER_TYPE_BUY, _Symbol, lot, px, px - dist, pl)) return 0;
+   return MathAbs(pl);
 }
 
 void PNBox(const string name, const int x, const int y, const int w, const int h)
@@ -131,10 +140,15 @@ void UpdatePanel()
       txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
-      txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%% / giới hạn -%.0f%%)", PNMoney(mpl, cur), pct, InpGuardDayLossPct);
+      txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)  ·  giới hạn -%.0f%% = %s", PNMoney(mpl, cur), pct, InpGuardDayLossPct,
+                            PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;
       txt[n] = StringFormat("Lệnh tay đang mở: %d   ·   Lệnh chờ: %d", pos, pend);  col[n++] = cTxt;
-      txt[n] = StringFormat("Luật: SL tự đặt %.2f%%  ·  rủi ro tối đa %.0f%%/lệnh", InpGuardSLPct, InpGuardMaxRiskPct);  col[n++] = cDim;
+      double slMoney = PNMinLotMoney(SymbolInfoDouble(_Symbol, SYMBOL_BID) * InpGuardSLPct / 100.0);
+      txt[n] = StringFormat("Luật: SL tự đặt %.2f%% (1R ≈ %s với %.2f lot)", InpGuardSLPct, PNMoney(slMoney, cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));
+      col[n++] = cDim;
+      txt[n] = StringFormat("Rủi ro tối đa %.0f%%/lệnh = %s", InpGuardMaxRiskPct, PNMoney(AccountInfoDouble(ACCOUNT_EQUITY) * InpGuardMaxRiskPct / 100.0, cur));
+      col[n++] = cDim;
       txt[n] = (InpGuardNoAverage ? "Cấm nhồi vào lệnh lỗ" : "Cho nhồi vào lệnh lỗ") +
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
       txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
@@ -162,7 +176,8 @@ void UpdatePanel()
       txt[n] = StringFormat("Sụt giảm từ đỉnh: %.2f%% / giới hạn %.1f%%", dd, P_MaxDrawdownPct);  col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
       if(P_UseFunding) { txt[n] = "Funding: " + (g_fundState == "" ? "chưa kiểm tra" : g_fundState); col[n++] = cDim; }
    }
-   txt[n] = StringFormat("Spread: %d point", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD));  col[n++] = cDim;
+   txt[n] = StringFormat("Spread: %d point ≈ %s mỗi %.2f lot", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
+                         PNMoney(PNMinLotMoney(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point), cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));  col[n++] = cDim;
 
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);

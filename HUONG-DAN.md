@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.5
+# Hướng dẫn bot BTC (MT5) v5.10.6
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -254,10 +254,10 @@ Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài 
 
 | File | Nội dung | Trạng thái |
 |---|---|---|
-| `01-Chuan-Donchian-H4.set` | Cấu hình C: phá vỡ Donchian 20 nến H4, SL 2,5 ATR, trailing 3 ATR, rủi ro 1% | **Đã kiểm thử.** Cần vốn từ 3.000 USD |
-| `02-Tu-bam-lenh-H4.set` | Bạn tự bấm BUY/SELL, bot tính lot, đặt SL, nhồi tối đa 3 lớp, trailing | Công cụ hỗ trợ |
-| `03-Bao-ve-lenh-tay.set` | Bot không vào lệnh, chỉ canh lệnh vào tay (tự đặt SL, giới hạn rủi ro và lỗ ngày) | Công cụ hỗ trợ |
-| `TN1` … `TN7` | Nhồi lệnh, M30, RSI, ORB, Wyckoff, demo 1 triệu (M5 và SL M5) | **Chưa đạt** kiểm thử, chỉ chạy demo |
+| `04-Bao-ve-lenh-tay-von-1-trieu.set` | Bot không tự vào lệnh, chỉ canh lệnh bạn vào tay (cả lệnh chờ): SL 0,25%, rủi ro tối đa 6%, khóa lỗ ngày 10%, hòa vốn ở 1R, kéo SL, tự nhồi tối đa 3 lớp | Công cụ hỗ trợ cho vốn 1 triệu |
+| `05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM.set` | Như 04, thêm bot tự vào 0,01 lot khi ≥ 6/9 khung cùng chiều (có H1 và H4) và nến M1 hồi về EMA20 | **Chưa backtest**, chỉ chạy demo |
+
+Các bộ 01, 02, 03 và TN1 … TN7 đã bỏ (11/2026) vì cần vốn từ 3.000 USD hoặc chưa đạt kiểm thử. Lần cập nhật kế tiếp tự xóa chúng khỏi danh sách Load trong MT5. Muốn dùng lại, lấy từ lịch sử GitHub hoặc tự lưu bộ riêng trong `cai-dat-rieng`.
 
 Mỗi file ghi đủ thông số giao dịch, nên Load một bộ không còn sót giá trị của bộ nạp trước (trước đây file chỉ ghi một phần, và MT5 giữ nguyên các thông số không có trong file). Cài đặt riêng của bạn (thông báo, Telegram, nhật ký, vốn dành cho bot, mã nhận diện) không nằm trong file nên Load giữ nguyên. Mỗi chiến thuật tự có mã nhận diện riêng, nên gắn nhiều chiến thuật trên cùng `BTCUSDm` (mỗi cái một chart) không lẫn lệnh.
 
@@ -514,7 +514,7 @@ Mo GiaoDien.cmd -> tab "Thong so". Doc thang moi thong so tu code bot (luon khop
   và hiện trạng thái (đã kiểm thử / chưa đạt) khi nạp một bộ.
 
 ## Bảo vệ cả lệnh chờ đặt tay (v5.10.2, 10/11/2026)
-Trước đây bot chỉ canh lệnh tay sau khi đã khớp. Nay với `InpGuardPending = true` (mặc định, dùng cùng bộ `03-Bao-ve-lenh-tay.set`),
+Trước đây bot chỉ canh lệnh tay sau khi đã khớp. Nay với `InpGuardPending = true` (mặc định, dùng cùng bộ `04` hoặc `05`),
 lệnh Buy/Sell Limit, Stop, Stop Limit bạn đặt tay trên mã của chart được sửa ngay khi còn đang chờ, kiểm tra mỗi 2 giây:
 - Chưa có SL: tự đặt SL cách giá sẽ khớp `InpGuardSLPct` (1,5%).
 - Nếu khớp rồi chạm SL mà lỗ hơn `InpGuardMaxRiskPct` (3%) vốn: MT5 không cho sửa lot lệnh chờ, nên bot hủy lệnh và đặt lại
@@ -560,3 +560,12 @@ Ghi lại kết quả sau 1–2 tuần (nút Gửi nhật ký) rồi mới quy�
 Cập nhật cùng ngày theo yêu cầu "nhiều, nhanh, không nghỉ": bộ 05 giờ dùng 6/9 khung, điểm vào trên nến M1
 (`InpGuardAutoTFmin = 1`), không giới hạn số lệnh/ngày, không nghỉ sau lệnh thua. Khóa lỗ ngày 10% vẫn giữ.
 Thêm `InpGuardAutoNeedHTF` (mặc định bật): ngoài 6/9 khung, H1 và H4 bắt buộc cùng chiều, để 6 khung nhỏ quay đầu không kéo bot vào ngược xu hướng lớn.
+
+## Bảng thông tin ghi thêm số tiền (v5.10.6)
+Các mức theo % trên bảng góc trái nay ghi kèm số tiền theo đơn vị tài khoản (VND với tài khoản của bạn):
+- Lãi/lỗ tay hôm nay và giới hạn lỗ ngày, ví dụ `giới hạn -10% = -97.909 VND`.
+- SL tự đặt: 1R bằng bao nhiêu tiền với lot nhỏ nhất (0,01).
+- Rủi ro tối đa mỗi lệnh bằng bao nhiêu tiền.
+- Spread: mỗi lệnh 0,01 lot mất bao nhiêu tiền phí chênh lệch.
+
+Giá trên chart vẫn là USD vì BTCUSDm niêm yết bằng USD, không đổi được.

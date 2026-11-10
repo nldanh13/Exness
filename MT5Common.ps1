@@ -66,10 +66,14 @@ function Invoke-BotCompile($mt5, [string]$src) {
         $setDst = Join-Path $mt5.DataDir "MQL5\Presets"
         if (-not (Test-Path $setDst)) { New-Item -ItemType Directory -Path $setDst | Out-Null }
         Copy-Item (Join-Path $setSrc "*.set") $setDst -Force
-        # Bo cai dat ten cu (truoc ban 5.10.1) da doi ten: xoa khoi MT5 de danh sach Load khong lan bo cu
+        # Bo cai dat cu (doi ten truoc 5.10.1, hoac da bo): xoa khoi MT5 de danh sach Load khong lan bo cu
         foreach ($old in @("1-Donchian-H4-khuyen-dung", "2-Donchian-M30-khoiLuong", "3-RSI-M15", "4-ORB-M5-phien-My",
                            "5-Luot-song-1trieu-THU-NGHIEM", "6-Donchian-H4-nhoi3", "7-Bao-ve-lenh-tay", "8-Demo-1trieu-tinHieuM5",
-                           "9-Demo-1trieu-H4-slM5", "10-Tu-bam-H4-nhoi3")) {
+                           "9-Demo-1trieu-H4-slM5", "10-Tu-bam-H4-nhoi3",
+                           # Bo da bo (11/2026): chi giu 04 va 05 cho von 1 trieu
+                           "01-Chuan-Donchian-H4", "02-Tu-bam-lenh-H4", "03-Bao-ve-lenh-tay", "TN1-Donchian-H4-nhoi-3-lop",
+                           "TN2-Donchian-M30-khoi-luong", "TN3-RSI-M15", "TN4-ORB-M5-phien-My", "TN5-Wyckoff-M15-von-nho",
+                           "TN6-Demo-1-trieu-M5", "TN7-Demo-1-trieu-H4-SL-M5")) {
             $f = Join-Path $setDst "$old.set"
             if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
         }
