@@ -39,7 +39,7 @@ void CheckManualTrades()
 
 //--- Bang thong tin: hop nen toi o goc trai tren, chu tieng Viet co dau (thay Comment() de khong de len nen)
 #define PN_PFX "TBPN_"
-#define PN_W   370
+#define PN_W   410
 
 string PNMoney(const double v, const string cur)
 {
@@ -137,6 +137,13 @@ void UpdatePanel()
       txt[n] = StringFormat("Luật: SL tự đặt %.2f%%  ·  rủi ro tối đa %.0f%%/lệnh", InpGuardSLPct, InpGuardMaxRiskPct);  col[n++] = cDim;
       txt[n] = (InpGuardNoAverage ? "Cấm nhồi vào lệnh lỗ" : "Cho nhồi vào lệnh lỗ") +
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
+      txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
+               (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, InpGuardTrailTFmin) : "  ·  không kéo SL");  col[n++] = cDim;
+      if(InpGuardPyramidMax > 1)
+      {
+         txt[n] = StringFormat("Tự nhồi: tối đa %d lớp  ·  mỗi %.1fR  ·  cần %d/9 khung cùng chiều", InpGuardPyramidMax, InpGuardPyramidStepR, InpGuardPyramidTrend);
+         col[n++] = cDim;
+      }
    }
    else
    {
@@ -152,7 +159,7 @@ void UpdatePanel()
    txt[n] = StringFormat("Spread: %d point", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD));  col[n++] = cDim;
 
    int x = 8, y = 22, lh = 17;
-   PNBox("bg", x, y, PN_W, 28 + n * lh);
+   PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
    for(int i = 0; i < 12; i++)
    {

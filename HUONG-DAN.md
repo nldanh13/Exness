@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.3
+# Hướng dẫn bot BTC (MT5) v5.10.4
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -530,3 +530,21 @@ Chưa chạy được trong backtest (không có lệnh tay). Hãy thử trên d
 - Khi chạy bộ 03 / 04 (chỉ bảo vệ lệnh tay), bảng trái hiện đúng việc đang làm: Algo Trading bật hay tắt, số dư,
   lãi/lỗ tay hôm nay so với giới hạn ngày, số lệnh tay đang mở và lệnh chờ, các luật đang áp dụng.
 - Tắt bảng trái: `InpShowPanel = false`; tắt bảng xu hướng: `InpTrendBoard = false`.
+
+## Tự chốt lời cho lệnh tay (v5.10.4, 10/11/2026)
+Sao kê lệnh tay cũ: thắng 66% nhưng lệnh lỗ trung bình gấp đôi lệnh lời (chốt lời sớm, gồng lỗ). Backtest của bot: lãi đến từ vài
+lệnh chạy xa, nhờ trailing thay vì TP cố định. Nên phần bảo vệ lệnh tay (bộ 03 / 04) giờ tự quản lý phần chốt lời:
+- R = khoảng cách giá vào → SL lúc bot thấy lệnh lần đầu (lưu theo lệnh, giữ qua khởi động lại).
+- Lời `InpGuardBreakevenR` (mặc định 1) × R: dời SL về giá vào + spread. Từ đó lệnh không còn lỗ; có thông báo.
+- Sau đó kéo SL theo giá, cách `InpGuardTrailATR` (2) × ATR khung `InpGuardTrailTFmin` (15 phút). SL chỉ đi theo hướng có lời.
+- Không đặt, không sửa TP. Nếu bạn tự đặt TP thì TP vẫn giữ nguyên.
+- Đặt 0 để tắt từng phần. Mức 2 × ATR M15 là ước lượng, chưa backtest cho lệnh tay: xem lại sau vài tuần demo.
+
+## Tự nhồi lệnh tay theo xu hướng (v5.10.4)
+Bộ 03 / 04 chỉ canh lệnh, không tự mở lệnh. Nay có thêm `InpGuardPyramidMax` (bộ 04 đặt 3, mặc định 1 = tắt):
+bot tự thêm một lớp cùng chiều với lệnh tay của bạn, cùng lot với lớp đầu, SL cách 1R, khi đủ cả 4 điều kiện:
+1. Mọi lớp đang mở cùng chiều và **đã dời SL về hòa vốn** (nên rủi ro mở của cả chuỗi chỉ khoảng 1 lớp).
+2. Giá đi thêm `InpGuardPyramidStepR` (1) × R tính từ giá vào của lớp mới nhất.
+3. Ít nhất `InpGuardPyramidTrend` (5) / 9 khung trong bảng xu hướng cùng chiều. Mua ngược khi đa số khung GIẢM thì không nhồi.
+4. Chưa khóa lỗ ngày, spread dưới 20% R, không có lệnh chờ tay, tài khoản hedging.
+Lớp mới vẫn là lệnh tay (ghi chú "TB nhoi tay"): hòa vốn, kéo SL, giới hạn lỗ ngày đều áp dụng. Mỗi lần nhồi có thông báo.
