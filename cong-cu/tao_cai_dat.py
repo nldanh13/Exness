@@ -45,6 +45,17 @@ PRESETS = [
         "hủy lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn.",
         "Gắn vào một chart bất kỳ của mã đó (khung M1). Chạy được cùng lúc với bot 01 (mã nhận diện khác nhau).",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true"}),
+    ("04-Bao-ve-lenh-tay-von-1-trieu.set", [
+        "04. Bảo vệ lệnh vào tay cho vốn khoảng 1 triệu VND (38 USD)",
+        "Trạng thái: CÔNG CỤ HỖ TRỢ. Như bộ 03 nhưng nới cho vốn nhỏ, vì 0,01 lot BTC là lot nhỏ nhất:",
+        "SL 1,5% (~1.100 USD giá) với 0,01 lot đã mất ~29% vốn, nên bộ 03 sẽ đóng mọi lệnh.",
+        "Bộ này: lệnh chưa có SL thì đặt SL cách giá vào 0,25% (~180 USD giá, ~5% vốn với 0,01 lot);",
+        "chấp nhận tối đa 6% vốn mỗi lệnh, nên SL bạn tự đặt phải cách giá vào không quá ~220 USD với 0,01 lot;",
+        "lỗ tay quá 10% trong ngày (khoảng 2 lệnh thua) thì đóng hết và khóa tới hết ngày.",
+        "Vẫn chặn nhồi vào lệnh đang lỗ, đóng lệnh lỗ giữ quá 24 giờ, sửa cả lệnh chờ.",
+        "Gắn vào một chart BTCUSDm bất kỳ. Rủi ro 5–6% mỗi lệnh là cao: 5 lệnh thua liên tiếp mất ~25% vốn.",
+    ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
+        "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0"}),
     ("TN1-Donchian-H4-nhoi-3-lop.set", [
         "TN1. Thử nghiệm: Donchian H4, nhồi tối đa 3 lớp",
         "Trạng thái: CHƯA ĐẠT. Vốn 3.000 USD: +1.740 / +1.926 USD (2023–2026 / 2020–2023), sụt giảm 12% / 9%.",
