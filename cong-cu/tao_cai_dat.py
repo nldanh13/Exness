@@ -36,6 +36,8 @@ PRESETS = [
         "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3"}),
     ("05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM.set", [
         "05. THỬ NGHIỆM: bot tự vào lệnh + bảo vệ, cho vốn khoảng 1 triệu VND",
+        "CHẾ ĐỘ TỰ GIAO DỊCH BẬT (InpGuardAutoEntry=true): bot tự mở lệnh mà không cần bạn bấm BUY hoặc SELL.",
+        "InpAllowBuy / InpAllowSell = false chỉ tắt chiến lược chính, KHÔNG tắt chế độ tự vào lệnh.",
         "Trạng thái: CHƯA BACKTEST. Chỉ chạy demo để xem kết quả trên số liệu hiện tại.",
         "Như bộ 04 (SL 0,25%, rủi ro tối đa 6%, khóa lỗ ngày 10%, hòa vốn ở 1R, kéo SL 2 × ATR M15, nhồi tối đa 3 lớp),",
         "thêm: bot tự vào 0,01 lot khi ≥ 6/9 khung cùng chiều (bắt buộc có H1 và H4) và nến M1 vừa hồi về EMA20 rồi bật lại.",

@@ -113,8 +113,8 @@ input double          InpCorrRiskScale    = 0.5;        // Hệ số rủi ro kh
 input double          InpMaxGroupRiskPct  = 1.5;        // Tổng rủi ro tối đa của cả nhóm (%, 0 = tắt)
 
 input group "9. Giờ giao dịch và giới hạn"
-input bool            InpAllowBuy         = true;       // Cho phép mua (Buy)
-input bool            InpAllowSell        = true;       // Cho phép bán (Sell)
+input bool            InpAllowBuy         = true;       // Chiến lược chính: cho phép mua (Buy)
+input bool            InpAllowSell        = true;       // Chiến lược chính: cho phép bán (Sell)
 input int             InpMaxTradesPerDay  = 0;          // Số lệnh tối đa mỗi ngày (0 = không giới hạn)
 input int             InpCooldownBars     = 0;          // Nghỉ sau lệnh thua (số nến, 0 = tắt)
 input int             InpMaxSpreadPoints  = 0;          // Spread tối đa (point, 0 = tắt)
@@ -147,7 +147,7 @@ input int             InpGuardTrailTFmin  = 15;         // Khung ATR để kéo 
 input int             InpGuardPyramidMax  = 1;          // Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)
 input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)
 input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
-input bool            InpGuardAutoEntry   = false;      // Thử nghiệm: bot tự vào lệnh đầu tiên (lot nhỏ nhất)
+input bool            InpGuardAutoEntry   = false;      // TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)
 input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
 input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
 input int             InpGuardAutoTFmin   = 5;          // Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)

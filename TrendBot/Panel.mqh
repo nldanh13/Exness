@@ -139,6 +139,7 @@ void UpdatePanel()
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
       txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
+      if(InpGuardAutoEntry) { txt[n] = "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL"; col[n++] = cBad; }
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
       txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)", PNMoney(mpl, cur), pct);
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;

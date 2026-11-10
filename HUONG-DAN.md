@@ -569,3 +569,11 @@ Các mức theo % trên bảng góc trái nay ghi kèm số tiền theo đơn v�
 - Spread: mỗi lệnh 0,01 lot mất bao nhiêu tiền phí chênh lệch.
 
 Giá trên chart vẫn là USD vì BTCUSDm niêm yết bằng USD, không đổi được.
+
+## Cảnh báo chế độ tự giao dịch (v5.10.7)
+Trong bộ 05, `InpAllowBuy` và `InpAllowSell` bằng false nhưng `InpGuardAutoEntry` bằng true. Hai ô Cho phép mua / bán chỉ tắt chiến lược chính; chế độ tự vào lệnh là phần riêng và vẫn mở lệnh. Để không hiểu nhầm:
+- Bảng trên chart có dòng đỏ "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL".
+- Tab Thông số trong GiaoDien báo đỏ khi `InpGuardAutoEntry` bật.
+- Nhãn các thông số và đầu file `05-...set` ghi rõ điều này.
+
+Muốn bot chỉ canh lệnh, không tự mở lệnh: dùng bộ 04, hoặc đặt `InpGuardAutoEntry = false`.
