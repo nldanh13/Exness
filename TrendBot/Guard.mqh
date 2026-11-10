@@ -99,6 +99,61 @@ double GuardManualDayPL(const datetime dayStart)
    return pl;
 }
 
+//--- Chot loi lenh tay (v5.10.4): hoa von o InpGuardBreakevenR x R, roi keo SL theo InpGuardTrailATR x ATR khung InpGuardTrailTFmin.
+// R = khoang cach gia vao -> SL luc bot thay lenh lan dau (luu Global Variable theo ticket, qua khoi dong lai).
+// Khong dat / sua TP. Chi dich SL theo huong co loi, khong bao gio noi SL ra.
+int g_gATR = INVALID_HANDLE;
+
+double GuardInitialR(const ulong t, const double open, const double sl)
+{
+   string n = GKey("r" + IntegerToString((long)t));
+   if(GlobalVariableCheck(n)) return GlobalVariableGet(n);
+   if(sl <= 0) return 0;
+   double r = MathAbs(open - sl);
+   GlobalVariableSet(n, r);
+   return r;
+}
+
+void GuardRelease() { if(g_gATR != INVALID_HANDLE) IndicatorRelease(g_gATR); g_gATR = INVALID_HANDLE; }
+
+void GuardProfitLock(const ulong t, const bool buy, const double open, const double sl, const double tp)
+{
+   if(InpGuardBreakevenR <= 0 && InpGuardTrailATR <= 0) return;
+   double r = GuardInitialR(t, open, sl);
+   if(r <= 0 || sl <= 0) return;
+   double px   = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double gain = buy ? px - open : open - px;
+   double rNow = gain / r;
+   double spr  = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
+   double be   = buy ? open + spr : open - spr;                 // hoa von + bu spread
+   bool   beDone = buy ? sl >= open : sl <= open;
+   double nsl  = sl;
+
+   if(InpGuardBreakevenR > 0 && rNow >= InpGuardBreakevenR && !beDone) nsl = be;
+   // trailing chi bat dau sau khi da hoa von (hoac khi tat hoa von: tu luc co lai 1R)
+   double startR = InpGuardBreakevenR > 0 ? InpGuardBreakevenR : 1.0;
+   if(InpGuardTrailATR > 0 && rNow >= startR)
+   {
+      if(g_gATR == INVALID_HANDLE) g_gATR = iATR(_Symbol, TFFromMin(InpGuardTrailTFmin), 14);
+      double atr;
+      if(g_gATR != INVALID_HANDLE && GetValue(g_gATR, 0, 1, atr) && atr > 0)
+      {
+         double cand = buy ? px - atr * InpGuardTrailATR : px + atr * InpGuardTrailATR;
+         if(buy ? cand > nsl : cand < nsl) nsl = cand;
+      }
+   }
+   nsl = NormalizeDouble(nsl, _Digits);
+   double minStep = MathMax(_Point * 10, r * 0.05);             // tranh sua lenh lien tuc
+   double minDist = (SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) + 1) * _Point + spr;
+   bool better = buy ? nsl > sl + minStep : nsl < sl - minStep;
+   bool valid  = buy ? px - nsl > minDist : nsl - px > minDist;
+   if(!better || !valid) return;
+   bool toBE = !beDone && (buy ? nsl >= open : nsl <= open);
+   if(PrepSend() && TradeDone(trade.PositionModify(t, nsl, tp), "Sua SL", "lenh tay #" + (string)t) && toBE)
+      Notify(StringFormat("[%s] BAO VE LENH TAY: lenh #%I64u lai %.1fR, da doi SL ve hoa von %.2f. Tu gio lenh nay khong con lo; bot keo SL theo gia.",
+                          _Symbol, t, rNow, nsl));
+}
+
 void GuardManual()
 {
    if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
@@ -210,7 +265,10 @@ void GuardManual()
          }
       }
 
-      // 5) Giu qua lau ma van lo: dong
+      // 5) Chot loi: hoa von roi keo SL theo gia
+      GuardProfitLock(t, buy, open, sl, tp);
+
+      // 6) Giu qua lau ma van lo: dong
       if(InpGuardMaxHoldH > 0 && TimeCurrent() - ot > InpGuardMaxHoldH * 3600 && GuardFloating(t) < 0)
          GuardClose(t, StringFormat("giu qua %d gio ma van lo (lenh giu qua 1 ngay la nhom lo nang nhat trong sao ke)", InpGuardMaxHoldH));
    }

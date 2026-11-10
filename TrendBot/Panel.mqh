@@ -137,6 +137,8 @@ void UpdatePanel()
       txt[n] = StringFormat("Luật: SL tự đặt %.2f%%  ·  rủi ro tối đa %.0f%%/lệnh", InpGuardSLPct, InpGuardMaxRiskPct);  col[n++] = cDim;
       txt[n] = (InpGuardNoAverage ? "Cấm nhồi vào lệnh lỗ" : "Cho nhồi vào lệnh lỗ") +
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
+      txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
+               (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, InpGuardTrailTFmin) : "  ·  không kéo SL");  col[n++] = cDim;
    }
    else
    {

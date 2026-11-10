@@ -43,6 +43,7 @@ PRESETS = [
         "đóng lệnh lỗ giữ quá 24 giờ, lỗ tay quá 5% trong ngày thì đóng hết và khóa lệnh tay tới hết ngày.",
         "Lệnh chờ (Limit / Stop) được sửa ngay khi còn chờ: tự đặt SL, lot quá lớn thì hủy và đặt lại nhỏ hơn,",
         "hủy lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn.",
+        "Chốt lời: lời bằng mức rủi ro ban đầu (1R) thì dời SL về hòa vốn, sau đó kéo SL theo giá cách 2 × ATR M15.",
         "Gắn vào một chart bất kỳ của mã đó (khung M1). Chạy được cùng lúc với bot 01 (mã nhận diện khác nhau).",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true"}),
     ("04-Bao-ve-lenh-tay-von-1-trieu.set", [
@@ -53,6 +54,7 @@ PRESETS = [
         "chấp nhận tối đa 6% vốn mỗi lệnh, nên SL bạn tự đặt phải cách giá vào không quá ~220 USD với 0,01 lot;",
         "lỗ tay quá 10% trong ngày (khoảng 2 lệnh thua) thì đóng hết và khóa tới hết ngày.",
         "Vẫn chặn nhồi vào lệnh đang lỗ, đóng lệnh lỗ giữ quá 24 giờ, sửa cả lệnh chờ.",
+        "Chốt lời: lời 1R thì dời SL về hòa vốn, sau đó kéo SL theo giá cách 2 × ATR M15.",
         "Gắn vào một chart BTCUSDm bất kỳ. Rủi ro 5–6% mỗi lệnh là cao: 5 lệnh thua liên tiếp mất ~25% vốn.",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
         "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0"}),
