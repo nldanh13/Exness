@@ -55,9 +55,10 @@ PRESETS = [
         "lỗ tay quá 10% trong ngày (khoảng 2 lệnh thua) thì đóng hết và khóa tới hết ngày.",
         "Vẫn chặn nhồi vào lệnh đang lỗ, đóng lệnh lỗ giữ quá 24 giờ, sửa cả lệnh chờ.",
         "Chốt lời: lời 1R thì dời SL về hòa vốn, sau đó kéo SL theo giá cách 2 × ATR M15.",
+        "Tự nhồi theo xu hướng: tối đa 3 lớp 0,01 lot; lớp mới khi mọi lớp đã hòa vốn, giá đi thêm 1R và ≥ 5/9 khung cùng chiều.",
         "Gắn vào một chart BTCUSDm bất kỳ. Rủi ro 5–6% mỗi lệnh là cao: 5 lệnh thua liên tiếp mất ~25% vốn.",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
-        "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0"}),
+        "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3"}),
     ("TN1-Donchian-H4-nhoi-3-lop.set", [
         "TN1. Thử nghiệm: Donchian H4, nhồi tối đa 3 lớp",
         "Trạng thái: CHƯA ĐẠT. Vốn 3.000 USD: +1.740 / +1.926 USD (2023–2026 / 2020–2023), sụt giảm 12% / 9%.",

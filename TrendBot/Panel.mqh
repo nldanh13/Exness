@@ -139,6 +139,11 @@ void UpdatePanel()
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
       txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
                (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, InpGuardTrailTFmin) : "  ·  không kéo SL");  col[n++] = cDim;
+      if(InpGuardPyramidMax > 1)
+      {
+         txt[n] = StringFormat("Tự nhồi: tối đa %d lớp  ·  mỗi %.1fR  ·  cần %d/9 khung cùng chiều", InpGuardPyramidMax, InpGuardPyramidStepR, InpGuardPyramidTrend);
+         col[n++] = cDim;
+      }
    }
    else
    {

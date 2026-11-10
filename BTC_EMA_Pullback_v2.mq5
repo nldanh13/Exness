@@ -144,6 +144,9 @@ input bool            InpGuardPending     = true;       // Sửa cả lệnh ch�
 input double          InpGuardBreakevenR  = 1.0;        // Lệnh tay lời bằng x lần rủi ro (R) thì dời SL về hòa vốn (0 = tắt)
 input double          InpGuardTrailATR    = 2.0;        // Sau đó kéo SL theo giá, cách x × ATR (0 = tắt)
 input int             InpGuardTrailTFmin  = 15;         // Khung ATR để kéo SL lệnh tay (phút)
+input int             InpGuardPyramidMax  = 1;          // Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)
+input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)
+input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
 
 input group "12. Nhật ký và kỷ luật giao dịch"
 input bool            InpJournal          = true;       // Ghi nhật ký mọi giao dịch của tài khoản
@@ -771,6 +774,7 @@ void OnTick()
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
+   GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);

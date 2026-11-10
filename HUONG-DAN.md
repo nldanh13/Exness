@@ -539,3 +539,12 @@ lệnh chạy xa, nhờ trailing thay vì TP cố định. Nên phần bảo v�
 - Sau đó kéo SL theo giá, cách `InpGuardTrailATR` (2) × ATR khung `InpGuardTrailTFmin` (15 phút). SL chỉ đi theo hướng có lời.
 - Không đặt, không sửa TP. Nếu bạn tự đặt TP thì TP vẫn giữ nguyên.
 - Đặt 0 để tắt từng phần. Mức 2 × ATR M15 là ước lượng, chưa backtest cho lệnh tay: xem lại sau vài tuần demo.
+
+## Tự nhồi lệnh tay theo xu hướng (v5.10.4)
+Bộ 03 / 04 chỉ canh lệnh, không tự mở lệnh. Nay có thêm `InpGuardPyramidMax` (bộ 04 đặt 3, mặc định 1 = tắt):
+bot tự thêm một lớp cùng chiều với lệnh tay của bạn, cùng lot với lớp đầu, SL cách 1R, khi đủ cả 4 điều kiện:
+1. Mọi lớp đang mở cùng chiều và **đã dời SL về hòa vốn** (nên rủi ro mở của cả chuỗi chỉ khoảng 1 lớp).
+2. Giá đi thêm `InpGuardPyramidStepR` (1) × R tính từ giá vào của lớp mới nhất.
+3. Ít nhất `InpGuardPyramidTrend` (5) / 9 khung trong bảng xu hướng cùng chiều. Mua ngược khi đa số khung GIẢM thì không nhồi.
+4. Chưa khóa lỗ ngày, spread dưới 20% R, không có lệnh chờ tay, tài khoản hedging.
+Lớp mới vẫn là lệnh tay (ghi chú "TB nhoi tay"): hòa vốn, kéo SL, giới hạn lỗ ngày đều áp dụng. Mỗi lần nhồi có thông báo.

@@ -126,6 +126,71 @@ void DrawTrendBoard(int &y)
    MELabel("tb_sum", 18, y, sum, up >= 7 ? C'90,200,120' : dn >= 7 ? C'235,95,85' : C'205,210,220', 8, "Segoe UI"); y += 24;
 }
 
+//--- Tu nhoi lenh tay theo xu huong (v5.10.4, InpGuardPyramidMax > 1, chi tai khoan hedging)
+// Them 1 lop cung chieu (magic 0, cung lot voi lop dau, SL cach 1R) khi:
+//  - moi lop dang mo cung chieu va DA DOI SL ve hoa von (rui ro mo cua ca chuoi ~ 1 lop)
+//  - gia di them InpGuardPyramidStepR x R tu gia vao cua lop moi nhat
+//  - it nhat InpGuardPyramidTrend / 9 khung bang xu huong cung chieu
+//  - chua khoa lo ngay, spread < 20% R, chua du so lop
+datetime g_gpLast = 0;
+
+int TrendCount(const bool up)
+{
+   if(!g_tbReady && !TrendBoardInit()) return 0;
+   int c = 0;
+   for(int i = 0; i < 9; i++) { int t = TrendOf(i); if(up ? t > 0 : t < 0) c++; }
+   return c;
+}
+
+void GuardPyramid()
+{
+   if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked()) return;
+   g_gpLast = TimeCurrent();
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+
+   int cnt = 0, dir = 0;
+   double lastOpen = 0, lastR = 0, lot = 0;
+   datetime lastTime = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsManualSelected()) continue;
+      int d = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
+      if(dir != 0 && d != dir) return;                       // dang giu ca 2 chieu: khong nhoi
+      dir = d; cnt++;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL);
+      if(sl <= 0 || (d > 0 ? sl < op : sl > op)) return;   // co lop chua hoa von
+      double r = GuardInitialR(t, op, sl);
+      if(r <= 0) return;
+      double v = PositionGetDouble(POSITION_VOLUME);
+      if(lot == 0 || v < lot) lot = v;
+      datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
+      if(ot >= lastTime) { lastTime = ot; lastOpen = op; lastR = r; }
+   }
+   if(cnt == 0 || cnt >= InpGuardPyramidMax) return;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)                // dang co lenh cho tay: de ban tu quyet
+      if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
+
+   bool buy = dir > 0;
+   double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double spr = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
+   if((buy ? px - lastOpen : lastOpen - px) < InpGuardPyramidStepR * lastR) return;
+   if(spr > lastR * 0.2) return;
+   int tc = TrendCount(buy);
+   if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
+
+   double sl = NormalizeDouble(buy ? px - lastR : px + lastR, _Digits);
+   ulong magic = P_Magic;
+   trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
+   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB nhoi tay")
+                                         : trade.Sell(lot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
+   trade.SetExpertMagicNumber(magic);
+   if(ok)
+      Notify(StringFormat("[%s] NHOI THEO XU HUONG: them lop %d/%d %s %.2f lot, SL %.2f. Cac lop truoc da hoa von; %d/9 khung cung chieu.",
+                          _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
+}
+
 //--- Nut vao lenh --------------------------------------------------
 double MEPreviewLots(const double slDist)
 {

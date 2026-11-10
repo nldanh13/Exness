@@ -137,6 +137,9 @@ GROUPS = [
         ("InpGuardBreakevenR", "Lệnh tay lời bằng x lần rủi ro (R) thì dời SL về hòa vốn (0 = tắt)", "R = khoảng cách giá vào tới SL lúc bot thấy lệnh lần đầu. Dời về giá vào cộng thêm spread."),
         ("InpGuardTrailATR",   "Sau đó kéo SL theo giá, cách x × ATR (0 = tắt)", "Bắt đầu khi lệnh đã lời đủ mức hòa vốn. SL chỉ đi theo hướng có lời, không đặt TP: lệnh lời chạy tới khi giá quay đầu."),
         ("InpGuardTrailTFmin", "Khung ATR để kéo SL lệnh tay (phút)", "15 = M15. Khung nhỏ hơn kéo sát hơn, dễ bị quét hơn."),
+        ("InpGuardPyramidMax",   "Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)", "Chỉ trên tài khoản hedging. Lớp mới cùng lot với lớp đầu, SL cách 1R, vẫn là lệnh tay nên mọi luật bảo vệ đều áp dụng."),
+        ("InpGuardPyramidStepR", "Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)", "Chỉ nhồi khi mọi lớp đang mở đã dời SL về hòa vốn, nên rủi ro mở của cả chuỗi chỉ khoảng 1 lớp."),
+        ("InpGuardPyramidTrend", "Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)", "Đếm theo bảng xu hướng M1 → D1 (giá đóng cửa so với EMA20 / EMA50)."),
     ]),
     ("12. Nhật ký và kỷ luật giao dịch", [
         ("InpJournal",           "Ghi nhật ký mọi giao dịch của tài khoản", "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv."),
