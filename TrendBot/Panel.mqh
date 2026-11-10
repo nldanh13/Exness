@@ -118,7 +118,7 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
    color  cTxt = C'205,210,220', cDim = C'130,138,152', cOk = C'90,200,120', cBad = C'235,95,85', cWarn = C'240,180,60';
 
-   string txt[14]; color col[14]; int n = 0;
+   string txt[16]; color col[16]; int n = 0;
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
@@ -154,7 +154,9 @@ void UpdatePanel()
       txt[n] = (InpGuardNoAverage ? "Cấm nhồi vào lệnh lỗ" : "Cho nhồi vào lệnh lỗ") +
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
       txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
-               (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, InpGuardTrailTFmin) : "  ·  không kéo SL");  col[n++] = cDim;
+               (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, GuardTFmin()) : "  ·  không kéo SL") +
+               (InpGuardTPR > 0 ? StringFormat("  ·  TP %.1fR", InpGuardTPR) : "");  col[n++] = cDim;
+      if(InpGuardMaxBars > 0) { txt[n] = StringFormat("Đóng lệnh chưa hòa vốn sau %d nến M%d (%d phút)", InpGuardMaxBars, GuardTFmin(), InpGuardMaxBars * GuardTFmin()); col[n++] = cDim; }
       if(InpGuardPyramidMax > 1)
       {
          txt[n] = StringFormat("Tự nhồi: tối đa %d lớp  ·  mỗi %.1fR  ·  cần %d/9 khung cùng chiều", InpGuardPyramidMax, InpGuardPyramidStepR, InpGuardPyramidTrend);
@@ -184,7 +186,7 @@ void UpdatePanel()
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
-   for(int i = 0; i < 14; i++)
+   for(int i = 0; i < 16; i++)
    {
       if(i < n) PNText("l" + IntegerToString(i), x + 10, y + 26 + i * lh, txt[i], col[i], 9);
       else ObjectDelete(0, PN_PFX + "l" + IntegerToString(i));
