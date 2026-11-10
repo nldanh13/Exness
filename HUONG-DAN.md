@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.6
+# Hướng dẫn bot BTC (MT5) v5.10.7
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -563,7 +563,7 @@ Thêm `InpGuardAutoNeedHTF` (mặc định bật): ngoài 6/9 khung, H1 và H4 b
 
 ## Bảng thông tin ghi thêm số tiền (v5.10.6)
 Các mức theo % trên bảng góc trái nay ghi kèm số tiền theo đơn vị tài khoản (VND với tài khoản của bạn):
-- Lãi/lỗ tay hôm nay và giới hạn lỗ ngày, ví dụ `giới hạn -10% = -97.909 VND`.
+- Giới hạn lỗ ngày, trên một dòng riêng (v5.10.7), ví dụ `Khóa lệnh tay khi lỗ ngày tới -10% = -97.909 VND`.
 - SL tự đặt: 1R bằng bao nhiêu tiền với lot nhỏ nhất (0,01).
 - Rủi ro tối đa mỗi lệnh bằng bao nhiêu tiền.
 - Spread: mỗi lệnh 0,01 lot mất bao nhiêu tiền phí chênh lệch.

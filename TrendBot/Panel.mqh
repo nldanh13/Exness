@@ -39,7 +39,7 @@ void CheckManualTrades()
 
 //--- Bang thong tin: hop nen toi o goc trai tren, chu tieng Viet co dau (thay Comment() de khong de len nen)
 #define PN_PFX "TBPN_"
-#define PN_W   440
+#define PN_W   460
 
 string PNMoney(const double v, const string cur)
 {
@@ -140,9 +140,10 @@ void UpdatePanel()
       txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
-      txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)  ·  giới hạn -%.0f%% = %s", PNMoney(mpl, cur), pct, InpGuardDayLossPct,
-                            PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
+      txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)", PNMoney(mpl, cur), pct);
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;
+      txt[n] = StringFormat("Khóa lệnh tay khi lỗ ngày tới -%.0f%% = %s", InpGuardDayLossPct, PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
+      col[n++] = cDim;
       txt[n] = StringFormat("Lệnh tay đang mở: %d   ·   Lệnh chờ: %d", pos, pend);  col[n++] = cTxt;
       double slMoney = PNMinLotMoney(SymbolInfoDouble(_Symbol, SYMBOL_BID) * InpGuardSLPct / 100.0);
       txt[n] = StringFormat("Luật: SL tự đặt %.2f%% (1R ≈ %s với %.2f lot)", InpGuardSLPct, PNMoney(slMoney, cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));
