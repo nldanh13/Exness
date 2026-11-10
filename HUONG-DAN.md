@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.2
+# Hướng dẫn bot BTC (MT5) v5.10.3
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -524,3 +524,9 @@ lệnh Buy/Sell Limit, Stop, Stop Limit bạn đặt tay trên mã của chart �
 - Ngày đã chạm giới hạn lỗ lệnh tay: hủy mọi lệnh chờ tới 0:00 giờ server.
 - Lệnh chờ đặt trước khi bật bảo vệ lần đầu: chỉ cảnh báo (trừ khi `InpGuardOldTrades = true`).
 Chưa chạy được trong backtest (không có lệnh tay). Hãy thử trên demo: đặt một Buy Limit không SL, lot lớn, và xem thông báo.
+
+## Bảng thông tin dễ đọc hơn (v5.10.3, 10/11/2026)
+- Bảng góc trái và bảng xu hướng góc phải nằm trong hộp nền tối, chữ tiếng Việt có dấu, không còn đè lên nến.
+- Khi chạy bộ 03 / 04 (chỉ bảo vệ lệnh tay), bảng trái hiện đúng việc đang làm: Algo Trading bật hay tắt, số dư,
+  lãi/lỗ tay hôm nay so với giới hạn ngày, số lệnh tay đang mở và lệnh chờ, các luật đang áp dụng.
+- Tắt bảng trái: `InpShowPanel = false`; tắt bảng xu hướng: `InpTrendBoard = false`.
