@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.6
+# Hướng dẫn bot BTC (MT5) v5.10.7
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -563,9 +563,17 @@ Thêm `InpGuardAutoNeedHTF` (mặc định bật): ngoài 6/9 khung, H1 và H4 b
 
 ## Bảng thông tin ghi thêm số tiền (v5.10.6)
 Các mức theo % trên bảng góc trái nay ghi kèm số tiền theo đơn vị tài khoản (VND với tài khoản của bạn):
-- Lãi/lỗ tay hôm nay và giới hạn lỗ ngày, ví dụ `giới hạn -10% = -97.909 VND`.
+- Giới hạn lỗ ngày, trên một dòng riêng (v5.10.7), ví dụ `Khóa lệnh tay khi lỗ ngày tới -10% = -97.909 VND`.
 - SL tự đặt: 1R bằng bao nhiêu tiền với lot nhỏ nhất (0,01).
 - Rủi ro tối đa mỗi lệnh bằng bao nhiêu tiền.
 - Spread: mỗi lệnh 0,01 lot mất bao nhiêu tiền phí chênh lệch.
 
 Giá trên chart vẫn là USD vì BTCUSDm niêm yết bằng USD, không đổi được.
+
+## Cảnh báo chế độ tự giao dịch (v5.10.7)
+Trong bộ 05, `InpAllowBuy` và `InpAllowSell` bằng false nhưng `InpGuardAutoEntry` bằng true. Hai ô Cho phép mua / bán chỉ tắt chiến lược chính; chế độ tự vào lệnh là phần riêng và vẫn mở lệnh. Để không hiểu nhầm:
+- Bảng trên chart có dòng đỏ "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL".
+- Tab Thông số trong GiaoDien báo đỏ khi `InpGuardAutoEntry` bật.
+- Nhãn các thông số và đầu file `05-...set` ghi rõ điều này.
+
+Muốn bot chỉ canh lệnh, không tự mở lệnh: dùng bộ 04, hoặc đặt `InpGuardAutoEntry = false`.

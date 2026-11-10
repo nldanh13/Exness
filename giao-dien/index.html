@@ -1162,7 +1162,8 @@ function warnings() {
   if (dd > 0) add('info', 'Mức dừng hẳn ' + dd + '% chỉ tính lãi đã chốt và lỗ đang chạy, không tính lãi đang chạy bị trả lại. Tài khoản có thể tụt so với đỉnh nhiều hơn con số này.', []);
   if (num('InpATRMult') > 0 && num('InpATRMult') < 1) add('warn', 'SL dưới 1 ATR: rất dễ bị quét, spread chiếm phần lớn mỗi lệnh.', ['InpATRMult']);
   if (on('InpResetHalt')) add('warn', 'Đặt lại mốc vốn đang BẬT: chỉ bật 1 lần để mở khóa, chạy xong nhớ tắt.', ['InpResetHalt']);
-  if (!on('InpAllowBuy') && !on('InpAllowSell')) add('bad', 'Đã tắt cả Buy và Sell: bot không vào lệnh nào.', ['InpAllowBuy', 'InpAllowSell']);
+  if (on('InpGuardAutoEntry')) add('bad', 'Chế độ tự giao dịch đang BẬT. Bot có thể tự mở lệnh mà không cần bạn bấm BUY hoặc SELL' + (!on('InpAllowBuy') && !on('InpAllowSell') ? ', dù Cho phép mua / bán đang tắt (hai ô đó chỉ tắt chiến lược chính).' : '.'), ['InpGuardAutoEntry', 'InpAllowBuy', 'InpAllowSell']);
+  else if (!on('InpAllowBuy') && !on('InpAllowSell')) add(on('InpGuardManual') || on('InpManualEntry') ? 'info' : 'bad', 'Đã tắt cả Buy và Sell: chiến lược chính không vào lệnh nào.', ['InpAllowBuy', 'InpAllowSell']);
   if (num('InpPyramidMax') > 1) add('info', 'Nhồi lệnh: đã thử ngày 07/11, ở cùng mức sụt giảm không hơn C.', ['InpPyramidMax']);
   if (num('InpEntryPullATR') > 0) add('info', 'Chờ giá hồi: đã thử ngày 07/11, kém hơn vào ngay.', ['InpEntryPullATR']);
   if (num('InpSLTFmin') > 0) add('info', 'SL theo khung nhỏ: chưa có kết quả backtest (đợt SLnho-*). Spread ~24 USD/BTC chiếm phần lớn SL nhỏ.', ['InpSLTFmin']);
