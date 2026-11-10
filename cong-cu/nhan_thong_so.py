@@ -142,6 +142,7 @@ GROUPS = [
         ("InpGuardPyramidTrend", "Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)", "Đếm theo bảng xu hướng M1 → D1 (giá đóng cửa so với EMA20 / EMA50)."),
         ("InpGuardAutoEntry",       "Thử nghiệm: bot tự vào lệnh đầu tiên (lot nhỏ nhất)", "CHƯA BACKTEST. Vào khi đa số khung cùng chiều và nến vừa hồi về EMA20 rồi đóng cửa bật lại. Lệnh được xử lý như lệnh tay."),
         ("InpGuardAutoTrend",       "Tự vào khi ít nhất x / 9 khung cùng chiều", ""),
+        ("InpGuardAutoNeedHTF",     "Tự vào chỉ khi H1 và H4 cũng cùng chiều", "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn."),
         ("InpGuardAutoTFmin",       "Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)", "Khung nhỏ hơn: nhiều lệnh hơn, nhiễu hơn."),
         ("InpGuardAutoMaxDay",      "Số lệnh tự vào tối đa mỗi ngày (0 = không giới hạn)", ""),
         ("InpGuardAutoCooldownMin", "Nghỉ sau lệnh thua (phút, 0 = tắt)", "Tránh vào lại ngay sau khi bị quét SL."),

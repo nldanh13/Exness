@@ -58,6 +58,7 @@
  "InpGuardPyramidStepR": "Chỉ nhồi khi mọi lớp đang mở đã dời SL về hòa vốn, nên rủi ro mở của cả chuỗi chỉ khoảng 1 lớp.",
  "InpGuardPyramidTrend": "Đếm theo bảng xu hướng M1 → D1 (giá đóng cửa so với EMA20 / EMA50).",
  "InpGuardAutoEntry": "CHƯA BACKTEST. Vào khi đa số khung cùng chiều và nến vừa hồi về EMA20 rồi đóng cửa bật lại. Lệnh được xử lý như lệnh tay.",
+ "InpGuardAutoNeedHTF": "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn.",
  "InpGuardAutoTFmin": "Khung nhỏ hơn: nhiều lệnh hơn, nhiễu hơn.",
  "InpGuardAutoCooldownMin": "Tránh vào lại ngay sau khi bị quét SL.",
  "InpJournal": "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv.",

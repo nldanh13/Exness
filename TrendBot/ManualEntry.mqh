@@ -194,7 +194,7 @@ void GuardPyramid()
 //--- Bot tu vao lenh dau tien o che do bao ve lenh tay (v5.10.5, InpGuardAutoEntry, THU NGHIEM - chua backtest)
 // Vao 1 lenh (magic 0, ghi chu "TB tu vao", lot nho nhat, SL cach InpGuardSLPct %) khi:
 //  - khong co lenh tay / lenh cho nao tren ma nay, chua khoa lo ngay, Algo Trading bat
-//  - it nhat InpGuardAutoTrend / 9 khung cung chieu
+//  - it nhat InpGuardAutoTrend / 9 khung cung chieu, va H1 + H4 cung chieu (InpGuardAutoNeedHTF)
 //  - nen khung InpGuardAutoTFmin (mac dinh M5) vua dong cham EMA20 cung khung roi dong cua tro lai ve phia xu huong (gia hoi roi bat lai)
 //  - chua qua InpGuardAutoMaxDay lenh tu vao trong ngay; da qua InpGuardAutoCooldownMin phut tu lenh tay thua gan nhat
 // Sau khi vao, lenh duoc xu ly nhu lenh tay: hoa von, keo SL, nhoi theo xu huong, khoa lo ngay.
@@ -244,6 +244,8 @@ void GuardAutoEntry()
    if(up >= InpGuardAutoTrend && lo <= e20 && cl > e20) dir = 1;
    if(dn >= InpGuardAutoTrend && hi >= e20 && cl < e20) dir = -1;
    if(dir == 0) return;
+   // Khung lon phai cung chieu: tranh truong hop 6/9 khung nho (M1..M30) quay len trong khi H1/H4 van giam
+   if(InpGuardAutoNeedHTF && (TrendOf(6) != dir || TrendOf(7) != dir)) return;   // g_tbTF[6] = H1, [7] = H4
 
    datetime lastLoss;
    int n = GuardAutoCountToday(lastLoss);

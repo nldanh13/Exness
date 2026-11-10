@@ -559,3 +559,4 @@ Giới hạn: tối đa `InpGuardAutoMaxDay` (5) lệnh tự vào mỗi ngày, n
 Ghi lại kết quả sau 1–2 tuần (nút Gửi nhật ký) rồi mới quyết định có giữ hay không.
 Cập nhật cùng ngày theo yêu cầu "nhiều, nhanh, không nghỉ": bộ 05 giờ dùng 6/9 khung, điểm vào trên nến M1
 (`InpGuardAutoTFmin = 1`), không giới hạn số lệnh/ngày, không nghỉ sau lệnh thua. Khóa lỗ ngày 10% vẫn giữ.
+Thêm `InpGuardAutoNeedHTF` (mặc định bật): ngoài 6/9 khung, H1 và H4 bắt buộc cùng chiều, để 6 khung nhỏ quay đầu không kéo bot vào ngược xu hướng lớn.

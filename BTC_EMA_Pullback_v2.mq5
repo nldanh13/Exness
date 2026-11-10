@@ -149,6 +149,7 @@ input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá
 input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
 input bool            InpGuardAutoEntry   = false;      // Thử nghiệm: bot tự vào lệnh đầu tiên (lot nhỏ nhất)
 input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
+input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
 input int             InpGuardAutoTFmin   = 5;          // Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)
 input int             InpGuardAutoMaxDay  = 5;          // Số lệnh tự vào tối đa mỗi ngày (0 = không giới hạn)
 input int             InpGuardAutoCooldownMin = 30;     // Nghỉ sau lệnh thua (phút, 0 = tắt)
