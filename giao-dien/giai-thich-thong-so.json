@@ -50,6 +50,7 @@
  "InpGuardMaxRiskPct": "Vượt mức thì giảm lot hoặc đóng lệnh.",
  "InpGuardDayLossPct": "Vượt mức thì đóng hết và khóa lệnh tay tới hết ngày.",
  "InpGuardOldTrades": "Mặc định chỉ cảnh báo các lệnh này.",
+ "InpGuardPending": "Lệnh chờ chưa có SL: tự đặt SL. Lot quá lớn: hủy và đặt lại với lot nhỏ hơn. Lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn: hủy. Ngày đã khóa lỗ: hủy mọi lệnh chờ.",
  "InpJournal": "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv.",
  "InpWarnBigWinPct": "Nhắc rút tiền, nghỉ 1–2 ngày và không tăng lot.",
  "InpMonthDepositCap": "Ví dụ 2000000 với tài khoản VND.",

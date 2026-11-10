@@ -6,6 +6,7 @@
 //|  - lenh qua to (> 0,5 lot lo, lenh nho lai)
 //|  - vai ngay lo rat lon lien tiep
 //| Chi chay that / demo (backtest khong co lenh tay). Bat bang InpGuardManual.
+//| Lenh cho dat tay (Limit / Stop / Stop Limit, InpGuardPending): GuardPending() o cuoi file.
 //+------------------------------------------------------------------+
 ulong    g_gSeen[];            // lenh tay da xem (de chi xu ly "lenh moi" 1 lan)
 bool     g_gInit      = false;
@@ -134,6 +135,8 @@ void GuardManual()
       }
    }
 
+   GuardPending(locked, since, eq);                          // lenh cho dat tay (truoc khi khop)
+
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       ulong t = PositionGetTicket(i);
@@ -210,5 +213,146 @@ void GuardManual()
       // 5) Giu qua lau ma van lo: dong
       if(InpGuardMaxHoldH > 0 && TimeCurrent() - ot > InpGuardMaxHoldH * 3600 && GuardFloating(t) < 0)
          GuardClose(t, StringFormat("giu qua %d gio ma van lo (lenh giu qua 1 ngay la nhom lo nang nhat trong sao ke)", InpGuardMaxHoldH));
+   }
+}
+
+
+//+------------------------------------------------------------------+
+//| Lenh cho dat tay (v5.10.2): sua NGAY khi con dang cho, truoc khi khop
+//|  - ngay da khoa lo: huy lenh cho
+//|  - lenh cho cung chieu, gia vao te hon mot lenh tay dang lo (Buy Limit duoi Buy dang lo,
+//|    Sell Limit tren Sell dang lo): huy - neu de khop thi bot cung dong ngay va mat spread
+//|  - chua co SL: dat SL cach gia cho InpGuardSLPct %
+//|  - cham SL lo hon InpGuardMaxRiskPct % von: MT5 khong cho sua lot lenh cho, nen huy
+//|    va dat lai lenh cung loai, cung gia, SL, TP, han voi lot nho hon
+//| Lenh cho dat truoc khi bat bao ve lan dau: chi canh bao (tru khi InpGuardOldTrades).
+//+------------------------------------------------------------------+
+bool IsManualPendingSelected()
+{
+   if(OrderGetInteger(ORDER_MAGIC) != 0 || OrderGetString(ORDER_SYMBOL) != _Symbol) return false;
+   ENUM_ORDER_TYPE ty = (ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+   return ty == ORDER_TYPE_BUY_LIMIT || ty == ORDER_TYPE_SELL_LIMIT || ty == ORDER_TYPE_BUY_STOP ||
+          ty == ORDER_TYPE_SELL_STOP || ty == ORDER_TYPE_BUY_STOP_LIMIT || ty == ORDER_TYPE_SELL_STOP_LIMIT;
+}
+
+bool PendingIsBuy(const ENUM_ORDER_TYPE ty)
+{
+   return ty == ORDER_TYPE_BUY_LIMIT || ty == ORDER_TYPE_BUY_STOP || ty == ORDER_TYPE_BUY_STOP_LIMIT;
+}
+
+string PendingName(const ENUM_ORDER_TYPE ty)
+{
+   switch(ty)
+   {
+      case ORDER_TYPE_BUY_LIMIT:       return "Buy Limit";
+      case ORDER_TYPE_SELL_LIMIT:      return "Sell Limit";
+      case ORDER_TYPE_BUY_STOP:        return "Buy Stop";
+      case ORDER_TYPE_SELL_STOP:       return "Sell Stop";
+      case ORDER_TYPE_BUY_STOP_LIMIT:  return "Buy Stop Limit";
+      case ORDER_TYPE_SELL_STOP_LIMIT: return "Sell Stop Limit";
+   }
+   return "lenh cho";
+}
+
+void GuardDeletePending(const ulong ticket, const string what, const string reason)
+{
+   if(PrepSend() && TradeDone(trade.OrderDelete(ticket), "Huy lenh cho tay", reason))
+      Notify(StringFormat("[%s] BAO VE LENH TAY: da huy %s #%I64u. Ly do: %s", _Symbol, what, ticket, reason));
+}
+
+void GuardPending(const bool locked, const datetime since, const double eq)
+{
+   if(!InpGuardPending) return;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+   {
+      ulong t = OrderGetTicket(i);
+      if(t == 0 || !IsManualPendingSelected()) continue;
+      ENUM_ORDER_TYPE ty = (ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+      bool     buy   = PendingIsBuy(ty);
+      string   name  = PendingName(ty);
+      double   price = OrderGetDouble(ORDER_PRICE_OPEN);       // gia kich hoat (Stop Limit: gia Stop)
+      double   lim   = OrderGetDouble(ORDER_PRICE_STOPLIMIT);  // gia Limit cua Stop Limit (0 voi loai khac)
+      double   entry = lim > 0 ? lim : price;                  // gia se khop
+      double   sl    = OrderGetDouble(ORDER_SL);
+      double   tp    = OrderGetDouble(ORDER_TP);
+      double   vol   = OrderGetDouble(ORDER_VOLUME_CURRENT);
+      ENUM_ORDER_TYPE_TIME tt = (ENUM_ORDER_TYPE_TIME)OrderGetInteger(ORDER_TYPE_TIME);
+      datetime exp   = (datetime)OrderGetInteger(ORDER_TIME_EXPIRATION);
+      datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
+      string   cmt   = OrderGetString(ORDER_COMMENT);
+
+      if(setup < since && !InpGuardOldTrades)
+      {
+         if((sl == 0 || locked) && ShouldNotify("gpold" + IntegerToString((long)t), 24 * 3600))
+            Notify(StringFormat("[%s] BAO VE LENH TAY: %s cu #%I64u (dat truoc khi bat bao ve)%s. Bot KHONG tu sua lenh nay; dat InpGuardOldTrades = true neu muon.",
+                                _Symbol, name, t, sl == 0 ? " chua co SL" : " trong ngay da cham gioi han lo"));
+         continue;
+      }
+      if(locked) { GuardDeletePending(t, name, "da cham gioi han lo ngay cua lenh tay"); continue; }
+
+      // 1) Lenh cho de nhoi vao lenh cung chieu dang lo, o gia te hon (trung binh gia xuong)
+      if(InpGuardNoAverage)
+      {
+         ulong bad = 0;
+         for(int j = PositionsTotal() - 1; j >= 0; j--)
+         {
+            ulong u = PositionGetTicket(j);
+            if(u == 0 || !IsManualSelected()) continue;
+            if((PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) != buy) continue;
+            if(PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP) >= 0) continue;
+            double op = PositionGetDouble(POSITION_PRICE_OPEN);
+            if(buy ? entry < op : entry > op) { bad = u; break; }
+         }
+         if(bad != 0)
+         {
+            GuardDeletePending(t, name, StringFormat("nhoi vao lenh %s #%I64u dang lo o gia te hon (trung binh gia xuong)", buy ? "Buy" : "Sell", bad));
+            continue;
+         }
+      }
+
+      int dg = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+      // 2) Chua co SL: dat SL cach gia se khop x%
+      if(sl == 0 && InpGuardSLPct > 0)
+      {
+         double nsl = NormalizeDouble(buy ? entry * (1 - InpGuardSLPct / 100.0) : entry * (1 + InpGuardSLPct / 100.0), dg);
+         if(PrepSend() && TradeDone(trade.OrderModify(t, price, nsl, tp, tt, exp, lim), "Dat SL lenh cho tay"))
+         {
+            sl = nsl;
+            Notify(StringFormat("[%s] BAO VE LENH TAY: %s #%I64u chua co SL, da dat SL %.2f (cach gia vao %.1f%%).", _Symbol, name, t, nsl, InpGuardSLPct));
+         }
+         else continue;                                        // thu lai lan sau
+      }
+
+      // 3) Lot qua to: huy roi dat lai voi lot nho hon (MT5 khong sua duoc lot lenh cho)
+      if(sl > 0 && InpGuardMaxRiskPct > 0)
+      {
+         double pr = 0;
+         if(OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, vol, entry, sl, pr) && pr < 0)
+         {
+            double allow = eq * InpGuardMaxRiskPct / 100.0;
+            if(-pr > allow * 1.05)
+            {
+               double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP), vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+               double keep = NormalizeDouble(MathFloor(vol * allow / -pr / step) * step, 2);
+               string why  = StringFormat("neu khop roi cham SL se lo %.1f%% von (gioi han %.1f%%)", -pr / eq * 100.0, InpGuardMaxRiskPct);
+               if(keep < vmin - 1e-9) { GuardDeletePending(t, name, why + ", lot nho nhat van qua rui ro"); continue; }
+               if(!(PrepSend() && TradeDone(trade.OrderDelete(t), "Huy lenh cho tay de giam lot", why))) continue;
+               ulong magic = P_Magic;
+               trade.SetExpertMagicNumber(0);                  // lenh dat lai van la lenh tay
+               bool sent = PrepSend() && trade.OrderOpen(_Symbol, ty, keep, lim, price, sl, tp, tt, exp, cmt);
+               uint rc = trade.ResultRetcode();
+               bool ok = sent && (rc == TRADE_RETCODE_PLACED || rc == TRADE_RETCODE_DONE);   // lenh cho: PLACED la thanh cong
+               if(!ok) Print(StringFormat("[%s] Dat lai lenh cho tay that bai: %u %s", _Symbol, rc, trade.ResultRetcodeDescription()));
+               trade.SetExpertMagicNumber(magic);
+               if(ok)
+               {
+                  ulong nt = trade.ResultOrder();
+                  Notify(StringFormat("[%s] BAO VE LENH TAY: %s #%I64u %s. Da dat lai thanh #%I64u voi %.2f lot (thay %.2f).", _Symbol, name, t, why, nt, keep, vol));
+               }
+               else
+                  Notify(StringFormat("[%s] BAO VE LENH TAY: da huy %s #%I64u (%s) nhung KHONG dat lai duoc lenh %.2f lot. Hay tu dat lai neu van muon vao.", _Symbol, name, t, why, keep));
+            }
+         }
+      }
    }
 }

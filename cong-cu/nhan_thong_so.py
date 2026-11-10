@@ -133,6 +133,7 @@ GROUPS = [
         ("InpGuardMaxHoldH",   "Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)", ""),
         ("InpGuardDayLossPct", "Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)", "Vượt mức thì đóng hết và khóa lệnh tay tới hết ngày."),
         ("InpGuardOldTrades",  "Áp dụng cả cho lệnh đã mở trước khi bật", "Mặc định chỉ cảnh báo các lệnh này."),
+        ("InpGuardPending",    "Sửa cả lệnh chờ (Limit / Stop) trước khi khớp", "Lệnh chờ chưa có SL: tự đặt SL. Lot quá lớn: hủy và đặt lại với lot nhỏ hơn. Lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn: hủy. Ngày đã khóa lỗ: hủy mọi lệnh chờ."),
     ]),
     ("12. Nhật ký và kỷ luật giao dịch", [
         ("InpJournal",           "Ghi nhật ký mọi giao dịch của tài khoản", "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv."),
