@@ -557,3 +557,5 @@ Theo yêu cầu: chạy thẳng trên demo với số liệu hiện tại, khôn
 Giới hạn: tối đa `InpGuardAutoMaxDay` (5) lệnh tự vào mỗi ngày, nghỉ `InpGuardAutoCooldownMin` (30) phút sau lệnh tay thua, không vào khi
 đã khóa lỗ ngày. Sau khi vào, lệnh được xử lý như lệnh tay của bộ 04 (SL 0,25%, hòa vốn 1R, kéo SL, nhồi tối đa 3 lớp).
 Ghi lại kết quả sau 1–2 tuần (nút Gửi nhật ký) rồi mới quyết định có giữ hay không.
+Cập nhật cùng ngày theo yêu cầu "nhiều, nhanh, không nghỉ": bộ 05 giờ dùng 6/9 khung, điểm vào trên nến M1
+(`InpGuardAutoTFmin = 1`), không giới hạn số lệnh/ngày, không nghỉ sau lệnh thua. Khóa lỗ ngày 10% vẫn giữ.

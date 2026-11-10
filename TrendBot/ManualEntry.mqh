@@ -195,7 +195,7 @@ void GuardPyramid()
 // Vao 1 lenh (magic 0, ghi chu "TB tu vao", lot nho nhat, SL cach InpGuardSLPct %) khi:
 //  - khong co lenh tay / lenh cho nao tren ma nay, chua khoa lo ngay, Algo Trading bat
 //  - it nhat InpGuardAutoTrend / 9 khung cung chieu
-//  - nen M5 vua dong cham EMA20 M5 roi dong cua tro lai ve phia xu huong (gia hoi roi bat lai)
+//  - nen khung InpGuardAutoTFmin (mac dinh M5) vua dong cham EMA20 cung khung roi dong cua tro lai ve phia xu huong (gia hoi roi bat lai)
 //  - chua qua InpGuardAutoMaxDay lenh tu vao trong ngay; da qua InpGuardAutoCooldownMin phut tu lenh tay thua gan nhat
 // Sau khi vao, lenh duoc xu ly nhu lenh tay: hoa von, keo SL, nhoi theo xu huong, khoa lo ngay.
 datetime g_aeLastBar = 0;
@@ -224,8 +224,11 @@ int GuardAutoCountToday(datetime &lastLossClose)
 void GuardAutoEntry()
 {
    if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER)) return;
-   datetime bar = iTime(_Symbol, PERIOD_M5, 0);
-   if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen M5 xet 1 lan
+   int ti = InpGuardAutoTFmin == 1 ? 0 : InpGuardAutoTFmin == 3 ? 1 : InpGuardAutoTFmin == 10 ? 3 :
+            InpGuardAutoTFmin == 15 ? 4 : InpGuardAutoTFmin == 30 ? 5 : 2;      // vi tri trong bang xu huong (mac dinh M5)
+   ENUM_TIMEFRAMES tf = g_tbTF[ti];
+   datetime bar = iTime(_Symbol, tf, 0);
+   if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
    if(GuardDayLocked()) return;
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
    for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsManualSelected()) return;
@@ -233,9 +236,9 @@ void GuardAutoEntry()
    if(!g_tbReady && !TrendBoardInit()) return;
 
    double e20;
-   if(!GetValue(g_tbE20[2], 0, 1, e20)) return;               // g_tbTF[2] = M5
+   if(!GetValue(g_tbE20[ti], 0, 1, e20)) return;
    g_aeLastBar = bar;
-   double lo = iLow(_Symbol, PERIOD_M5, 1), hi = iHigh(_Symbol, PERIOD_M5, 1), cl = iClose(_Symbol, PERIOD_M5, 1);
+   double lo = iLow(_Symbol, tf, 1), hi = iHigh(_Symbol, tf, 1), cl = iClose(_Symbol, tf, 1);
    int up = TrendCount(true), dn = TrendCount(false);
    int dir = 0;
    if(up >= InpGuardAutoTrend && lo <= e20 && cl > e20) dir = 1;
@@ -258,8 +261,8 @@ void GuardAutoEntry()
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
    trade.SetExpertMagicNumber(magic);
    if(ok)
-      Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f. %d/9 khung cung chieu, nen M5 hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
-                          _Symbol, buy ? "BUY" : "SELL", lot, sl, buy ? up : dn, n + 1));
+      Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f. %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
+                          _Symbol, buy ? "BUY" : "SELL", lot, sl, buy ? up : dn, g_tbName[ti], n + 1));
 }
 
 //--- Nut vao lenh --------------------------------------------------

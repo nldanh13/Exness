@@ -146,7 +146,8 @@ void UpdatePanel()
       }
       if(InpGuardAutoEntry)
       {
-         txt[n] = StringFormat("Tự vào lệnh (thử nghiệm): cần %d/9 khung + hồi EMA20 M5  ·  tối đa %d/ngày", InpGuardAutoTrend, InpGuardAutoMaxDay);
+         txt[n] = StringFormat("Tự vào (thử nghiệm): cần %d/9 khung + hồi EMA20 M%d  ·  %s", InpGuardAutoTrend, InpGuardAutoTFmin,
+                               InpGuardAutoMaxDay > 0 ? StringFormat("tối đa %d/ngày", InpGuardAutoMaxDay) : "không giới hạn");
          col[n++] = cWarn;
       }
    }
