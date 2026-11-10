@@ -21,35 +21,10 @@ PERSONAL = {"InpCapital", "InpMagic", "InpManageEverySec"}
 
 # (ten file, [dong ghi chu dau file], {thong so khac mac dinh})
 PRESETS = [
-    ("01-Chuan-Donchian-H4.set", [
-        "01. Cấu hình chuẩn: phá vỡ kênh Donchian H4 (cấu hình C)",
-        "Trạng thái: ĐÃ KIỂM THỬ. PF 1,93 (2023–2026) và 2,59 (2020–2023), sụt giảm dưới 5%.",
-        "Backtest giá tick thật, vốn 3.000 USD, đã trừ trượt giá 0,05% mỗi lệnh.",
-        "Lãi dồn vào ít lệnh lớn: bỏ 5 lệnh tốt nhất thì lợi nhuận giảm mạnh. Cần chạy demo 2–3 tháng trước khi dùng tiền thật.",
-        "Vốn khuyến nghị: từ 3.000 USD. 0,01 lot với SL khoảng 3.000 USD/BTC đã rủi ro ~30 USD mỗi lệnh;",
-        "vốn nhỏ hơn thì bot bỏ qua tín hiệu (không làm tròn lên lot tối thiểu).",
-    ], {}),
-    ("02-Tu-bam-lenh-H4.set", [
-        "02. Tự bấm lệnh, bot quản lý (khung H4)",
-        "Trạng thái: CÔNG CỤ HỖ TRỢ, không phải chiến lược đã kiểm thử.",
-        "Bot KHÔNG tự vào lệnh. Bạn bấm BUY / SELL trên chart (bấm 2 lần để xác nhận); bot tính lot theo rủi ro 1%,",
-        "đặt SL 2,5 ATR H4, dời SL về hòa vốn, nhồi tối đa 3 lớp khi giá đi thêm 1 ATR, trailing 3 ATR.",
-        "Góc phải chart có bảng xu hướng M1 → D1.",
-    ], {"InpManualEntry": "true", "InpPyramidMax": "3"}),
-    ("03-Bao-ve-lenh-tay.set", [
-        "03. Bảo vệ lệnh vào tay",
-        "Trạng thái: CÔNG CỤ HỖ TRỢ. Bot không tự vào lệnh, chỉ canh các lệnh bạn vào tay trên mã của chart:",
-        "tự đặt SL 1,5% nếu lệnh chưa có SL, giảm lot khi rủi ro trên 3% vốn, đóng lệnh nhồi vào lệnh đang lỗ,",
-        "đóng lệnh lỗ giữ quá 24 giờ, lỗ tay quá 5% trong ngày thì đóng hết và khóa lệnh tay tới hết ngày.",
-        "Lệnh chờ (Limit / Stop) được sửa ngay khi còn chờ: tự đặt SL, lot quá lớn thì hủy và đặt lại nhỏ hơn,",
-        "hủy lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn.",
-        "Chốt lời: lời bằng mức rủi ro ban đầu (1R) thì dời SL về hòa vốn, sau đó kéo SL theo giá cách 2 × ATR M15.",
-        "Gắn vào một chart bất kỳ của mã đó (khung M1). Chạy được cùng lúc với bot 01 (mã nhận diện khác nhau).",
-    ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true"}),
     ("04-Bao-ve-lenh-tay-von-1-trieu.set", [
         "04. Bảo vệ lệnh vào tay cho vốn khoảng 1 triệu VND (38 USD)",
-        "Trạng thái: CÔNG CỤ HỖ TRỢ. Như bộ 03 nhưng nới cho vốn nhỏ, vì 0,01 lot BTC là lot nhỏ nhất:",
-        "SL 1,5% (~1.100 USD giá) với 0,01 lot đã mất ~29% vốn, nên bộ 03 sẽ đóng mọi lệnh.",
+        "Trạng thái: CÔNG CỤ HỖ TRỢ. Bot không tự vào lệnh, chỉ canh lệnh bạn vào tay (cả lệnh chờ) trên mã của chart.",
+        "0,01 lot BTC là lot nhỏ nhất, nên các mức dưới đây đã nới cho vốn nhỏ.",
         "Bộ này: lệnh chưa có SL thì đặt SL cách giá vào 0,25% (~180 USD giá, ~5% vốn với 0,01 lot);",
         "chấp nhận tối đa 6% vốn mỗi lệnh, nên SL bạn tự đặt phải cách giá vào không quá ~220 USD với 0,01 lot;",
         "lỗ tay quá 10% trong ngày (khoảng 2 lệnh thua) thì đóng hết và khóa tới hết ngày.",
@@ -70,43 +45,6 @@ PRESETS = [
         "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3",
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "1",
         "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0"}),
-    ("TN1-Donchian-H4-nhoi-3-lop.set", [
-        "TN1. Thử nghiệm: Donchian H4, nhồi tối đa 3 lớp",
-        "Trạng thái: CHƯA ĐẠT. Vốn 3.000 USD: +1.740 / +1.926 USD (2023–2026 / 2020–2023), sụt giảm 12% / 9%.",
-        "Ở cùng mức sụt giảm không hơn cấu hình 01; tính theo từng đợt xu hướng, t chỉ 1,7. Chỉ chạy demo.",
-    ], {"InpPyramidMax": "3"}),
-    ("TN2-Donchian-M30-khoi-luong.set", [
-        "TN2. Thử nghiệm: Donchian M30, lọc khối lượng nến phá vỡ",
-        "Trạng thái: CHƯA ĐẠT. PF 1,51 (2023–2026) nhưng 0,74 (2020–2023). Chỉ chạy demo.",
-    ], {"InpTF": "30", "InpUseHTF": "false", "InpBreakMinVol": "1.5", "InpMaxSpreadPoints": "1500"}),
-    ("TN3-RSI-M15.set", [
-        "TN3. Thử nghiệm: RSI(2) quá mua / quá bán, khung M15",
-        "Trạng thái: CHƯA ĐẠT. PF 0,90 (2023–2026), 0,75 (2020–2023). Chỉ chạy demo.",
-    ], {"InpStrategy": "2", "InpTF": "15", "InpUseADX": "false", "InpUseTrailing": "false", "InpATRMult": "1.5",
-        "InpRR": "1", "InpMaxSpreadPoints": "1500"}),
-    ("TN4-ORB-M5-phien-My.set", [
-        "TN4. Thử nghiệm: phá vỡ vùng giá 30 phút đầu phiên Mỹ, khung M5",
-        "Trạng thái: CHƯA ĐẠT. PF 0,98 (2023–2026), 0,89 (2020–2023). Chỉ chạy demo.",
-    ], {"InpStrategy": "3", "InpTF": "5", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
-        "InpATRMult": "1.0", "InpRR": "2", "InpMaxTradesPerDay": "1", "InpMaxSpreadPoints": "1500"}),
-    ("TN5-Wyckoff-M15-von-nho.set", [
-        "TN5. Thử nghiệm: Wyckoff spring / upthrust M15 cho vốn nhỏ",
-        "Trạng thái: CHƯA ĐẠT. Vốn lớn: PF 0,92 / 0,66. Vốn 1 triệu, rủi ro tới 5%/lệnh: 3 năm +10 USD, sụt giảm 27%.",
-        "Với 5%/lệnh, 3 lệnh thua liên tiếp là chạm mức dừng hẳn 15%. Chỉ chạy demo.",
-    ], {"InpStrategy": "6", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
-        "InpMaxRiskRoundUp": "5", "InpMaxSpreadPoints": "1500"}),
-    ("TN6-Demo-1-trieu-M5.set", [
-        "TN6. Thử nghiệm cho tài khoản demo 1 triệu VND: Donchian M5 (tín hiệu, SL và trailing đều theo M5)",
-        "Trạng thái: CHƯA ĐẠT. Donchian M5 lỗ ở cả hai giai đoạn backtest. Chỉ để làm quen cách bot vận hành.",
-        "0,01 lot thua khoảng 80–150 nghìn (8–15% tài khoản). Khóa lỗ ngày 20%, dừng hẳn khi sụt 50%",
-        "(mức mặc định 3% / 15% sẽ dừng bot sau 1–2 lệnh thua).",
-    ], {"InpTF": "5", "InpMaxSpreadPoints": "1500", "InpMaxRiskRoundUp": "20", "InpMaxDailyLossPct": "20",
-        "InpMaxDrawdownPct": "50"}),
-    ("TN7-Demo-1-trieu-H4-SL-M5.set", [
-        "TN7. Thử nghiệm cho tài khoản demo 1 triệu VND: tín hiệu H4 như cấu hình 01, SL và trailing theo ATR M5",
-        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST (đợt SLnho-*). SL M5 ~150 USD/BTC, spread ~24 USD/BTC chiếm khoảng 16% mỗi lệnh.",
-        "0,01 lot thua khoảng 80–150 nghìn (8–15% tài khoản). Khóa lỗ ngày 20%, dừng hẳn khi sụt 50%.",
-    ], {"InpSLTFmin": "5", "InpMaxRiskRoundUp": "20", "InpMaxDailyLossPct": "20", "InpMaxDrawdownPct": "50"}),
 ]
 
 
