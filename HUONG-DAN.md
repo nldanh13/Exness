@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.9
+# Hướng dẫn bot BTC (MT5) v5.10.2
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -512,3 +512,15 @@ Mo GiaoDien.cmd -> tab "Thong so". Doc thang moi thong so tu code bot (luon khop
   và `python cong-cu/tao_cai_dat.py` (tạo lại các bộ cài đặt sẵn). Thiếu nhãn thì script báo lỗi.
 - Tab Thông số lấy nhãn từ code bot, hiện thêm dòng giải thích, chia bộ cài đặt sẵn thành "Cài đặt sẵn" và "Thử nghiệm",
   và hiện trạng thái (đã kiểm thử / chưa đạt) khi nạp một bộ.
+
+## Bảo vệ cả lệnh chờ đặt tay (v5.10.2, 10/11/2026)
+Trước đây bot chỉ canh lệnh tay sau khi đã khớp. Nay với `InpGuardPending = true` (mặc định, dùng cùng bộ `03-Bao-ve-lenh-tay.set`),
+lệnh Buy/Sell Limit, Stop, Stop Limit bạn đặt tay trên mã của chart được sửa ngay khi còn đang chờ, kiểm tra mỗi 2 giây:
+- Chưa có SL: tự đặt SL cách giá sẽ khớp `InpGuardSLPct` (1,5%).
+- Nếu khớp rồi chạm SL mà lỗ hơn `InpGuardMaxRiskPct` (3%) vốn: MT5 không cho sửa lot lệnh chờ, nên bot hủy lệnh và đặt lại
+  lệnh cùng loại, cùng giá, SL, TP, hạn với lot nhỏ hơn (có thông báo số lệnh mới). Lot nhỏ nhất vẫn quá rủi ro thì chỉ hủy.
+- Lệnh chờ cùng chiều với một lệnh tay đang lỗ, ở giá tệ hơn giá vào của lệnh đó (Buy Limit dưới Buy đang lỗ, Sell Limit trên Sell
+  đang lỗ): hủy, vì nếu để khớp thì luật "không nhồi vào lệnh lỗ" cũng đóng nó ngay và bạn mất spread.
+- Ngày đã chạm giới hạn lỗ lệnh tay: hủy mọi lệnh chờ tới 0:00 giờ server.
+- Lệnh chờ đặt trước khi bật bảo vệ lần đầu: chỉ cảnh báo (trừ khi `InpGuardOldTrades = true`).
+Chưa chạy được trong backtest (không có lệnh tay). Hãy thử trên demo: đặt một Buy Limit không SL, lot lớn, và xem thông báo.

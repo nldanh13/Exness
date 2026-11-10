@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.1"
-#property version   "5.101"
+#define  BOT_VERSION "5.10.2"
+#property version   "5.102"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -140,6 +140,7 @@ input bool            InpGuardNoAverage   = true;       // Đóng ngay lệnh nh
 input int             InpGuardMaxHoldH    = 24;         // Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)
 input double          InpGuardDayLossPct  = 5.0;        // Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)
 input bool            InpGuardOldTrades   = false;      // Áp dụng cả cho lệnh đã mở trước khi bật
+input bool            InpGuardPending     = true;       // Sửa cả lệnh chờ (Limit / Stop) trước khi khớp
 
 input group "12. Nhật ký và kỷ luật giao dịch"
 input bool            InpJournal          = true;       // Ghi nhật ký mọi giao dịch của tài khoản

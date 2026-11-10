@@ -41,6 +41,8 @@ PRESETS = [
         "Trạng thái: CÔNG CỤ HỖ TRỢ. Bot không tự vào lệnh, chỉ canh các lệnh bạn vào tay trên mã của chart:",
         "tự đặt SL 1,5% nếu lệnh chưa có SL, giảm lot khi rủi ro trên 3% vốn, đóng lệnh nhồi vào lệnh đang lỗ,",
         "đóng lệnh lỗ giữ quá 24 giờ, lỗ tay quá 5% trong ngày thì đóng hết và khóa lệnh tay tới hết ngày.",
+        "Lệnh chờ (Limit / Stop) được sửa ngay khi còn chờ: tự đặt SL, lot quá lớn thì hủy và đặt lại nhỏ hơn,",
+        "hủy lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn.",
         "Gắn vào một chart bất kỳ của mã đó (khung M1). Chạy được cùng lúc với bot 01 (mã nhận diện khác nhau).",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true"}),
     ("TN1-Donchian-H4-nhoi-3-lop.set", [
