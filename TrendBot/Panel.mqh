@@ -39,7 +39,7 @@ void CheckManualTrades()
 
 //--- Bang thong tin: hop nen toi o goc trai tren, chu tieng Viet co dau (thay Comment() de khong de len nen)
 #define PN_PFX "TBPN_"
-#define PN_W   370
+#define PN_W   410
 
 string PNMoney(const double v, const string cur)
 {
@@ -152,7 +152,7 @@ void UpdatePanel()
    txt[n] = StringFormat("Spread: %d point", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD));  col[n++] = cDim;
 
    int x = 8, y = 22, lh = 17;
-   PNBox("bg", x, y, PN_W, 28 + n * lh);
+   PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
    for(int i = 0; i < 12; i++)
    {
