@@ -109,12 +109,12 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
    color  cTxt = C'205,210,220', cDim = C'130,138,152', cOk = C'90,200,120', cBad = C'235,95,85', cWarn = C'240,180,60';
 
-   string txt[12]; color col[12]; int n = 0;
+   string txt[14]; color col[14]; int n = 0;
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
                   P_Strategy == STRAT_MACD ? "MACD đa khung" : P_Strategy == STRAT_IMOM ? "Quán tính trong ngày" : "EMA pullback";
-   string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? "Bảo vệ lệnh tay" : P_ManualEntry ? "Tự bấm lệnh" : strat);
+   string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)
    {
@@ -128,7 +128,7 @@ void UpdatePanel()
       for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) pend++;
       bool locked = GuardDayLocked();
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
-      txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
+      txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
       txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%% / giới hạn -%.0f%%)", PNMoney(mpl, cur), pct, InpGuardDayLossPct);
@@ -143,6 +143,11 @@ void UpdatePanel()
       {
          txt[n] = StringFormat("Tự nhồi: tối đa %d lớp  ·  mỗi %.1fR  ·  cần %d/9 khung cùng chiều", InpGuardPyramidMax, InpGuardPyramidStepR, InpGuardPyramidTrend);
          col[n++] = cDim;
+      }
+      if(InpGuardAutoEntry)
+      {
+         txt[n] = StringFormat("Tự vào lệnh (thử nghiệm): cần %d/9 khung + hồi EMA20 M5  ·  tối đa %d/ngày", InpGuardAutoTrend, InpGuardAutoMaxDay);
+         col[n++] = cWarn;
       }
    }
    else
@@ -161,7 +166,7 @@ void UpdatePanel()
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
-   for(int i = 0; i < 12; i++)
+   for(int i = 0; i < 14; i++)
    {
       if(i < n) PNText("l" + IntegerToString(i), x + 10, y + 26 + i * lh, txt[i], col[i], 9);
       else ObjectDelete(0, PN_PFX + "l" + IntegerToString(i));

@@ -191,6 +191,77 @@ void GuardPyramid()
                           _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
 }
 
+//--- Bot tu vao lenh dau tien o che do bao ve lenh tay (v5.10.5, InpGuardAutoEntry, THU NGHIEM - chua backtest)
+// Vao 1 lenh (magic 0, ghi chu "TB tu vao", lot nho nhat, SL cach InpGuardSLPct %) khi:
+//  - khong co lenh tay / lenh cho nao tren ma nay, chua khoa lo ngay, Algo Trading bat
+//  - it nhat InpGuardAutoTrend / 9 khung cung chieu
+//  - nen M5 vua dong cham EMA20 M5 roi dong cua tro lai ve phia xu huong (gia hoi roi bat lai)
+//  - chua qua InpGuardAutoMaxDay lenh tu vao trong ngay; da qua InpGuardAutoCooldownMin phut tu lenh tay thua gan nhat
+// Sau khi vao, lenh duoc xu ly nhu lenh tay: hoa von, keo SL, nhoi theo xu huong, khoa lo ngay.
+datetime g_aeLastBar = 0;
+
+int GuardAutoCountToday(datetime &lastLossClose)
+{
+   lastLossClose = 0;
+   MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
+   datetime dayStart = TimeCurrent() - (dt.hour * 3600 + dt.min * 60 + dt.sec);
+   int n = 0;
+   if(!HistorySelect(dayStart - 86400, TimeCurrent() + 60)) return 0;
+   for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
+   {
+      ulong d = HistoryDealGetTicket(i);
+      if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
+      datetime t = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
+      long entry = HistoryDealGetInteger(d, DEAL_ENTRY);
+      if(entry == DEAL_ENTRY_IN && t >= dayStart && StringFind(HistoryDealGetString(d, DEAL_COMMENT), "TB tu vao") == 0) n++;
+      if(entry != DEAL_ENTRY_IN && lastLossClose == 0 &&
+         HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION) < 0)
+         lastLossClose = t;
+   }
+   return n;
+}
+
+void GuardAutoEntry()
+{
+   if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER)) return;
+   datetime bar = iTime(_Symbol, PERIOD_M5, 0);
+   if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen M5 xet 1 lan
+   if(GuardDayLocked()) return;
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+   for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsManualSelected()) return;
+   for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
+   if(!g_tbReady && !TrendBoardInit()) return;
+
+   double e20;
+   if(!GetValue(g_tbE20[2], 0, 1, e20)) return;               // g_tbTF[2] = M5
+   g_aeLastBar = bar;
+   double lo = iLow(_Symbol, PERIOD_M5, 1), hi = iHigh(_Symbol, PERIOD_M5, 1), cl = iClose(_Symbol, PERIOD_M5, 1);
+   int up = TrendCount(true), dn = TrendCount(false);
+   int dir = 0;
+   if(up >= InpGuardAutoTrend && lo <= e20 && cl > e20) dir = 1;
+   if(dn >= InpGuardAutoTrend && hi >= e20 && cl < e20) dir = -1;
+   if(dir == 0) return;
+
+   datetime lastLoss;
+   int n = GuardAutoCountToday(lastLoss);
+   if(InpGuardAutoMaxDay > 0 && n >= InpGuardAutoMaxDay) return;
+   if(InpGuardAutoCooldownMin > 0 && lastLoss > 0 && TimeCurrent() - lastLoss < InpGuardAutoCooldownMin * 60) return;
+
+   bool   buy = dir > 0;
+   double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double slp = InpGuardSLPct > 0 ? InpGuardSLPct : 0.25;
+   double sl  = NormalizeDouble(buy ? px * (1 - slp / 100.0) : px * (1 + slp / 100.0), _Digits);
+   double lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   ulong magic = P_Magic;
+   trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
+   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
+                                         : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
+   trade.SetExpertMagicNumber(magic);
+   if(ok)
+      Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f. %d/9 khung cung chieu, nen M5 hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
+                          _Symbol, buy ? "BUY" : "SELL", lot, sl, buy ? up : dn, n + 1));
+}
+
 //--- Nut vao lenh --------------------------------------------------
 double MEPreviewLots(const double slDist)
 {
