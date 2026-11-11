@@ -35,7 +35,8 @@ void BotRiskSave(const bool urgent = false)
                       DoubleToString(GVGet("epoch"), 0) + "\r\n" +
                       DoubleToString(GVGet("dayId", -1), 0) + "\r\n" +
                       DoubleToString(GVGet("dayEq"), 8) + "\r\n" +
-                      DoubleToString(GVGet("dayLock", -1), 0) + "\r\n");
+                      DoubleToString(GVGet("dayLock", -1), 0) + "\r\n" +
+                      DoubleToString(GVGet("mtmPeak"), 8) + "\r\n");
       FileClose(h);
    }
    GlobalVariablesFlush();
@@ -54,6 +55,7 @@ void BotRiskLoad()
    double savedDayId = StringToDouble(FileReadString(h));
    double savedDayEq = StringToDouble(FileReadString(h));
    double savedDayLock = StringToDouble(FileReadString(h));
+   double savedMtmPeak = !FileIsEnding(h) ? StringToDouble(FileReadString(h)) : 0;
    FileClose(h);
    if(savedBase > 0 && !GlobalVariableCheck(GVName("base"))) GlobalVariableSet(GVName("base"), savedBase);
    if(savedEpoch > 0 && !GlobalVariableCheck(GVName("epoch"))) GlobalVariableSet(GVName("epoch"), savedEpoch);
@@ -61,6 +63,7 @@ void BotRiskLoad()
    if(savedDayEq > 0 && !GlobalVariableCheck(GVName("dayEq"))) GlobalVariableSet(GVName("dayEq"), savedDayEq);
    if(savedDayLock > 0 && !GlobalVariableCheck(GVName("dayLock"))) GlobalVariableSet(GVName("dayLock"), savedDayLock);
    if(savedPeak > GVGet("peak")) GlobalVariableSet(GVName("peak"), savedPeak);
+   if(savedMtmPeak > GVGet("mtmPeak")) GlobalVariableSet(GVName("mtmPeak"), savedMtmPeak);
    if(savedHalt && GVGet("halt") <= 0) GlobalVariableSet(GVName("halt"), 1.0);
 }
 
@@ -105,6 +108,16 @@ double FloatingPL()
 
 double BaseCapital() { return P_Capital > 0 ? P_Capital : GVGet("base"); }
 double BotEquity() { return BaseCapital() + g_closedPL + FloatingPL(); }
+// Hai pham vi DD ro rang: (1) equity thuc mark-to-market, (2) moc gioi han
+// bao thu khong tinh lai floating duong. KHONG dung DD mtm lam trigger dong
+// lenh trend following de tranh cat duoi phai chi vi tra lai mot phan lai chua chot.
+double BotMtmDrawdownPct()
+{
+   double eq = BotEquity();
+   double peak = GVGet("mtmPeak", eq);
+   if(eq > peak) { peak = eq; GlobalVariableSet(GVName("mtmPeak"), peak); }
+   return peak > 0 ? MathMax(0.0, (peak - eq) / peak * 100.0) : 0;
+}
 
 // Von dung de xet gioi han: chi tru phan lo dang chay (duoi gia vao), KHONG tinh lai dang chay.
 // Nho vay, lenh dang lai ma tra bot lai lai khong bi coi la lo ngay / sut giam.
@@ -128,6 +141,7 @@ void ResetBaseline(const bool unlock)
    g_plDirty = true;
    RefreshClosedPL();
    GlobalVariableSet(GVName("peak"), BotEquityForLimits());
+   GlobalVariableSet(GVName("mtmPeak"), BotEquity());
    BotRiskSave(true);
 }
 
@@ -207,6 +221,7 @@ bool LimitsReady()
 
 void CheckDrawdown()
 {
+   BotMtmDrawdownPct(); // cap nhat dinh mark-to-market rieng (khong tu dung)
    double eq   = BotEquityForLimits();
    double peak = GVGet("peak");
    if(eq > peak) { GlobalVariableSet(GVName("peak"), eq); peak = eq; }
