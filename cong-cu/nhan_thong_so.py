@@ -153,6 +153,7 @@ GROUPS = [
         ("InpGuardAutoTFmin",       "Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)", "Khung nhỏ hơn: nhiều lệnh hơn, nhiễu hơn."),
         ("InpGuardAutoMaxDay",      "Số lệnh tự vào tối đa mỗi ngày (0 = không giới hạn)", ""),
         ("InpGuardAutoCooldownMin", "Nghỉ sau lệnh thua (phút, 0 = tắt)", "Tránh vào lại ngay sau khi bị quét SL."),
+        ("InpGuardAutoRiskPct",     "Rủi ro mỗi lệnh tự vào (% vốn, 0 = lot nhỏ nhất)", "Bot tính lot TRƯỚC khi vào để lỗ khi chạm SL không vượt mức này (và không vượt Rủi ro tối đa mỗi lệnh tay). Vốn tăng thì lot tăng. Lot nhỏ nhất đã vượt giới hạn thì bỏ tín hiệu, không mở rồi đóng ngay."),
     ]),
     ("12. Nhật ký và kỷ luật giao dịch", [
         ("InpJournal",           "Ghi nhật ký mọi giao dịch của tài khoản", "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv."),

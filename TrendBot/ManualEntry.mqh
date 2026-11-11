@@ -339,6 +339,7 @@ void GuardExit()
 //  - chua qua InpGuardAutoMaxDay lenh tu vao trong ngay; da qua InpGuardAutoCooldownMin phut tu lenh tay thua gan nhat
 // Sau khi vao, lenh duoc xu ly nhu lenh tay: hoa von, keo SL, nhoi theo xu huong, khoa lo ngay.
 datetime g_aeLastBar = 0;
+int      g_aeSkipDay = 0;      // ngay da bao "bo tin hieu vi lot qua lon"
 
 int GuardAutoCountToday(datetime &lastLossClose)
 {
@@ -396,15 +397,47 @@ void GuardAutoEntry()
    double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double slp = InpGuardSLPct > 0 ? InpGuardSLPct : 0.25;
    double sl  = NormalizeDouble(buy ? px * (1 - slp / 100.0) : px * (1 + slp / 100.0), _Digits);
-   double lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   // Khoi luong tinh TRUOC khi vao (v5.10.10): lo khi cham SL khong vuot ngan sach. Truoc day luon vao lot nho nhat roi de
+   // bo bao ve (buoc 4 trong GuardManual) dong / giam lot SAU khi da khop - mat spread va truot gia vo ich.
+   //  - InpGuardAutoRiskPct > 0: lot = von x % / lo cua 1 lot tai SL, lam tron xuong theo buoc lot.
+   //  - InpGuardAutoRiskPct = 0: lot nho nhat.
+   //  - Tran: InpGuardMaxRiskPct. Lot nho nhat da vuot tran (hoac ngan sach) thi BO tin hieu, bao 1 lan / ngay.
+   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), vmax = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   double eq   = AccountInfoDouble(ACCOUNT_EQUITY);
+   double loss1 = 0;                                        // so tien lo cua 1,0 lot neu cham SL
+   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, 1.0, px, sl, loss1) || loss1 >= 0 || eq <= 0) return;
+   loss1 = -loss1;
+   double cap = InpGuardMaxRiskPct > 0 ? eq * InpGuardMaxRiskPct / 100.0 : 0;
+   double budget = InpGuardAutoRiskPct > 0 ? eq * InpGuardAutoRiskPct / 100.0 : 0;
+   if(cap > 0 && budget > cap) budget = cap;
+   double limPct = (budget > 0 ? budget : cap) / eq * 100.0;
+   double lot = vmin;
+   if(budget > 0 && step > 0) lot = MathMin(MathFloor(budget / loss1 / step + 1e-9) * step, vmax);
+   lot = NormalizeDouble(lot, 2);
+   double riskMin = loss1 * vmin;
+   bool tooBig = lot < vmin - 1e-9 || (cap > 0 && loss1 * lot > cap * 1.0001);
+   if(tooBig)
+   {
+      MqlDateTime d; TimeToStruct(TimeCurrent(), d);
+      int dayKey = d.year * 1000 + d.day_of_year;
+      if(g_aeSkipDay != dayKey)
+      {
+         g_aeSkipDay = dayKey;
+         Notify(StringFormat("[%s] BO TIN HIEU TU VAO: %.2f lot (nho nhat) voi SL %.2f%% se lo %.0f %s = %.1f%% von, vuot gioi han %.1f%%. "
+                             "Can von lon hon, SL gan hon hoac noi gioi han. Bao 1 lan / ngay.", _Symbol, vmin, slp, riskMin,
+                             AccountInfoString(ACCOUNT_CURRENCY), riskMin / eq * 100.0, limPct));
+      }
+      return;
+   }
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
    trade.SetExpertMagicNumber(magic);
    if(ok)
-      Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f. %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
-                          _Symbol, buy ? "BUY" : "SELL", lot, sl, buy ? up : dn, g_tbName[ti], n + 1));
+      Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f (rui ro %.1f%% von). %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
+                          _Symbol, buy ? "BUY" : "SELL", lot, sl, loss1 * lot / eq * 100.0, buy ? up : dn, g_tbName[ti], n + 1));
 }
 
 //--- Nut vao lenh --------------------------------------------------

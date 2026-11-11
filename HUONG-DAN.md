@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.9
+# Hướng dẫn bot BTC (MT5) v5.10.10
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -606,3 +606,12 @@ SL gần hơn nên dễ bị quét hơn, spread chiếm khoảng 6% của R.
 - `InpGuardSpikeATR`: không chờ nến đóng. Giá vừa chạy về phía lệnh rồi giật ngược x × ATR (râu nến đang hình thành) thì chốt ngay.
   Dùng cùng ngưỡng lời tối thiểu `InpGuardRevMinR`.
 - Bộ 06 bật: để lời chạy khi ≥ 7/9 khung, chốt đảo chiều khi lời ≥ 0,5R, chốt khi giật ngược 1 ATR M5.
+
+## Tính lot trước khi tự vào lệnh (v5.10.10)
+Trước đây `GuardAutoEntry` luôn vào lot nhỏ nhất, còn giới hạn `InpGuardMaxRiskPct` chỉ được kiểm tra SAU khi lệnh đã khớp.
+Nếu lot nhỏ nhất quá lớn so với vốn, bot mở lệnh rồi đóng ngay, mất spread và trượt giá.
+- Bây giờ bot tính số tiền lỗ tại SL TRƯỚC khi gửi lệnh. Lot nhỏ nhất đã vượt giới hạn thì **bỏ tín hiệu**, không mở lệnh,
+  và báo về điện thoại 1 lần mỗi ngày (kèm số tiền và % vốn sẽ lỗ).
+- `InpGuardAutoRiskPct` (mới, mặc định 0 = lot nhỏ nhất): đặt > 0 thì lot = vốn × % / số tiền lỗ của 1 lot tại SL, làm tròn xuống.
+  Vốn tăng thì lot tăng, thua thì lot tự nhỏ lại. Không bao giờ vượt `InpGuardMaxRiskPct`.
+- Lớp nhồi dùng cùng lot với lớp đầu và SL cách 1R, nên rủi ro mỗi lớp bằng lớp đầu, đã qua kiểm tra này.

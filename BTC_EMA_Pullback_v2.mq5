@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.9"
-#property version   "5.109"
+#define  BOT_VERSION "5.10.10"
+#property version   "5.1010"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -160,6 +160,7 @@ input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H
 input int             InpGuardAutoTFmin   = 5;          // Khung tìm điểm vào: nến hồi về EMA20 (phút: 1, 3, 5, 10, 15, 30)
 input int             InpGuardAutoMaxDay  = 5;          // Số lệnh tự vào tối đa mỗi ngày (0 = không giới hạn)
 input int             InpGuardAutoCooldownMin = 30;     // Nghỉ sau lệnh thua (phút, 0 = tắt)
+input double          InpGuardAutoRiskPct = 0.0;        // Rủi ro mỗi lệnh tự vào (% vốn, 0 = lot nhỏ nhất)
 
 input group "12. Nhật ký và kỷ luật giao dịch"
 input bool            InpJournal          = true;       // Ghi nhật ký mọi giao dịch của tài khoản
