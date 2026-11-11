@@ -4,7 +4,9 @@
 
 Expert Advisor cho MT5 (sàn Exness, mã `BTCUSDm`), kèm bộ script PowerShell để backtest hàng loạt, giao diện trên trình duyệt và vài công cụ Python. Chiến lược chính là phá vỡ kênh Donchian 20 nến H4, lọc theo EMA200 H4/D1 và ADX, SL theo ATR, rủi ro 1% vốn mỗi lệnh. Bot còn có chế độ bảo vệ lệnh vào tay (đặt SL, giới hạn lỗ ngày, chặn nhồi lệnh lỗ).
 
-**Tài liệu đầy đủ (cách dùng, ý nghĩa thông số, kết quả từng đợt backtest, lịch sử phiên bản): [HUONG-DAN.md](HUONG-DAN.md).** Phiên bản hiện tại ghi ở dòng đầu của file đó.
+**Tài liệu đầy đủ (cách dùng, ý nghĩa thông số, kết quả từng đợt backtest, lịch sử phiên bản): [HUONG-DAN.md](HUONG-DAN.md).**
+
+**Rà soát riêng v5.10.20:** [vốn tối thiểu theo ATR, bộ lọc Donchian, nhồi giảm lot, risk buckets 1%/2% và kế hoạch kiểm thử](RA-SOAT-RUI-RO-5.10.20.md). Với BTC và vốn khoảng 1 triệu VND, mức lot nhỏ nhất có thể khiến EA bỏ hoàn toàn các tín hiệu; không nên nâng rủi ro chỉ để vào được lệnh. Phiên bản hiện tại ghi ở dòng đầu của file đó.
 
 ## Bắt đầu nhanh
 
