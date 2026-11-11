@@ -184,6 +184,7 @@ class MqlSafetyRegression(unittest.TestCase):
         self.assertIn("DEAL_COMMISSION", ledger)
         self.assertIn("DEAL_FEE", ledger)
         self.assertIn("net -= oldPL", ledger)
+        self.assertIn("weightedEntry / totalVolume", ledger)
         self.assertIn("LedgerMainClosedPL", source("TrendBot/Protection.mqh"))
         guard = source("TrendBot/Guard.mqh")
         self.assertIn("LedgerDayPL(bucket, pl)", guard)
@@ -208,7 +209,7 @@ class MqlSafetyRegression(unittest.TestCase):
         core = source("TrendBot/Core.mqh")
         checker = function("EntryMarginOk", "TrendBot/Core.mqh")
         for frag in ("OrderCalcMargin(", "OrderCheck(", "result.margin_free",
-                     "result.margin_level", "free * 0.35"):
+                     "result.margin_level", "free * 0.35", "result.retcode != 0"):
             self.assertIn(frag, checker)
         main = source("BTC_EMA_Pullback_v2.mq5")
         manage = source("TrendBot/Manage.mqh")
