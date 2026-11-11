@@ -232,6 +232,67 @@ double NormalizeVolume(double lots)
    return NormalizeDouble(lots, digits);
 }
 
+// Account-money preflight for EVERY new market order, including manual button,
+// pyramiding and Guard magic0. Conservative defaults: each new order may consume
+// <=35% of currently free margin; projected margin level >=300%, cash free >=10%
+// equity. Server dynamic HMR is checked with OrderCheck immediately before send.
+// Not a guarantee against gap, stop-out, changed quote or slippage.
+bool EntryMarginOk(const bool buy, const double lots, const double price,
+                   const double sl, const double tp)
+{
+   if(lots <= 0 || price <= 0 || sl <= 0) return false;
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   double free = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+   double used = AccountInfoDouble(ACCOUNT_MARGIN);
+   double newMargin = 0;
+   if(eq <= 0 || free <= 0 ||
+      !OrderCalcMargin(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL,
+                       _Symbol, lots, price, newMargin) || newMargin <= 0)
+      return false;
+   if(newMargin > free * 0.35 || free - newMargin < eq * 0.10 ||
+      eq / (used + newMargin) * 100.0 < 300.0)
+   {
+      if(ShouldNotify("marginBlock", 3600))
+         PrintFormat("[%s] BO VAO: du tru ky quy khong du (margin %.2f / free %.2f %s).",
+                     _Symbol, newMargin, free, AccountInfoString(ACCOUNT_CURRENCY));
+      return false;
+   }
+   MqlTradeRequest request; MqlTradeCheckResult result;
+   ZeroMemory(request); ZeroMemory(result);
+   request.action = TRADE_ACTION_DEAL;
+   request.magic = P_Magic;
+   request.symbol = _Symbol;
+   request.volume = lots;
+   request.type = buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
+   request.price = price;
+   request.sl = NormalizeDouble(sl, _Digits);
+   request.tp = tp > 0 ? NormalizeDouble(tp, _Digits) : 0;
+   request.deviation = 100;
+   long fills = SymbolInfoInteger(_Symbol, SYMBOL_FILLING_MODE);
+   if((fills & SYMBOL_FILLING_IOC) == SYMBOL_FILLING_IOC)
+      request.type_filling = ORDER_FILLING_IOC;
+   else if((fills & SYMBOL_FILLING_FOK) == SYMBOL_FILLING_FOK)
+      request.type_filling = ORDER_FILLING_FOK;
+   else request.type_filling = ORDER_FILLING_RETURN;
+   if(!OrderCheck(request, result) ||
+      (result.retcode != TRADE_RETCODE_DONE && result.retcode != TRADE_RETCODE_PLACED))
+   {
+      if(ShouldNotify("orderCheck", 3600))
+         PrintFormat("[%s] BO VAO: OrderCheck loi retcode=%u (%s).",
+                     _Symbol, result.retcode, result.comment);
+      return false;
+   }
+   if(result.margin_free < eq * 0.10 ||
+      (result.margin_level > 0 && result.margin_level < 300.0))
+   {
+      if(ShouldNotify("marginFuture", 3600))
+         PrintFormat("[%s] BO VAO: margin sau OrderCheck (free %.2f, level %.1f%%).",
+                     _Symbol, result.margin_free, result.margin_level);
+      return false;
+   }
+   return true;
+}
+
 //--- Vi the ----------------------------------------------------------
 bool HasOwnPosition()
 {
