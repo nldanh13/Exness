@@ -65,7 +65,7 @@ bool LedgerDayPL(const int bucket, double &pl)
    for(int i = 0; i < nd; i++)
    {
       ulong d = tickets[i];
-      if(d == 0 || !HistoryDealSelect(d)) continue;
+      if(d == 0 || !HistoryDealSelect(d)) { g_ledgerHealthy = false; return false; }
       long ty = HistoryDealGetInteger(d, DEAL_TYPE);
       if(ty != DEAL_TYPE_BUY && ty != DEAL_TYPE_SELL) continue;
       ulong pid = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
@@ -143,7 +143,7 @@ bool LedgerMainClosedPL(const datetime from, double &all, double &day)
    for(int i = 0; i < n; i++)
    {
       ulong d = tickets[i];
-      if(d == 0 || !HistoryDealSelect(d)) continue;
+      if(d == 0 || !HistoryDealSelect(d)) return false;
       if(HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
       ulong pid = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
       if(pid == 0) continue;
