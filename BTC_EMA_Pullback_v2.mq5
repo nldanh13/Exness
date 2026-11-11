@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.19"
-#property version   "5.1019"
+#define  BOT_VERSION "5.10.20"
+#property version   "5.1020"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -585,14 +585,14 @@ int OnInit()
 {
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
+   if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;
    if(MQLInfoInteger(MQL_TESTER) && P_GuardBacktest)
    {
       // Moi optimization pass khong duoc thua huong bien global cua pass truoc.
       GlobalVariablesDeleteAll(GKey(""));
       GlobalVariableDel(GAcctKey("peak"));
       GlobalVariableDel(GAcctKey("halt"));
-   }
-   if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
+   }   // het cau hinh: bo qua lan nay
    // Moi chien luoc / khung co Magic rieng, de nhieu bot tren CUNG ma khong quan ly nham lenh cua nhau.
    // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
    if(!(P_Strategy == STRAT_DONCHIAN && P_TF == PERIOD_H4))
