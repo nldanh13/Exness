@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.22
+# Hướng dẫn bot BTC (MT5) v5.10.23
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
