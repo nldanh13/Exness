@@ -128,7 +128,10 @@ class MqlSafetyRegression(unittest.TestCase):
                 self.assertIn(fragment, body, (fn, fragment))
             self.assertLess(body.index("GroupLock()"), body.index("GroupGuardRiskAllowed(newRisk)"))
             self.assertLess(body.index("GroupReserveGuard(newRisk)"), body.index("trade.SetExpertMagicNumber(0)"))
-            self.assertLess(body.index("GroupUnlock()"), body.index("GuardMarkAuto(") if fn == "GuardAutoEntry" else self.assertLess(body.index("GroupUnlock()"), body.index("GuardMarkBotMade("))
+            if fn == "GuardAutoEntry":
+                self.assertLess(body.index("GroupUnlock()"), body.index("GuardMarkAuto("))
+            else:
+                self.assertLess(body.index("GroupUnlock()"), body.index("GuardMarkBotMade("))
 
     def test_human_and_algo_buckets_independent_for_auto_pyramid(self):
         body = function("GuardPyramid", "TrendBot/ManualEntry.mqh")
