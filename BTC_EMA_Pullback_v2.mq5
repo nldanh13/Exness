@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.20"
-#property version   "5.1020"
+#define  BOT_VERSION "5.10.21"
+#property version   "5.1021"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -134,6 +134,8 @@ input double          InpMaxDrawdownPct   = 15.0;       // Dừng hẳn khi sụ
 input bool            InpCloseOnHalt      = true;       // Đóng hết lệnh khi dừng hẳn
 input bool            InpResetHalt        = false;      // Mở khóa và đặt lại mốc vốn (bật 1 lần rồi tắt)
 input double          InpCapital          = 0;          // Vốn dành cho bot (0 = cả tài khoản)
+input double          InpLiveExpR         = 0.31;       // Theo dõi chạy thật: kỳ vọng mỗi lệnh từ backtest (R, 0 = tắt)
+input double          InpLiveSdR          = 1.69;       // Theo dõi chạy thật: độ lệch chuẩn mỗi lệnh từ backtest (R)
 
 input group "11. Bảo vệ lệnh vào tay"
 input bool            InpGuardManual      = false;      // Bật bảo vệ lệnh vào tay trên mã của chart này
@@ -194,6 +196,7 @@ input ulong           InpMagic            = 20261105;   // Mã nhận diện l�
 input int             InpManageEverySec   = 0;          // Kiểm tra lệnh mỗi (giây, 0 = mỗi tick)
 input int             InpPreset           = 0;          // Backtest: số thứ tự cấu hình (0 = dùng thông số trên)
 input string          InpTestLabel        = "";         // Backtest: tên lần chạy
+input int             InpTrials           = 1;          // Backtest: số cấu hình đã thử cạnh tranh (để tính Sharpe điều chỉnh)
 input int             InpExportTFmin      = 0;          // Backtest: xuất dữ liệu nến (phút, 0 = tắt)
 
 
@@ -578,6 +581,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Journal.mqh"
 #include "TrendBot/ManualEntry.mqh"
 #include "TrendBot/Status.mqh"
+#include "TrendBot/LiveR.mqh"
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
 
@@ -887,6 +891,7 @@ void OnTickBody()
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
    CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
+   UpdateLiveR();                   // tong R that so voi nguong xem lai (5 phut/lan, bao 1 lan khi xuong duoi)
    UpdatePanel();
 
    datetime barTime = iTime(_Symbol, P_TF, 0);

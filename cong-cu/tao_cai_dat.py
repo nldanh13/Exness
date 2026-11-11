@@ -14,7 +14,7 @@ SRC = os.path.join(ROOT, "BTC_EMA_Pullback_v2.mq5")
 OUT = os.path.join(ROOT, "cai-dat")
 ENUMS = {"PERIOD_M1": 1, "PERIOD_M5": 5, "PERIOD_M15": 15, "PERIOD_M30": 30, "PERIOD_H1": 16385, "PERIOD_H4": 16388,
          "PERIOD_D1": 16408, "PERIOD_W1": 32769}
-BACKTEST_ONLY = {"InpPreset", "InpTestLabel", "InpExportTFmin"}
+BACKTEST_ONLY = {"InpPreset", "InpTestLabel", "InpExportTFmin", "InpTrials"}
 # Cai dat rieng cua nguoi dung: KHONG ghi vao bo cai dat san, de Load khong xoa token Telegram, von chia cho bot, ...
 PERSONAL_GROUPS = {"12. Nhật ký và kỷ luật giao dịch", "13. Hiển thị và thông báo"}
 PERSONAL = {"InpCapital", "InpMagic", "InpManageEverySec"}

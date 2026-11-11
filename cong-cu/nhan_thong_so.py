@@ -127,6 +127,8 @@ GROUPS = [
         ("InpCloseOnHalt",      "Đóng hết lệnh khi dừng hẳn", ""),
         ("InpResetHalt",        "Mở khóa và đặt lại mốc vốn (bật 1 lần rồi tắt)", "Dùng sau khi bot dừng hẳn, hoặc sau khi nạp / rút tiền."),
         ("InpCapital",          "Vốn dành cho bot (0 = cả tài khoản)", "Dùng khi chia vốn cho nhiều bot trên cùng một tài khoản."),
+        ("InpLiveExpR",         "Theo dõi chạy thật: kỳ vọng mỗi lệnh từ backtest (R, 0 = tắt)", "Lấy từ cột E_R của backtest. Bảng thông tin hiện tổng R thật so với ngưỡng E_R × n − 2 × độ lệch chuẩn × √n; xuống dưới ngưỡng (sau ít nhất 10 lệnh) thì bot báo một lần để bạn dừng và xem lại. Bot không tự dừng."),
+        ("InpLiveSdR",          "Theo dõi chạy thật: độ lệch chuẩn mỗi lệnh từ backtest (R)", "Độ lệch chuẩn của R mỗi lệnh trong backtest (cấu hình C: khoảng 1,69)."),
     ]),
     ("11. Bảo vệ lệnh vào tay", [
         ("InpGuardManual",     "Bật bảo vệ lệnh vào tay trên mã của chart này", "Áp dụng cho lệnh bạn tự vào (magic 0)."),
@@ -187,6 +189,7 @@ GROUPS = [
         ("InpManageEverySec", "Kiểm tra lệnh mỗi (giây, 0 = mỗi tick)", "Mặc định 0: thử với tick thật cho thấy 1 giây đã làm lệch kết quả."),
         ("InpPreset",         "Backtest: số thứ tự cấu hình (0 = dùng thông số trên)", ""),
         ("InpTestLabel",      "Backtest: tên lần chạy", ""),
+        ("InpTrials",         "Backtest: số cấu hình đã thử cạnh tranh (để tính Sharpe điều chỉnh)", "Số cấu hình khác nhau đã thử trên cùng dữ liệu trước khi chọn cấu hình này. Dùng cho cột DSR% và SR0 trong file kết quả. Để 1 nếu chỉ thử đúng một cấu hình định trước."),
         ("InpExportTFmin",    "Backtest: xuất dữ liệu nến (phút, 0 = tắt)", "Cuối lần chạy, ghi nến ra Common\\Files\\TrendBot_bars_Mx.csv."),
     ]),
 ]

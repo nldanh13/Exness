@@ -697,6 +697,8 @@ var COLS = [
   { k: 'RecoveryFactor', l: 'Recovery', d: 2, tech: true, tip: 'Kết quả / sụt giảm lớn nhất' },
   { k: 'E_R', l: 'Kỳ vọng R', d: 3, tech: true, tip: 'Kết quả trung bình mỗi lượt theo đơn vị R' },
   { k: 'tStat', l: 't-stat', d: 2, tech: true, tip: 'Trên 2 thì khó là do ngẫu nhiên' },
+  { k: 'DSR%', l: 'DSR', d: 0, pct: true, tech: true, tip: 'Xác suất kết quả không phải do may, đã trừ số cấu hình đã thử (SoLanThu). Trên 95% mới đáng tin' },
+  { k: 'MinTRL_dot', l: 'Số lượt cần', d: 0, tech: true, tip: 'Số lượt tối thiểu để tin kết quả với độ tin cậy 95%. -1 là không đạt được' },
   { k: 'PF_BoTop5', l: 'PF bỏ top 5', d: 2, tech: true, tip: 'PF khi bỏ 5 lượt tốt nhất' },
   { k: 'MC_SutGiam95%', l: 'MC sụt giảm 95%', d: 2, tech: true, tip: 'Monte Carlo: 95% số lần xáo trộn thứ tự có sụt giảm thấp hơn mức này' },
   { k: 'BoQuaLot', l: 'Bỏ qua', d: 0, tech: true, tip: 'Số lượt bị bỏ vì vượt mức rủi ro cho phép' }

@@ -195,6 +195,11 @@ void UpdatePanel()
       col[n++] = DailyLocked() ? cBad : dayPL < 0 ? cBad : cTxt;
       txt[n] = StringFormat("Đã đóng hôm nay: %s  ·  Lệnh: %d", PNMoney(g_closedToday, cur), TradesToday());  col[n++] = cTxt;
       txt[n] = StringFormat("Sụt giảm từ đỉnh: %.2f%% / giới hạn %.1f%%", dd, P_MaxDrawdownPct);  col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
+      if(UpdateLiveR() && g_lrN > 0)
+      {
+         txt[n] = StringFormat("Tổng R thật: %+.1fR / %d lệnh  ·  ngưỡng xem lại %+.1fR", g_lrSum, g_lrN, g_lrLimit);
+         col[n++] = g_lrN >= 10 && g_lrSum < g_lrLimit ? cBad : g_lrSum < InpLiveExpR * g_lrN ? cDim : cOk;
+      }
       if(P_UseFunding) { txt[n] = "Funding: " + (g_fundState == "" ? "chưa kiểm tra" : g_fundState); col[n++] = cDim; }
    }
    txt[n] = StringFormat("Spread: %d point ≈ %s mỗi %.2f lot", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),

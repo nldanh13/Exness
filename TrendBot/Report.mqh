@@ -40,6 +40,28 @@ double PosRiskMoney(const ulong pid, double &slDist)
    return 0;
 }
 
+// Phan phoi chuan: CDF (xap xi erf Abramowitz-Stegun 7.1.26, sai so < 1,5e-7) va nghich dao (Acklam, sai so ~1e-9)
+double NormCdf(const double x)
+{
+   double z = MathAbs(x) / MathSqrt(2.0), t = 1.0 / (1.0 + 0.3275911 * z);
+   double e = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * MathExp(-z * z);
+   return x >= 0 ? 0.5 * (1.0 + e) : 0.5 * (1.0 - e);
+}
+double NormInv(const double p)
+{
+   if(p <= 0) return -1e10;
+   if(p >= 1) return 1e10;
+   double a1 = -39.69683028665376, a2 = 220.9460984245205, a3 = -275.9285104469687, a4 = 138.3577518672690, a5 = -30.66479806614716, a6 = 2.506628277459239;
+   double b1 = -54.47609879822406, b2 = 161.5858368580409, b3 = -155.6989798598866, b4 = 66.80131188771972, b5 = -13.28068155288572;
+   double c1 = -0.007784894002430293, c2 = -0.3223964580411365, c3 = -2.400758277161838, c4 = -2.549732539343734, c5 = 4.374664141464968, c6 = 2.938163982698783;
+   double d1 = 0.007784695709041462, d2 = 0.3224671290700398, d3 = 2.445134137142996, d4 = 3.754408661907416;
+   double q, r;
+   if(p < 0.02425) { q = MathSqrt(-2 * MathLog(p)); return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1); }
+   if(p > 1 - 0.02425) { q = MathSqrt(-2 * MathLog(1 - p)); return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1); }
+   q = p - 0.5; r = q * q;
+   return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q / (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1);
+}
+
 void WriteTradeFeatures(const ulong &ids[], const double &net[])
 {
    if(ArraySize(g_fT) == 0) LoadFunding();
@@ -239,16 +261,39 @@ double OnTester()
 
    // Thong ke theo R (1R = tien rui ro o SL ban dau): E[R], t-stat, ty le thang kem can duoi Wilson 95%
    double sumR = 0, sumR2 = 0; int nR = 0, nWin = 0;
+   double rs[]; ArrayResize(rs, nC);
    for(int j = 0; j < nC; j++)
    {
       if(campRisk[j] <= 0) continue;
       double r = campNet[j] / campRisk[j];
+      rs[nR] = r;
       sumR += r; sumR2 += r * r; nR++;
       if(campNet[j] > 0) nWin++;
    }
    double meanR = nR > 0 ? sumR / nR : 0;
    double sdR   = nR > 1 ? MathSqrt(MathMax(0, (sumR2 - nR * meanR * meanR) / (nR - 1))) : 0;
    double tStat = sdR > 0 ? meanR / (sdR / MathSqrt(nR)) : 0;
+   // Sharpe dieu chinh (Bailey & Lopez de Prado): skew / kurtosis cua R, so lenh toi thieu (MinTRL) va DSR.
+   // SR = Sharpe moi dot. SR0 = Sharpe "tot nhat do may" khi da thu InpTrials cau hinh khong co loi the.
+   // DSR% = xac suat Sharpe that > SR0. MinTRL = so dot can de SR > SR0 voi do tin cay 95% (1 phia); -1 = khong dat duoc.
+   double skR = 0, kuR = 3, srR = sdR > 0 ? meanR / sdR : 0, sr0 = 0, dsr = 0, minTRL = -1;
+   if(nR > 2 && sdR > 0)
+   {
+      double m2 = 0, m3 = 0, m4 = 0;
+      for(int j = 0; j < nR; j++) { double dv = rs[j] - meanR; m2 += dv * dv; m3 += dv * dv * dv; m4 += dv * dv * dv * dv; }
+      m2 /= nR; m3 /= nR; m4 /= nR;
+      if(m2 > 0) { skR = m3 / MathPow(m2, 1.5); kuR = m4 / (m2 * m2); }
+      double adj = 1.0 - skR * srR + (kuR - 1.0) / 4.0 * srR * srR;
+      if(adj < 1e-6) adj = 1e-6;
+      int trials = InpTrials > 1 ? InpTrials : 1;
+      if(trials > 1)
+      {
+         double eg = 0.5772156649, vSR = adj / (nR - 1);
+         sr0 = MathSqrt(vSR) * ((1 - eg) * NormInv(1.0 - 1.0 / trials) + eg * NormInv(1.0 - 1.0 / (trials * M_E)));
+      }
+      dsr = NormCdf((srR - sr0) * MathSqrt(nR - 1.0) / MathSqrt(adj)) * 100.0;
+      if(srR > sr0) minTRL = 1.0 + adj * MathPow(1.6448536 / (srR - sr0), 2);
+   }
    double wilson = 0;
    if(nR > 0)
    {
@@ -315,7 +360,8 @@ double OnTester()
                    "LamTronLot", "GiuLenhTB_gio", "TongSwap", "TongPhiHoaHong", "LoiNhuanTruocPhi", "ChanTin",
                    "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
                    "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh",
-                   "SoDot", "ChoHoi_ChamGia", "ChoHoi_HetNen", "ChoHoi_BiHuy", "ChoHoi_Khop", "RuiRoMoMax%", "NhoiBiBoVoiRuiRo", "VaoLai");
+                   "SoDot", "ChoHoi_ChamGia", "ChoHoi_HetNen", "ChoHoi_BiHuy", "ChoHoi_Khop", "RuiRoMoMax%", "NhoiBiBoVoiRuiRo", "VaoLai",
+                   "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -343,7 +389,9 @@ double OnTester()
                 DoubleToString(meanR, 3), DoubleToString(tStat, 2), DoubleToString(wilson, 1),
                 DoubleToString(mcStreak95, 0), g_ddScaled, g_pyrAdds,
                 nC, g_pendHit, g_pendMissed, g_pendBlocked, g_pendFilled,
-                DoubleToString(g_maxOpenRiskPct, 2), g_chainSkips, g_reEntries);
+                DoubleToString(g_maxOpenRiskPct, 2), g_chainSkips, g_reEntries,
+                DoubleToString(skR, 2), DoubleToString(kuR, 2), InpTrials > 1 ? InpTrials : 1, DoubleToString(sr0, 3),
+                DoubleToString(dsr, 1), minTRL > 0 ? IntegerToString((int)MathCeil(minTRL)) : "-1");
       FileClose(h);
    }
    else
