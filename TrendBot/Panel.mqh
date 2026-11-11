@@ -195,7 +195,8 @@ void UpdatePanel()
                             DailyLocked() ? "  ĐÃ KHÓA" : "");
       col[n++] = DailyLocked() ? cBad : dayPL < 0 ? cBad : cTxt;
       txt[n] = StringFormat("Đã đóng hôm nay: %s  ·  Lệnh: %d", PNMoney(g_closedToday, cur), TradesToday());  col[n++] = cTxt;
-      txt[n] = StringFormat("Sụt giảm từ đỉnh: %.2f%% / giới hạn %.1f%%", dd, P_MaxDrawdownPct);  col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
+      txt[n] = StringFormat("DD giới hạn (bỏ qua lãi thả nổi): %.2f%% / %.1f%%", dd, P_MaxDrawdownPct); col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
+      txt[n] = StringFormat("DD mark-to-market (cả lãi thả nổi): %.2f%% (chỉ báo)", BotMtmDrawdownPct()); col[n++] = cDim;
       if(haveLiveR && g_lrN > 0)
       {
          txt[n] = StringFormat("Tổng R thật: %+.1fR / %d lệnh  ·  ngưỡng xem lại %+.1fR", g_lrSum, g_lrN, g_lrLimit);
@@ -215,7 +216,7 @@ void UpdatePanel()
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
-   for(int i = 0; i < 24; i++)
+   for(int i = 0; i < 28; i++)
    {
       if(i < n) PNText("l" + IntegerToString(i), x + 10, y + 26 + i * lh, txt[i], col[i], 9);
       else ObjectDelete(0, PN_PFX + "l" + IntegerToString(i));
