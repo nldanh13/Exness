@@ -277,7 +277,7 @@ bool EntryMarginOk(const bool buy, const double lots, const double price,
       request.type_filling = ORDER_FILLING_FOK;
    else request.type_filling = ORDER_FILLING_RETURN;
    if(!OrderCheck(request, result) ||
-      (result.retcode != TRADE_RETCODE_DONE && result.retcode != TRADE_RETCODE_PLACED))
+      (result.retcode != 0 && result.retcode != TRADE_RETCODE_DONE && result.retcode != TRADE_RETCODE_PLACED))
    {
       if(ShouldNotify("orderCheck", 3600))
          PrintFormat("[%s] BO VAO: OrderCheck loi retcode=%u (%s).",
