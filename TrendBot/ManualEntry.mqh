@@ -253,6 +253,7 @@ void GuardPyramid()
    {
       GroupUnlock(); return;
    }
+   if(!EntryMarginOk(buy, newLot, px, sl, 0)) { GroupUnlock(); return; }
    GroupReserveGuard(newRisk);
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
@@ -624,6 +625,7 @@ void GuardAutoEntry()
    {
       GroupUnlock(); return;
    }
+   if(!EntryMarginOk(buy, lot, px, sl, 0)) { GroupUnlock(); return; }
    GroupReserveGuard(newRisk);
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
