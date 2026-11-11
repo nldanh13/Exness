@@ -1,4 +1,6 @@
-# Kiểm thử bot trên demo (v5.10.18)
+# Kiểm thử bot trên demo (v5.10.20)
+
+Các bài thử bên dưới là các kịch bản cũ. Với v5.10.20, xem thêm [bài thử mới và hạn chế](RA-SOAT-RUI-RO-5.10.20.md). Trước demo, chạy Strategy Tester ở chế độ **Every tick based on real ticks** khi bật `InpGuardBacktest`; không lấy kết quả quá khứ làm cam kết lợi nhuận. Bộ 05/06 có thể không mở lệnh nếu giới hạn 2% nhỏ hơn rủi ro của lot BTC nhỏ nhất.
 
 Chạy trên tài khoản **demo** Exness, chart BTCUSDm M5, bộ cài đặt 05 hoặc 06. Mỗi bài ghi lại: ngày giờ, ảnh bảng điều khiển,
 dòng trong tab **Experts** (Ctrl+T → Experts), và file liên quan. Các file nằm ở `File → Open Data Folder → ..\Common\Files`.
