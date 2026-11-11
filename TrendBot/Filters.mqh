@@ -297,6 +297,15 @@ bool USNewsNear(string &name)
    if(MQLInfoInteger(MQL_TESTER))
    {
       g_newsDataOk = ArraySize(g_newsT) > 0;
+      // File co nhieu ban ghi cu van khong co nghia la bao phu giai doan
+      // backtest. Khong su dung calendar ngoai khoang du lieu da xac minh.
+      if(g_newsDataOk)
+      {
+         datetime now = TimeCurrent();
+         double nearest = MathAbs(HoursToNews(now, name));
+         if(now < g_newsT[0] || now > g_newsT[ArraySize(g_newsT)-1] + 7*86400 ||
+            nearest > 40.0 * 24.0) g_newsDataOk = false;
+      }
       return g_newsDataOk && MathAbs(HoursToNews(TimeCurrent(), name)) <= P_NewsHours;
    }
    MqlCalendarValue vals[];

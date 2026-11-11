@@ -61,6 +61,8 @@ GitHub Actions (`.github/workflows/kiem-tra-nhan.yml`) chạy lại hai lệnh n
 
 `ket-qua/` chỉ giữ lần chạy mới nhất của mỗi chế độ (`nhanh`, `chinhxac`): script backtest xóa bảng cũ trong cùng commit đẩy bảng mới, nên bản cũ vẫn xem lại được trong lịch sử git. Giao diện đọc trực tiếp các file `-lenh.csv` để hiện kết quả cộng dồn. Dữ liệu giá (`ket-qua/gia-*.zip`) và open interest (`du-lieu/oi-*.zip`) là file nén để Claude phân tích; chỉ cập nhật khi thật cần, vì mỗi bản mới đều nằm lại trong lịch sử git.
 
+**Kiểm toán v5.10.23:** [Sổ cái theo position ID, trần nhóm lệnh đầu, ký quỹ, BTCUSDc, lịch CPI và nghiên cứu kiểm định](RA-SOAT-RUI-RO-5.10.23.md). Cần compile MetaEditor/demo trước tiền thật.
+
 **Bản sửa an toàn 5.10.22:** [LiveR, Hedging, khóa nhóm BTC/ETH, bucket và dòng tiền nạp/rút](RA-SOAT-RUI-RO-5.10.22.md). Cần compile MetaEditor và demo trước khi sử dụng vốn thật.
 
 ## An toàn

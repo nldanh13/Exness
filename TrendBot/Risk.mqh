@@ -115,7 +115,7 @@ double GroupOpenRisk(const double stdRisk)
       double ts = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE);
       double tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE_LOSS);
       if(tv <= 0) tv = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
-      if(sl <= 0 || ts <= 0 || tv <= 0) { sum += stdRisk; continue; }
+      if(sl <= 0 || ts <= 0 || tv <= 0) return DBL_MAX; // rui ro khong the dinh luong: cam mo them
       double dist = buy ? op - sl : sl - op;
       if(dist > 0) sum += dist / ts * tv * vol;
    }
@@ -136,7 +136,7 @@ double OwnOpenRisk(const double stdRisk)
       double sl = PositionGetDouble(POSITION_SL), op = PositionGetDouble(POSITION_PRICE_OPEN);
       double vol = PositionGetDouble(POSITION_VOLUME);
       bool   buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
-      if(sl <= 0 || ts <= 0 || tv <= 0) { sum += stdRisk; continue; }
+      if(sl <= 0 || ts <= 0 || tv <= 0) return DBL_MAX; // rui ro khong the dinh luong: cam mo them
       double dist = buy ? op - sl : sl - op;
       if(dist > 0) sum += dist / ts * tv * vol;
    }
@@ -196,7 +196,9 @@ double CalcLots(const double slDistance)
 
    // Rui ro tinh tren "von cua bot" (cung moc voi gioi han lo), khong phai equity ca tai khoan.
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
-   double riskBase   = BotEquity();
+   // InpCapital la von AO cua bot; khong duoc co rui ro lon hon equity that.
+   // Tren Cent, OrderCalcProfit va equity cung tinh theo USC (100 USC = 1 USD).
+   double riskBase = MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY));
    if(riskBase <= 0 || P_RiskPercent <= 0) return 0;
    double riskMoney  = riskBase * P_RiskPercent / 100.0;
    // Giam co theo sut giam tu dinh von cua bot: < 5% giu nguyen, 5-10% con 50%, > 10% con 25%.
@@ -233,7 +235,8 @@ double CalcLots(const double slDistance)
       if(riskMoney > allowed) riskMoney = allowed;
    }
    // Tran chung cho ca nhom: lenh moi + lenh dang mo tren ma cung nhom (ca lop cu cua chinh bot) khong vuot InpMaxGroupRiskPct
-   if(P_MaxGroupRiskPct > 0 && corr != "")
+   // Khong doi corr != "": lenh dau tien cung phai tuan thu tran nhom.
+   if(P_MaxGroupRiskPct > 0 && InGroup())
    {
       double used = GroupOpenRisk(stdRisk) + own;
       allowed = MathMin(allowed, riskBase * P_MaxGroupRiskPct / 100.0 - used);

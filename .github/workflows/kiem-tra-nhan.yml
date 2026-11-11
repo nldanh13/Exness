@@ -25,6 +25,9 @@ jobs:
       - name: Bien dich cac script Python
         run: python -m compileall -q cong-cu
 
+      - name: Xac minh lich kinh te My CPI/FOMC truoc backtest
+        run: python cong-cu/kiem_tra_lich_tin.py
+
       - name: Kiem tra bat bien an toan MQL5 (phan tich tinh, khong thay MetaEditor)
         run: python -m unittest discover -s tests -p "test_*.py" -v
 

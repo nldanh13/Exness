@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.22"
-#property version   "5.1022"
+#define  BOT_VERSION "5.10.23"
+#property version   "5.1023"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -572,6 +572,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
 #include "TrendBot/Notify.mqh"
+#include "TrendBot/Ledger.mqh"
 #include "TrendBot/Protection.mqh"
 #include "TrendBot/Filters.mqh"
 #include "TrendBot/Signals.mqh"
@@ -590,6 +591,15 @@ int OnInit()
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;
+   // Tai khoan Cent dung BTCUSDc/ETHUSDc, khong phai BTCUSDm/ETHUSDm.
+   // Chi doi Nhom MAC DINH, khong ghi de nhom do nguoi dung chu dong chon.
+   if((_Symbol == "BTCUSDc" || _Symbol == "ETHUSDc") &&
+      P_CorrSymbols == "BTCUSDm,ETHUSDm")
+   {
+      P_CorrSymbols = "BTCUSDc,ETHUSDc";
+      Print("STANDARD CENT: nhom quan ly rui ro -> ", P_CorrSymbols,
+            ". Tai khoan USC: InpCapital phai theo don vi USC, KHONG nhap USD.");
+   }
    if(MQLInfoInteger(MQL_TESTER) && P_GuardBacktest)
    {
       // Moi optimization pass khong duoc thua huong bien global cua pass truoc.
@@ -1076,6 +1086,8 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price + slDist * P_RR : 0.0);
       if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
+      if(!EntryMarginOk(true, lots, price, price - slDist, tp))
+      { g_status = "OrderCheck / du tru ky quy chua dat"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
                      tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY");
@@ -1086,6 +1098,8 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price - slDist * P_RR : 0.0);
       if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
+      if(!EntryMarginOk(false, lots, price, price + slDist, tp))
+      { g_status = "OrderCheck / du tru ky quy chua dat"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
                       tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL");
