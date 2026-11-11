@@ -245,10 +245,13 @@ bool HasOwnPosition()
 
 void CloseAll()
 {
-   // Gioi han 1 lan moi 10 giay de khong spam lenh/thong bao khi server tu choi lien tuc
-   static datetime lastTry = 0;
-   if(TimeCurrent() - lastTry < 10) return;
-   lastTry = TimeCurrent();
+   // Dong dong bo va KIEM TRA retcode. Async khong dong atom gi o server; CloseBy chi dung khi co vi the nguoc chieu hedging.
+   // Khi dung khan cap, timer phai duoc thu lai ngay ca khi TimeCurrent dung yen vi khong co tick.
+   static ulong lastTryMs = 0;
+   ulong nowMs = GetTickCount64();
+   ulong intervalMs = (IsHalted() || GuardHalted()) ? 2000 : 10000;
+   if(lastTryMs > 0 && nowMs - lastTryMs < intervalMs) return;
+   lastTryMs = nowMs;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       ulong ticket = PositionGetTicket(i);
