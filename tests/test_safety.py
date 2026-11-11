@@ -60,7 +60,8 @@ def without_literals(text):
 
 def function(name, fname):
     code = source(fname)
-    m = re.search(r"\b" + re.escape(name) + r"\s*\([^;]*?\)\s*\{", code)
+    m = re.search(r"(?m)^\s*(?:void|bool|double|int|long|ulong|string|datetime)\s+" +
+                  re.escape(name) + r"\s*\([^;{}]*?\)\s*\{", code)
     if not m:
         raise AssertionError(f"Missing function {name} in {fname}")
     start = m.end() - 1
