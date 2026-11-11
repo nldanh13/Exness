@@ -47,6 +47,24 @@ void GroupReserve(const double risk)
    GlobalVariableSet(ResKey("T_", _Symbol, (long)P_Magic), (double)TimeLocal());
 }
 void GroupClear() { GlobalVariableDel(ResKey("R_", _Symbol, (long)P_Magic)); GlobalVariableDel(ResKey("T_", _Symbol, (long)P_Magic)); }
+
+// Du tru rieng cho lenh magic0 do bot tu vao/nh oi. Dung magic am ao de
+// HasPosition(sym, P_Magic) khong lam mat reservation khi con pending fill.
+// Reservation het han sau 120s, doi tinh an toan lay tan suat giao dich.
+long GroupGuardReserveTag() { return -(long)P_Magic - 1; }
+void GroupReserveGuard(const double risk)
+{
+   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
+   GlobalVariableSet(ResKey("R_", _Symbol, GroupGuardReserveTag()), risk);
+   GlobalVariableSet(ResKey("T_", _Symbol, GroupGuardReserveTag()), (double)TimeLocal());
+}
+void GroupClearGuard()
+{
+   if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return;
+   GlobalVariableDel(ResKey("R_", _Symbol, GroupGuardReserveTag()));
+   GlobalVariableDel(ResKey("T_", _Symbol, GroupGuardReserveTag()));
+}
+
 bool HasPosition(const string sym, const long magic)
 {
    for(int i = PositionsTotal() - 1; i >= 0; i--)
