@@ -178,7 +178,7 @@ double GuardOpenRisk(const bool buy)
 
 void GuardPyramid()
 {
-   if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
+   if(!InpGuardManual || InpGuardPyramidMax <= 1 || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || !IsHedging()) return;
    if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!GuardTradeOk()) return;
@@ -219,12 +219,20 @@ void GuardPyramid()
    int tc = TrendCount(buy);
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
+   // Khong the nhoi 0.005 lot neu san chi cho 0.01: bo lop, KHONG lam tron len (pha vo cap so nhan).
+   if(P_GuardPyramidLotFactor <= 0 || P_GuardPyramidLotFactor > 1) return;
+   double newLot = NormalizeVolume(lot * P_GuardPyramidLotFactor);
+   if(newLot < SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN) - 1e-9)
+   {
+      if(ShouldNotify("guardPyrMin", 3600)) PrintFormat("Khong nhoi: lot %.2f x he so %.2f < lot toi thieu. Can von du de mo lop lon hon.", lot, P_GuardPyramidLotFactor);
+      return;
+   }
    double sl = NormalizeDouble(buy ? px - lastR : px + lastR, _Digits);
    // Tong rui ro TRUOC khi gui (v5.10.13): rui ro con mo cua cac lop (sau hoa von ~0) + lop moi khong vuot InpGuardMaxRiskPct
    double eq = AccountInfoDouble(ACCOUNT_EQUITY), newRisk = 0;
    double openRisk = GuardOpenRisk(buy);
    if(openRisk < 0 || eq <= 0) return;
-   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, lot, px, sl, newRisk)) return;
+   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, newLot, px, sl, newRisk)) return;
    newRisk = MathAbs(newRisk);
    if(InpGuardMaxRiskPct > 0 && openRisk + newRisk > eq * InpGuardMaxRiskPct / 100.0)
    {
@@ -237,13 +245,13 @@ void GuardPyramid()
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
    double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB nhoi tay")
-                                         : trade.Sell(lot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
+   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(newLot, _Symbol, 0, sl, 0, "TB nhoi tay")
+                                         : trade.Sell(newLot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
    if(ok) { GuardMarkBotMade(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] NHOI THEO XU HUONG: them lop %d/%d %s %.2f lot, SL %.2f. Cac lop truoc da hoa von; %d/9 khung cung chieu.",
-                          _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
+                          _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", newLot, sl, tc));
 }
 
 //--- Chot loi linh hoat cho chuoi lenh tay cung chieu tren ma nay (v5.10.9). R = so tien lop DAU TIEN mat neu cham SL ban dau
@@ -315,7 +323,7 @@ bool GuardBotMade()
 
 void GuardExit()
 {
-   if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
+   if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest)) return;
    if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
    if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;              // vua dong that bai: doi 5 giay
    g_gbWait = 0;
@@ -491,7 +499,7 @@ int GuardAutoCountToday(datetime &lastLossClose)
 
 void GuardAutoEntry()
 {
-   if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER) || g_gOtherChart != 0) return;
+   if(!InpGuardManual || !InpGuardAutoEntry || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || g_gOtherChart != 0) return;
    int ti = InpGuardAutoTFmin == 1 ? 0 : InpGuardAutoTFmin == 3 ? 1 : InpGuardAutoTFmin == 10 ? 3 :
             InpGuardAutoTFmin == 15 ? 4 : InpGuardAutoTFmin == 30 ? 5 : 2;      // vi tri trong bang xu huong (mac dinh M5)
    ENUM_TIMEFRAMES tf = g_tbTF[ti];
