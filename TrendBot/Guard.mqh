@@ -276,64 +276,24 @@ bool GuardPositionAuto()
 double GuardManualDayPL(const datetime dayStart, const int bucket = 0)
 {
    double pl = 0;
-   if(HistorySelect(dayStart, TimeCurrent() + 60))
-      for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
-      {
-         ulong d = HistoryDealGetTicket(i);
-         if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
-         if(bucket != 0 && GuardDealAuto(d) != (bucket == 2)) continue;
-         if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) { pl += HistoryDealGetDouble(d, DEAL_COMMISSION); continue; }
-         pl += HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION);
-      }
-   double dayOpen = iOpen(_Symbol, PERIOD_D1, 0);
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   // bucket 0 = magic0 cua symbol, 1 = human toan account, 2 = algo toan account.
+   if(!LedgerDayPL(bucket, pl))
    {
-      if(PositionGetTicket(i) == 0 || !IsManualSelected()) continue;
-      if(bucket != 0 && GuardPositionAuto() != (bucket == 2)) continue;
-      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
-      if((datetime)PositionGetInteger(POSITION_TIME) < dayStart && dayOpen > 0)
-      {
-         // tru phan lai/lo da co tu truoc 0:00 (gia vao -> gia mo cua ngay)
-         bool b = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
-         double p0 = 0;
-         if(OrderCalcProfit(b ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, PositionGetDouble(POSITION_VOLUME),
-                            PositionGetDouble(POSITION_PRICE_OPEN), dayOpen, p0)) pl -= p0;
-      }
+      if(ShouldNotify("ledgerMissing", 3600))
+         Print("RISK LEDGER: khong du lich su theo POSITION_IDENTIFIER; KHONG mo lenh moi.");
+      return 0; // khong dong bat buoc vi du lieu loi; moi order se fail closed.
    }
-   // Lenh mo tu truoc 0:00 va da dong hom nay: phan lai/lo truoc 0:00 nam trong deal dong -> tru ra
-   if(HistorySelect(dayStart, TimeCurrent() + 60))
-      for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
-      {
-         ulong d = HistoryDealGetTicket(i);
-         if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
-         if(bucket != 0 && GuardDealAuto(d) != (bucket == 2)) continue;
-         if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) continue;
-         ulong pos = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
-         double vol = HistoryDealGetDouble(d, DEAL_VOLUME);
-         long   dt  = HistoryDealGetInteger(d, DEAL_TYPE);            // deal dong Sell = vi the Buy
-         if(!HistorySelectByPosition(pos)) break;
-         double op = 0; datetime ot = 0;
-         for(int j = 0; j < HistoryDealsTotal(); j++)
-         {
-            ulong e = HistoryDealGetTicket(j);
-            if(HistoryDealGetInteger(e, DEAL_ENTRY) == DEAL_ENTRY_IN) { op = HistoryDealGetDouble(e, DEAL_PRICE); ot = (datetime)HistoryDealGetInteger(e, DEAL_TIME); break; }
-         }
-         double p0 = 0;
-         if(ot > 0 && ot < dayStart && dayOpen > 0 &&
-            OrderCalcProfit(dt == DEAL_TYPE_SELL ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, vol, op, dayOpen, p0)) pl -= p0;
-         if(!HistorySelect(dayStart, TimeCurrent() + 60)) break;    // chon lai lich su ngay de lap tiep
-      }
    return pl;
 }
 // Khoa bucket den cuoi ngay server; muc % 0 = tat (giu nguyen hanh vi cu).
 bool GuardBucketLocked(const int bucket)
 {
-   string n = GKey(bucket == 1 ? "humanLock" : "algoLock");
+   string n = GAcctKey(bucket == 1 ? "humanLock" : "algoLock");
    return GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent());
 }
 void GuardBucketSetLock(const int bucket)
 {
-   GlobalVariableSet(GKey(bucket == 1 ? "humanLock" : "algoLock"), GDayKey(TimeCurrent()));
+   GlobalVariableSet(GAcctKey(bucket == 1 ? "humanLock" : "algoLock"), GDayKey(TimeCurrent()));
    if(!MQLInfoInteger(MQL_TESTER)) GlobalVariablesFlush();
 }
 // So tien lo thuat toan duoc phep them theo bucket ngay (co the = 0).
@@ -343,8 +303,9 @@ double GuardAlgoBudgetRemaining()
    if(GuardBucketLocked(2)) return 0;
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
    if(eq <= 0) return 0;
-   double used = MathMin(0.0, GuardManualDayPL(DayStart(), 2) + DayPL());
-   return MathMax(0.0, eq * P_GuardAlgoDayPct / 100.0 + used);
+   double dailyPL = 0;
+   if(!LedgerDayPL(2, dailyPL)) return 0;
+   return MathMax(0.0, eq * P_GuardAlgoDayPct / 100.0 + MathMin(0.0, dailyPL));
 }
 
 //--- Chot loi lenh tay (v5.10.4): hoa von o InpGuardBreakevenR x R, roi keo SL theo InpGuardTrailATR x ATR khung InpGuardTrailTFmin.
@@ -451,10 +412,12 @@ void GuardManual()
    // 0) Sut giam ca tai khoan tu dinh (InpGuardMaxDDPct): dung han, coi nhu khoa (dong lenh tay, khong tu vao / nhoi)
    GuardCheckAcctDD(eq);
    // 1) Lo trong ngay cua lenh tay vuot gioi han: dong het, khoa toi het ngay
+   // Ledger theo POSITION_IDENTIFIER xac nhan du lieu, tranh doi tuong CTrade mang magic khac.
    bool locked = GuardDayLocked();
    if(InpGuardDayLossPct > 0 && !locked)
    {
       double pl = GuardManualDayPL(dayStart);
+      if(!g_ledgerHealthy) return;
       double base = eq - pl;                                  // uoc tinh von dau ngay
       if(base > 0 && pl <= -base * InpGuardDayLossPct / 100.0)
       {
@@ -469,6 +432,7 @@ void GuardManual()
    if(!locked && !humanLocked && P_GuardHumanDayPct > 0)
    {
       double hp = GuardManualDayPL(dayStart, 1);
+      if(!g_ledgerHealthy) return;
       double hb = eq - hp;
       if(hb > 0 && hp <= -hb * P_GuardHumanDayPct / 100.0)
       {
@@ -478,7 +442,8 @@ void GuardManual()
    }
    if(!locked && !algoLocked && P_GuardAlgoDayPct > 0)
    {
-      double ap = GuardManualDayPL(dayStart, 2) + DayPL();
+      double ap = GuardManualDayPL(dayStart, 2);
+      if(!g_ledgerHealthy) return;
       double ab = eq - ap;
       if(ab > 0 && ap <= -ab * P_GuardAlgoDayPct / 100.0)
       {
