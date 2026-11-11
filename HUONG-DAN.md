@@ -633,3 +633,17 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
 - Rút tiền làm equity giảm và có thể bị tính là sụt giảm: sau khi rút, bật `InpResetHalt` một lần.
 - Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".- Chiến lược chính đang dừng hẳn (sụt giảm `InpMaxDrawdownPct`) hoặc chạm lỗ ngày (`InpMaxDailyLossPct`) thì bot cũng KHÔNG tự vào,
   không tự nhồi. Hai bước này nay chạy sau khi đã cập nhật lỗ ngày / sụt giảm của tick đó (trước đây chạy trước và không kiểm tra).
+
+**Rà soát thêm (cùng bản 5.10.12):**
+- Tự vào lệnh nay dùng chung bộ lọc giờ nghỉ / cuối tuần / tin và spread tối đa (`InpMaxSpreadPoints`) với chiến lược chính,
+  và bỏ tín hiệu khi spread lớn hơn 20% khoảng cách SL (như luật nhồi). Giới hạn số lệnh/ngày và nghỉ sau thua của chiến lược chính
+  không áp dụng; tự vào có giới hạn riêng (`InpGuardAutoMaxDay`, `InpGuardAutoCooldownMin`).
+- Bộ 05/06: tối đa 10 lệnh tự vào mỗi ngày, nghỉ 15 phút sau lệnh thua (trước là không giới hạn, không nghỉ).
+- Nhồi lệnh: trước khi gửi, cộng rủi ro tiền còn mở của các lớp (lớp đã hòa vốn tính 0) với lớp mới; vượt `InpGuardMaxRiskPct` thì không nhồi.
+- Nhận diện lệnh bot mở: ngoài ghi chú `TB ...`, bot lưu ticket vào Global Variable lúc mở, nên sàn đổi ghi chú vẫn nhận ra.
+- Chốt gộp tính lãi THẬT: trừ ước 2 lần phí (commission + fee) lúc vào. Tài khoản Standard của Exness không có phí nên không đổi.
+- Vẫn còn (không sửa trong code):
+  - Bảo vệ lệnh tay (`InpGuardManual`) cố ý sửa SL / đóng cả lệnh bạn tự đặt trên mã đó: đó là chức năng của bộ 04. Không muốn thì
+    đừng vào lệnh tay trên mã đang chạy bộ 05/06, hoặc vào lệnh tay trên mã khác.
+  - Khóa "một chart mỗi mã" và trạng thái dừng hẳn dùng Global Variable, chỉ có hiệu lực trong CÙNG một MT5. Không chạy bot cho
+    cùng tài khoản trên hai máy / hai VPS cùng lúc.
