@@ -796,3 +796,7 @@ Kết luận: không phương án nào tốt hơn gốc khi so ở cùng mức r
 ## Rà soát an toàn v5.10.22
 
 Xem [tài liệu kiểm tra riêng v5.10.22](RA-SOAT-RUI-RO-5.10.22.md). Bản mới tách R thực tế của `P_Magic` và `magic 0`; không đếm partial close thành vị thế đã đóng; không cho chạy trên Netting; khóa nhóm BTC/ETH bao gồm lệnh tự vào/nhồi; bucket human/algo tách quyền nhồi, và nhận biết dữ liệu bộ lọc bị thiếu. Mốc DD tài khoản được điều chỉnh theo deal Balance nạp/rút và lưu watermark; khi sàn dùng Balance cho điều chỉnh khác, cần xem History. Chưa có xác nhận compile MQL5 hoặc kết quả demo ở thời điểm cập nhật.
+
+## Rà soát chuyên sâu v5.10.23
+
+Xem [kiểm toán và các bài kiểm thử v5.10.23](RA-SOAT-RUI-RO-5.10.23.md): hạch toán human/algo theo vị thế mở; bucket lỗ chung toàn account, trần rủi ro nhóm áp dụng cho cả lệnh đầu tiên; OrderCalcMargin/OrderCheck; BTCUSDc trên MT5 Standard Cent (đơn vị USC); drawdown mark-to-market riêng; xác minh lịch CPI và block bootstrap. Nhánh chưa được biên dịch/Strategy Tester trên MT5 thật. 
