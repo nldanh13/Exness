@@ -137,7 +137,7 @@ void UpdatePanel()
       for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) pend++;
       bool locked = GuardDayLocked();
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
-      txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
+      txt[n] = algo ? (locked ? (GuardHalted() ? StringFormat("DỪNG HẲN: vốn tài khoản sụt ≥ %.0f%% từ đỉnh. Bật Đặt lại mốc vốn 1 lần để chạy lại", InpGuardMaxDDPct) : "ĐÃ KHÓA lệnh tay tới hết ngày") : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
       if(g_gOtherChart != 0) { txt[n] = "CHART KHÁC đang bảo vệ " + _Symbol + ": chart này KHÔNG làm gì. Gỡ bot khỏi 1 trong 2 chart."; col[n++] = cBad; }
       if(InpGuardAutoEntry) { txt[n] = "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL"; col[n++] = cBad; }
@@ -146,6 +146,13 @@ void UpdatePanel()
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;
       txt[n] = StringFormat("Khóa lệnh tay khi lỗ ngày tới -%.0f%% = %s", InpGuardDayLossPct, PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
       col[n++] = cDim;
+      if(InpGuardMaxDDPct > 0)
+      {
+         double pk = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
+         double ddNow = pk > 0 ? MathMax(0, (pk - AccountInfoDouble(ACCOUNT_EQUITY)) / pk * 100.0) : 0;
+         txt[n] = StringFormat("Sụt giảm tài khoản: %.1f%% / dừng hẳn ở %.0f%%", ddNow, InpGuardMaxDDPct);
+         col[n++] = ddNow > InpGuardMaxDDPct * 0.6 ? cWarn : cDim;
+      }
       txt[n] = StringFormat("Lệnh tay đang mở: %d   ·   Lệnh chờ: %d", pos, pend);  col[n++] = cTxt;
       double slMoney = PNMinLotMoney(SymbolInfoDouble(_Symbol, SYMBOL_BID) * InpGuardSLPct / 100.0);
       txt[n] = StringFormat("Luật: SL tự đặt %.2f%% (1R ≈ %s với %.2f lot)", InpGuardSLPct, PNMoney(slMoney, cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));

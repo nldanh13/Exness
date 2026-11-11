@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.11"
-#property version   "5.1011"
+#define  BOT_VERSION "5.10.12"
+#property version   "5.1012"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -139,6 +139,7 @@ input double          InpGuardMaxRiskPct  = 3.0;        // Rủi ro tối đa m�
 input bool            InpGuardNoAverage   = true;       // Đóng ngay lệnh nhồi vào lệnh cùng chiều đang lỗ
 input int             InpGuardMaxHoldH    = 24;         // Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)
 input double          InpGuardDayLossPct  = 5.0;        // Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)
+input double          InpGuardMaxDDPct    = 15.0;       // Dừng hẳn khi vốn tài khoản sụt từ đỉnh (%, 0 = tắt)
 input bool            InpGuardOldTrades   = false;      // Áp dụng cả cho lệnh đã mở trước khi bật
 input bool            InpGuardPending     = true;       // Sửa cả lệnh chờ (Limit / Stop) trước khi khớp
 input double          InpGuardBreakevenR  = 1.0;        // Lệnh tay lời bằng x lần rủi ro (R) thì dời SL về hòa vốn (0 = tắt)
@@ -644,6 +645,7 @@ bool TryInitState()
    if(P_ResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
    {
       ResetBaseline(P_ResetHalt);
+      if(P_ResetHalt && !MQLInfoInteger(MQL_TESTER)) GuardResetHalt();   // mo ca dung han lenh tay / tu vao (InpGuardMaxDDPct)
       if(P_ResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
       if(capitalChanged) Print("InpCapital da thay doi, tu dat lai moc von va dinh von.");
       if(capitalChanged && !P_ResetHalt && (IsHalted() || GlobalVariableCheck(GVName("dayLock"))))

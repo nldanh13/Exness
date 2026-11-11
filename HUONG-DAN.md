@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.11
+# Hướng dẫn bot BTC (MT5) v5.10.12
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -623,3 +623,12 @@ Nếu lot nhỏ nhất quá lớn so với vốn, bot mở lệnh rồi đóng n
   không chốt) và hiện dòng đỏ "CHART KHÁC đang bảo vệ ...". Gỡ bot khỏi một trong hai chart. Đóng chart giữ quyền thì chart kia tự nhận.
 - Vẫn không nên chạy EA khác cùng quản lý lệnh magic 0 trên mã này.- Chốt khi giật ngược (`InpGuardSpikeATR`) trước đây đo từ đỉnh / đáy của nến đang chạy, có thể là đỉnh tạo ra TRƯỚC lúc vào lệnh
   (vào giữa nến M5), nên đóng sớm hơn ý định. Nay bot ghi giá tốt nhất kể từ khi lớp đầu khớp (cập nhật mỗi giây) và chỉ đo từ đó.
+
+## Dừng hẳn theo sụt giảm cả tài khoản cho lệnh tay / tự vào (v5.10.12)
+Chiến lược chính dùng magic của bot (`InpMagic`) và tự dừng ở lỗ 3%/ngày, sụt 15%. Lệnh tay và lệnh tự vào của bộ 04/05/06
+dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng chỉ có khóa lỗ ngày riêng (`InpGuardDayLossPct`, bộ 05/06 là 10%).
+- `InpGuardMaxDDPct` (mới, mặc định 15): equity CẢ TÀI KHOẢN sụt từ đỉnh quá mức này thì bot đóng lệnh tay trên mã của chart,
+  ngừng tự vào và tự nhồi, và giữ trạng thái dừng qua khởi động lại. Mọi chart bảo vệ trên cùng tài khoản đều thấy trạng thái này.
+- Mở lại: đặt `InpResetHalt = true` một lần (đặt lại đỉnh bằng equity hiện tại), rồi đổi về `false`.
+- Rút tiền làm equity giảm và có thể bị tính là sụt giảm: sau khi rút, bật `InpResetHalt` một lần.
+- Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".
