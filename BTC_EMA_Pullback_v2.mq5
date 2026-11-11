@@ -841,7 +841,13 @@ bool FundingOk(const bool buy, const bool breakout = false)
    // Donchian can giu cac dot bung no; chi loc funding neu nguoi dung chu dong bat.
    if(!P_UseFunding || (breakout && !P_BreakoutUseSentiment)) return true;
    double f = FundingNow();
-   if(f != EMPTY_VALUE && ((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax)))
+   if(f == EMPTY_VALUE)
+   {
+      g_status = "DUNG TIN HIEU: da bat funding nhung du lieu thieu / qua han";
+      if(ShouldNotify("fundingMissing", 3600)) Print(g_status);
+      return false;
+   }
+   if((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax))
    {
       g_fundBlocked++;
       g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);
