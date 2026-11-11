@@ -417,7 +417,8 @@ void GuardManual()
    if(InpGuardDayLossPct > 0 && !locked)
    {
       double pl = GuardManualDayPL(dayStart);
-      if(!g_ledgerHealthy) return;
+      // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
+      // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double base = eq - pl;                                  // uoc tinh von dau ngay
       if(base > 0 && pl <= -base * InpGuardDayLossPct / 100.0)
       {
@@ -432,7 +433,8 @@ void GuardManual()
    if(!locked && !humanLocked && P_GuardHumanDayPct > 0)
    {
       double hp = GuardManualDayPL(dayStart, 1);
-      if(!g_ledgerHealthy) return;
+      // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
+      // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double hb = eq - hp;
       if(hb > 0 && hp <= -hb * P_GuardHumanDayPct / 100.0)
       {
@@ -443,7 +445,8 @@ void GuardManual()
    if(!locked && !algoLocked && P_GuardAlgoDayPct > 0)
    {
       double ap = GuardManualDayPL(dayStart, 2);
-      if(!g_ledgerHealthy) return;
+      // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
+      // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double ab = eq - ap;
       if(ab > 0 && ap <= -ab * P_GuardAlgoDayPct / 100.0)
       {
