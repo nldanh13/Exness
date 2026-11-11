@@ -11,6 +11,7 @@ bool InGroup()
    StringReplace(list, " ", "");
    return StringFind(list, "," + _Symbol + ",") >= 0;
 }
+int g_groupSkips  = 0;   // So tin hieu bi bo vi nhom BTC/ETH da dung het tran rui ro
 bool g_grpLocked = false;
 double g_grpLockToken = 0; // chi nguoi giu dung gia tri nay moi duoc mo khoa
 // Tra false neu bot nay thuoc nhom ma khong lay duoc khoa: KHONG duoc vao lenh (thu lai o tick sau).
@@ -123,6 +124,30 @@ double OwnOpenRisk(const double stdRisk)
    }
    return sum;
 }
+// Bat buoc goi TRONG GroupLock(), truoc khi gui lenh magic=0 cua GuardAutoEntry/GuardPyramid.
+// GroupOpenRisk gom ca cac lenh magic=0 BTC/ETH; OwnOpenRisk gom P_Magic chart nay.
+// Neu khong co SL, dung 1 rui ro mot lenh uoc tinh thay vi coi la 0.
+bool GroupGuardRiskAllowed(const double newRisk)
+{
+   if(newRisk <= 0) return false;
+   if(!InGroup() || P_MaxGroupRiskPct <= 0) return true;
+   if(!MQLInfoInteger(MQL_TESTER) && !g_grpLocked) return false; // fail-closed: chua giu khoa chung
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY), bot = BotEquity();
+   double base = MathMin(eq, bot);
+   if(base <= 0) return false;
+   double maxOnePct = MathMax(P_RiskPercent, InpGuardMaxRiskPct);
+   if(InpGuardAutoRiskPct > maxOnePct) maxOnePct = InpGuardAutoRiskPct;
+   double unknownSLRisk = base * maxOnePct / 100.0;
+   double used = GroupOpenRisk(unknownSLRisk) + OwnOpenRisk(unknownSLRisk);
+   double cap = base * P_MaxGroupRiskPct / 100.0;
+   if(used + newRisk <= cap + 1e-8) return true;
+   g_groupSkips++;
+   if(ShouldNotify("guardGroupRisk", 600))
+      PrintFormat("[%s] BO magic0: rui ro nhom BTC/ETH %.2f + lenh moi %.2f > tran %.2f %s (%.1f%%).",
+                  _Symbol, used, newRisk, cap, AccountInfoString(ACCOUNT_CURRENCY), P_MaxGroupRiskPct);
+   return false;
+}
+
 // Ma khac trong InpCorrSymbols, hoac bot khac tren cung ma, dang co lenh -> tra mo ta, khong co -> ""
 string CorrOpen()
 {
@@ -141,7 +166,7 @@ string CorrOpen()
 int g_minLotSkips = 0;
 int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)
 int g_ddScaled   = 0;   // So lenh bi giam co vi dang sut giam
-int g_groupSkips  = 0;   // So tin hieu bi bo vi nhom BTC/ETH da dung het tran rui ro
+// g_groupSkips khai bao truoc GroupGuardRiskAllowed de dung duoc trong module.
 int g_chainSkips  = 0;   // So lan nhoi bi bo vi cac lop cu cua bot con rui ro (chua o hoa von) da bang 1 lenh chuan
 double g_maxOpenRiskPct = 0;   // Rui ro mo lon nhat cua bot (moi lop, ngay sau khi vao lop moi), % von cua bot
 double CalcLots(const double slDistance)
