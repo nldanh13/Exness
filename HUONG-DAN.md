@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.14
+# Hướng dẫn bot BTC (MT5) v5.10.15
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -691,3 +691,15 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   Bộ 05 giữ 6% vì với SL 0,25%, lot nhỏ nhất đã khoảng 5% vốn; giảm nữa thì bot bỏ mọi tín hiệu. Muốn rủi ro thấp hơn cần vốn lớn hơn.
 - Không sửa được trong code (giới hạn của MT5): khóa giữa các bot chỉ trong một terminal; chốt gộp / đảo chiều / kéo SL cần MT5 mở
   và có mạng. Chạy MỘT terminal trên VPS cho mỗi tài khoản.
+
+## Khóa lỗ ngày đóng cả lệnh cũ, và cách thử trên demo (v5.10.15)
+- Lỗ của lệnh tay mở trước khi bật bảo vệ vẫn được cộng vào lỗ ngày, nhưng trước đây khi khóa thì chúng không bị đóng. Nay khóa lỗ ngày
+  (cũng như dừng hẳn) đóng CẢ lệnh cũ và hủy CẢ lệnh chờ cũ. `InpGuardOldTrades` chỉ còn quyết định việc tự đặt SL / dời hòa vốn cho lệnh cũ.
+- Rủi ro 6% (bộ 05) / 4% (bộ 06) là mức tính tại giá SL. Khi giá nhảy (tin, mở cửa cuối tuần), SL có thể khớp xấu hơn, lỗ thật vượt mức đó.
+  Code không chặn được; xem cột trượt giá SL trong `TrendBot_truotgia.csv` sau vài tuần demo.
+- Thử trên demo trước tiền thật (mỗi mục chụp lại bảng chart / thông báo):
+  1. Khởi động lại MT5 khi đang giữ 1 lệnh tự vào: bảng vẫn đếm đúng số lệnh tự vào trong ngày, chốt gộp vẫn nhận lệnh đó.
+  2. Đặt `InpGuardAutoMaxDay = 1`: sau lệnh tự vào đầu tiên trong ngày, bot không vào thêm (kể cả sau khởi động lại).
+  3. Đóng tay một nửa lot của lệnh tự vào (khớp một phần): lệnh còn lại vẫn được chốt gộp / kéo SL.
+  4. Gắn bot lên 2 chart BTC cùng lúc: chart thứ hai hiện dòng đỏ "CHART KHÁC đang bảo vệ".
+  5. Đặt `InpGuardDayLossPct` rất nhỏ (ví dụ 0,5): khi chạm, mọi lệnh tay trên mã bị đóng và bot ngừng tự vào tới hết ngày.
