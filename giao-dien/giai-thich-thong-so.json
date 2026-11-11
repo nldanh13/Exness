@@ -70,6 +70,7 @@
  "InpGuardAutoNeedHTF": "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn.",
  "InpGuardAutoTFmin": "Khung nhỏ hơn: nhiều lệnh hơn, nhiễu hơn.",
  "InpGuardAutoCooldownMin": "Tránh vào lại ngay sau khi bị quét SL.",
+ "InpGuardAutoRiskPct": "Bot tính lot TRƯỚC khi vào để lỗ khi chạm SL không vượt mức này (và không vượt Rủi ro tối đa mỗi lệnh tay). Vốn tăng thì lot tăng. Lot nhỏ nhất đã vượt giới hạn thì bỏ tín hiệu, không mở rồi đóng ngay.",
  "InpJournal": "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv.",
  "InpWarnBigWinPct": "Nhắc rút tiền, nghỉ 1–2 ngày và không tăng lot.",
  "InpMonthDepositCap": "Ví dụ 2000000 với tài khoản VND.",
