@@ -12,10 +12,12 @@ bool InGroup()
    return StringFind(list, "," + _Symbol + ",") >= 0;
 }
 bool g_grpLocked = false;
+double g_grpLockToken = 0; // chi nguoi giu dung gia tri nay moi duoc mo khoa
 // Tra false neu bot nay thuoc nhom ma khong lay duoc khoa: KHONG duoc vao lenh (thu lai o tick sau).
 bool GroupLock()
 {
    g_grpLocked = false;
+   g_grpLockToken = 0;
    if(MQLInfoInteger(MQL_TESTER) || !InGroup()) return true;     // backtest 1 ma / khong thuoc nhom: khong can khoa
    string k = GrpKey("LOCK");
    // Tao bien khoa mot cach nguyen tu: GlobalVariableTemp chi tao khi chua co (gia tri 0) va KHONG ghi de
@@ -24,15 +26,17 @@ bool GroupLock()
    for(int i = 0; i < 100 && !IsStopped(); i++)                // toi da ~5 giay
    {
       double now = (double)TimeLocal();
-      if(GlobalVariableSetOnCondition(k, now, 0)) { g_grpLocked = true; return true; }
+      if(GlobalVariableSetOnCondition(k, now, 0)) { g_grpLocked = true; g_grpLockToken = now; return true; }
       double v = GlobalVariableGet(k);
       // Khoa bi bo quen (bot kia bi tat giua chung): giu qua 60 giay thi coi nhu het han
-      if(v > 0 && now - v > 60 && GlobalVariableSetOnCondition(k, now, v)) { g_grpLocked = true; return true; }
+      if(v > 0 && now - v > 60 && GlobalVariableSetOnCondition(k, now, v)) { g_grpLocked = true; g_grpLockToken = now; return true; }
       Sleep(50);
    }
    return false;
 }
-void GroupUnlock() { if(g_grpLocked) GlobalVariableSet(GrpKey("LOCK"), 0); g_grpLocked = false; }
+void GroupUnlock() { if(g_grpLocked) GlobalVariableSetOnCondition(GrpKey("LOCK"), 0, g_grpLockToken); g_grpLocked = false; g_grpLockToken = 0; }
+// GlobalVariableTime khong phu hop lam TTL: do THOI DIEM TRUY CAP, ke ca doc gia tri.
+// TTL 60 giay tinh tu TimeLocal trong CHINH gia tri khoa; khong duoc ha tuy tien xuong 30s khi server co the tre.
 // Giu cho theo tung bot (ma + Magic): nhieu chien luoc tren CUNG ma cung duoc tinh vao tran chung
 string ResKey(const string p, const string sym, const long magic) { return GrpKey(p + sym + "_" + IntegerToString(magic)); }
 void GroupReserve(const double risk)
