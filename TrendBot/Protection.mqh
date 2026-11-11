@@ -121,6 +121,7 @@ void ResetBaseline(const bool unlock)
    g_plDirty = true;
    RefreshClosedPL();
    GlobalVariableSet(GVName("peak"), BotEquityForLimits());
+   BotRiskSave(true);
 }
 
 // Von cua bot luc dau ngay duoc luu vao Global Variable, nen khoi dong lai giua ngay khong reset
@@ -208,6 +209,7 @@ void CheckDrawdown()
    if(++hits >= 2)
    {
       GlobalVariableSet(GVName("halt"), 1);
+      BotRiskSave(true);
       Notify(StringFormat("[%s] BOT DUNG HAN: von cua bot sut %.1f%% tu dinh %.2f. Dat InpResetHalt=true de chay lai.",
                           _Symbol, (1.0 - eq / peak) * 100.0, peak));
       if(P_CloseOnHalt) CloseAll();
