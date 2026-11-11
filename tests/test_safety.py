@@ -185,6 +185,7 @@ class MqlSafetyRegression(unittest.TestCase):
         self.assertIn("DEAL_FEE", ledger)
         self.assertIn("net -= oldPL", ledger)
         self.assertIn("weightedEntry / totalVolume", ledger)
+        self.assertIn("if(d == 0 || !HistoryDealSelect(d)) { g_ledgerHealthy = false; return false; }", ledger)
         self.assertIn("LedgerMainClosedPL", source("TrendBot/Protection.mqh"))
         guard = source("TrendBot/Guard.mqh")
         self.assertIn("LedgerDayPL(bucket, pl)", guard)
@@ -195,6 +196,8 @@ class MqlSafetyRegression(unittest.TestCase):
         guard = source("TrendBot/Guard.mqh")
         self.assertIn('GAcctKey(bucket == 1 ? "humanLock" : "algoLock")', guard)
         self.assertIn("LedgerDayPL(2, dailyPL)", guard)
+        self.assertIn("string legacy = GKey(suffix)", guard)
+        self.assertIn("GlobalVariableSet(n, today)", guard)
 
     def test_first_order_group_cap_and_missing_stop_fail_closed(self):
         risk = source("TrendBot/Risk.mqh")
