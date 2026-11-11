@@ -357,6 +357,11 @@ void PyramidStep(const bool addOnly = false)
    }
    g_lastRisk *= scaled / lots;
    lots = scaled;
+   if(g_lastRisk > GuardAlgoBudgetRemaining() + 1e-8)
+   {
+      g_status = "Bucket thuat toan khong du de nhoi them";
+      GroupUnlock(); return;
+   }
    GroupReserve(g_lastRisk);
    double price = buy ? tick.ask : tick.bid;
    g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
