@@ -685,6 +685,7 @@ void ManualUIDelete()
 void ManualFire(const bool buy)
 {
    if(IsHalted() || GuardHalted()) { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh, ke ca nhoi."); return; }
+   if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { Notify("[" + _Symbol + "] Da khoa bucket thuat toan, khong vao / nhoi."); return; }
    int dir = OwnDirection();
    // Cung bo loc voi bot cho CA vao moi lan nhoi tay (v5.10.19): truoc day nut nhoi bo qua lo ngay, gio nghi, spread, tin My
    string nw = "", gw = "";
