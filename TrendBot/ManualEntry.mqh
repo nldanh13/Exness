@@ -214,7 +214,7 @@ void GuardExitRelease()
 }
 
 // Nen vua dong (shift 1) bao dao chieu NGUOC voi lenh dang giu (buy = dang giu Buy)
-bool GuardReversal(const bool buy, const datetime firstTime, string &why)
+bool GuardReversal(const bool buy, const datetime firstTime, const double ext, string &why)
 {
    ENUM_TIMEFRAMES tf = TFFromMin(GuardTFmin());
    bool barAfter = iTime(_Symbol, tf, 0) > firstTime;                  // nen 1 dong sau khi vao lenh
@@ -228,18 +228,17 @@ bool GuardReversal(const bool buy, const datetime firstTime, string &why)
    if(o1 <= 0 || o2 <= 0) return false;
    double body1 = MathAbs(c1 - o1), body2 = MathAbs(c2 - o2);
    string m = "M" + IntegerToString(GuardTFmin());
-   if(!barAfter) { h1 = buy ? 0 : DBL_MAX; l1 = buy ? 0 : DBL_MAX; }   // nen 1 truoc khi vao: chi dung nen dang chay cho giat nguoc
    if(candles && barAfter && (buy ? c1 < ema : c1 > ema))
    { why = StringFormat("nen %s dong cua %s EMA20", m, buy ? "duoi" : "tren"); return true; }
    bool against1 = buy ? c1 < o1 : c1 > o1, with2 = buy ? c2 > o2 : c2 < o2;
    if(candles && barAfter && against1 && with2 && body1 >= body2 && body1 >= 0.5 * atr)
    { why = StringFormat("nen %s nhan chim %s", m, buy ? "giam" : "tang"); return true; }
-   // Giat nguoc trong nen DANG CHAY (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh),
-   // tinh tu dinh / day cua nen hien tai va nen truoc. Bat ngay, khong cho nen dong.
+   // Giat nguoc (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh). Bat ngay, khong
+   // cho nen dong. ext = gia tot nhat GHI NHAN SAU KHI lop dau khop (v5.10.11, GuardExit cap nhat moi giay) - khong dung dinh / day
+   // cua nen da co tu truoc luc vao lenh.
    if(InpGuardSpikeATR > 0)
    {
       double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-      double ext = buy ? MathMax(iHigh(_Symbol, tf, 0), h1) : MathMin(iLow(_Symbol, tf, 0), l1);
       double back = buy ? ext - px : px - ext;
       if(ext > 0 && back >= InpGuardSpikeATR * atr)
       { why = StringFormat("gia giat %s %.1f ATR %s tu %s", buy ? "xuong" : "len", back / atr, m, buy ? "dinh" : "day"); return true; }
@@ -305,9 +304,15 @@ void GuardExit()
    double rNow = pl / rMoney;
 
    string why = "", rev = "";
+   // Gia tot nhat tu luc lop dau khop (cho chot khi giat nguoc): bat dau tu gia vao, cap nhat moi giay
+   string extKey = GKey("ext" + IntegerToString((long)firstT));
+   double pxNow = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double ext = GlobalVariableCheck(extKey) ? GlobalVariableGet(extKey) : firstOpen;
+   if(pxNow > 0 && (buy ? pxNow > ext : pxNow < ext)) ext = pxNow;
+   GlobalVariableSet(extKey, ext);
    string runKey = GKey("run" + IntegerToString((long)firstT));      // da qua muc chot gop, dang de loi chay
    bool running = GlobalVariableCheck(runKey);
-   if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, rev))
+   if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, ext, rev))
       why = "dau hieu dao chieu: " + rev;
    else if(InpGuardBasketR > 0 && rNow >= InpGuardBasketR)
    {
@@ -332,7 +337,7 @@ void GuardExit()
    int closed = 0;
    for(int i = 0; i < cnt; i++)
       if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) closed++;
-   if(closed == cnt && running) GlobalVariableDel(runKey);
+   if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); }
    Notify(StringFormat("[%s] CHOT LOI: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR). Ly do: %s.", _Symbol, closed, cnt,
                        buy ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), rNow, why));
 }

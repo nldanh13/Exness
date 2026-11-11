@@ -621,4 +621,5 @@ Nếu lot nhỏ nhất quá lớn so với vốn, bot mở lệnh rồi đóng n
 - `InpGuardExitScope` (mặc định 0): chỉ tính lệnh do bot mở (ghi chú `TB tu vao` hoặc `TB nhoi tay`). Đặt 1 để gộp cả lệnh bạn tự đặt như cũ.
 - Mỗi tài khoản + mã chỉ một chart được bảo vệ lệnh tay. Chart bật sau không làm gì (không đặt SL, không nhồi, không tự vào,
   không chốt) và hiện dòng đỏ "CHART KHÁC đang bảo vệ ...". Gỡ bot khỏi một trong hai chart. Đóng chart giữ quyền thì chart kia tự nhận.
-- Vẫn không nên chạy EA khác cùng quản lý lệnh magic 0 trên mã này.
+- Vẫn không nên chạy EA khác cùng quản lý lệnh magic 0 trên mã này.- Chốt khi giật ngược (`InpGuardSpikeATR`) trước đây đo từ đỉnh / đáy của nến đang chạy, có thể là đỉnh tạo ra TRƯỚC lúc vào lệnh
+  (vào giữa nến M5), nên đóng sớm hơn ý định. Nay bot ghi giá tốt nhất kể từ khi lớp đầu khớp (cập nhật mỗi giây) và chỉ đo từ đó.
