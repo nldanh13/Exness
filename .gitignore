@@ -11,3 +11,6 @@ ket-qua-so-sanh.csv
 # Bo thong so tu luu tu giao dien (tab "Thong so"): co the chua token Telegram
 cai-dat-rieng/
 __pycache__/
+
+# Nhat ky tai khoan that (GuiNhatKy.ps1 tu `git add -f` sau khi hoi): khong dua len nham bang git add .
+ket-qua/thuc-te/

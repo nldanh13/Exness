@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.12"
-#property version   "5.1012"
+#define  BOT_VERSION "5.10.13"
+#property version   "5.1013"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -615,7 +615,7 @@ int OnInit()
    trade.SetDeviationInPoints(100);
 
    TryInitState();          // neu chua dang nhap, se thu lai o cac tick sau
-   // Timer 500 ms (v5.10.12): kiem tra an toan lenh tay / chot loi ca khi khong co tick moi (thi truong im, tick bi gop)
+   // Timer 500 ms (v5.10.13): kiem tra an toan lenh tay / chot loi ca khi khong co tick moi (thi truong im, tick bi gop)
    if(!MQLInfoInteger(MQL_TESTER) && InpGuardManual) EventSetMillisecondTimer(500);
    return INIT_SUCCEEDED;
 }
@@ -788,7 +788,7 @@ bool FundingOk(const bool buy)
    return true;
 }
 void OnTickBody();
-// An toan truoc (bao ve lenh tay, chot loi), hien thi / bao cao sau. Goi tu OnTick va OnTimer (v5.10.12).
+// An toan truoc (bao ve lenh tay, chot loi), hien thi / bao cao sau. Goi tu OnTick va OnTimer (v5.10.13).
 void SafetyStep()
 {
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
@@ -830,7 +830,7 @@ void OnTickBody()
    // Da dung han ma van con lenh (vd. dong that bai lan truoc) thi thu dong lai moi tick
    if(IsHalted() && P_CloseOnHalt && HasOwnPosition()) CloseAll();
    if(ready) CheckDailyLoss();
-   // Tu nhoi / tu vao chay SAU khi da cap nhat lo ngay va sut giam cua chien luoc chinh (v5.10.12), va tu bo qua
+   // Tu nhoi / tu vao chay SAU khi da cap nhat lo ngay va sut giam cua chien luoc chinh (v5.10.13), va tu bo qua
    // khi chien luoc chinh dang dung han hoac cham lo ngay (MainStopped trong ManualEntry.mqh).
    GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
    GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
@@ -1025,7 +1025,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 {
    if(trans.type != TRADE_TRANSACTION_DEAL_ADD || !g_stateReady) return;
    if(!HistoryDealSelect(trans.deal)) return;
-   LogStopSlippage(trans.deal);                     // truot gia khi cham SL / TP (moi magic tren ma nay, v5.10.12)
+   LogStopSlippage(trans.deal);                     // truot gia khi cham SL / TP (moi magic tren ma nay, v5.10.13)
    if(HistoryDealGetInteger(trans.deal, DEAL_MAGIC) != (long)P_Magic ||
       HistoryDealGetString(trans.deal, DEAL_SYMBOL) != _Symbol) return;
    g_plDirty = true;                                // tinh lai lai/lo cua bot o tick sau

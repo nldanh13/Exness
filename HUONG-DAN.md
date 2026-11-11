@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.12
+# Hướng dẫn bot BTC (MT5) v5.10.13
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -621,10 +621,33 @@ Nếu lot nhỏ nhất quá lớn so với vốn, bot mở lệnh rồi đóng n
 - `InpGuardExitScope` (mặc định 0): chỉ tính lệnh do bot mở (ghi chú `TB tu vao` hoặc `TB nhoi tay`). Đặt 1 để gộp cả lệnh bạn tự đặt như cũ.
 - Mỗi tài khoản + mã chỉ một chart được bảo vệ lệnh tay. Chart bật sau không làm gì (không đặt SL, không nhồi, không tự vào,
   không chốt) và hiện dòng đỏ "CHART KHÁC đang bảo vệ ...". Gỡ bot khỏi một trong hai chart. Đóng chart giữ quyền thì chart kia tự nhận.
-- Vẫn không nên chạy EA khác cùng quản lý lệnh magic 0 trên mã này.- Chốt khi giật ngược (`InpGuardSpikeATR`) trước đây đo từ đỉnh / đáy của nến đang chạy, có thể là đỉnh tạo ra TRƯỚC lúc vào lệnh
+- Vẫn không nên chạy EA khác cùng quản lý lệnh magic 0 trên mã này.
+- Chốt khi giật ngược (`InpGuardSpikeATR`) trước đây đo từ đỉnh / đáy của nến đang chạy, có thể là đỉnh tạo ra TRƯỚC lúc vào lệnh
   (vào giữa nến M5), nên đóng sớm hơn ý định. Nay bot ghi giá tốt nhất kể từ khi lớp đầu khớp (cập nhật mỗi giây) và chỉ đo từ đó.
 
-## Dừng hẳn theo sụt giảm cả tài khoản cho lệnh tay / tự vào (v5.10.12)
+## Giám sát lệnh tự vào và bảo mật giao diện (v5.10.12)
+- Tệp trạng thái (`TrendBot_trangthai_<chart>.txt`): trước đây `lenhbot` chỉ đếm lệnh có magic của bot, nên bộ 05 / 06 (tự vào, magic 0)
+  luôn báo 0 lệnh dù đang giữ vị thế. Nay `lenhbot` = lệnh magic + lệnh bot tự vào / tự nhồi (ghi chú `TB tu vao` / `TB nhoi tay`),
+  kèm các dòng mới `lenhmagic`, `lenhtuvao`, `lenhtay`. Giao diện hiện "N mục mở (x tự vào) · y lệnh tay".
+  Nếu máy chủ cắt ghi chú lệnh, lệnh tự vào sẽ bị đếm vào `lenhtay` (tổng vẫn đúng ở `lenhtaikhoan`).
+- Giao diện web (`GiaoDien.ps1`):
+  - Từ chối mọi yêu cầu không đến từ chính máy này, hoặc có Host khác `localhost` / `127.0.0.1`.
+  - Mỗi lần mở GiaoDien.cmd sinh một mã truy cập ngẫu nhiên; trình duyệt mở `http://localhost:8765/#k=<mã>`, trang tự cất mã vào tab
+    và xoá khỏi thanh địa chỉ. Mọi lệnh gọi `/api/*` và `/ket-qua/*` phải kèm mã. Tab cũ (mở trước khi khởi động lại giao diện)
+    sẽ báo "chưa có mã truy cập": đóng tab và mở lại bằng GiaoDien.cmd.
+  - Vẫn KHÔNG mở cổng 8765 ra Internet / mạng LAN (port forward, ngrok, Cloudflare Tunnel...). Mã truy cập chỉ là lớp bảo vệ phụ,
+    giao diện không có HTTPS và có thể chạy mô phỏng, đóng MT5, lấy code mới.
+- Gửi nhật ký (`GuiNhatKy.ps1`, nút 4): mặc định gửi BẢN RÚT GỌN, bỏ dòng NẠP / RÚT, bỏ cột số dư (`SoDuHienTai`, `SoDu`, `Equity`, `Nap`, `Rut`)
+  và che số tiền trong dòng cảnh báo. Lệnh, lot, giá, lãi/lỗ, trượt giá vẫn giữ để đối chiếu với backtest.
+  Cần bản đầy đủ: `GuiNhatKy.ps1 -DayDu` (hoặc biến môi trường `TRENDBOT_NHATKY_DAYDU=y`).
+- Chính sách lưu giữ nhật ký thật:
+  - Repo phải để Private, chỉ chủ tài khoản có quyền; không thêm người cộng tác, không fork. Kiểm tra định kỳ ở GitHub > Settings > Collaborators.
+  - File đã đẩy lên nằm trong LỊCH SỬ git; xoá file sau đó không xoá được lịch sử. Muốn xoá hẳn phải viết lại lịch sử
+    (`git filter-repo --path ket-qua/thuc-te --invert-paths`) rồi force push, hoặc dùng một repo riêng chỉ để chứa nhật ký và xoá repo đó khi xong.
+  - Khuyến nghị: sau khi Claude đối chiếu xong, xoá thư mục `ket-qua/thuc-te/` khỏi repo; giữ bản gốc trên máy (Common\Files của MT5).
+  - `ket-qua/thuc-te/` đã có trong `.gitignore` để không bị đưa lên nhầm bằng `git add .`; chỉ nút 4 mới đẩy (sau khi hỏi).
+
+## Dừng hẳn theo sụt giảm cả tài khoản cho lệnh tay / tự vào (v5.10.13)
 Chiến lược chính dùng magic của bot (`InpMagic`) và tự dừng ở lỗ 3%/ngày, sụt 15%. Lệnh tay và lệnh tự vào của bộ 04/05/06
 dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng chỉ có khóa lỗ ngày riêng (`InpGuardDayLossPct`, bộ 05/06 là 10%).
 - `InpGuardMaxDDPct` (mới, mặc định 15): equity CẢ TÀI KHOẢN sụt từ đỉnh quá mức này thì bot đóng lệnh tay trên mã của chart,
@@ -634,7 +657,7 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
 - Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".- Chiến lược chính đang dừng hẳn (sụt giảm `InpMaxDrawdownPct`) hoặc chạm lỗ ngày (`InpMaxDailyLossPct`) thì bot cũng KHÔNG tự vào,
   không tự nhồi. Hai bước này nay chạy sau khi đã cập nhật lỗ ngày / sụt giảm của tick đó (trước đây chạy trước và không kiểm tra).
 
-**Rà soát thêm (cùng bản 5.10.12):**
+**Rà soát thêm (cùng bản 5.10.13):**
 - Tự vào lệnh nay dùng chung bộ lọc giờ nghỉ / cuối tuần / tin và spread tối đa (`InpMaxSpreadPoints`) với chiến lược chính,
   và bỏ tín hiệu khi spread lớn hơn 20% khoảng cách SL (như luật nhồi). Giới hạn số lệnh/ngày và nghỉ sau thua của chiến lược chính
   không áp dụng; tự vào có giới hạn riêng (`InpGuardAutoMaxDay`, `InpGuardAutoCooldownMin`).
@@ -648,7 +671,7 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   - Khóa "một chart mỗi mã" và trạng thái dừng hẳn dùng Global Variable, chỉ có hiệu lực trong CÙNG một MT5. Không chạy bot cho
     cùng tài khoản trên hai máy / hai VPS cùng lúc.
 
-**Tốc độ phản ứng (cùng bản 5.10.12):**
+**Tốc độ phản ứng (cùng bản 5.10.13):**
 - Thêm timer 500 ms: bảo vệ lệnh tay và chốt lời linh hoạt chạy cả khi không có tick mới, không chỉ trong `OnTick()`.
   Các bước an toàn chạy trước, hiển thị / nhật ký chạy sau. Bộ đếm dùng đồng hồ máy (`GetTickCount64`) thay vì giờ server
   (giờ server đứng yên khi không có tick). Bảo vệ lệnh tay kiểm tra mỗi 1 giây (trước 2 giây), chốt linh hoạt 4 lần / giây.

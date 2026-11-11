@@ -143,10 +143,10 @@ int TrendCount(const bool up)
 }
 
 // Chien luoc chinh (magic P_Magic) dang dung han vi sut giam hoac da cham lo ngay: khong mo them lenh nao,
-// ke ca tu nhoi / tu vao (magic 0). Hai co che nay truoc v5.10.12 doc lap voi nhau.
+// ke ca tu nhoi / tu vao (magic 0). Hai co che nay truoc v5.10.13 doc lap voi nhau.
 bool MainStopped() { return IsHalted() || DailyLossHit(); }
 
-// Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable theo ticket (v5.10.12). Truoc chi dua vao ghi chu "TB ...",
+// Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable theo ticket (v5.10.13). Truoc chi dua vao ghi chu "TB ...",
 // ma san co the doi / cat ghi chu. Trong MT5 ticket vi the = ticket lenh da mo no (trade.ResultOrder()).
 void GuardMarkBotMade(const ulong ticket) { if(ticket > 0) GlobalVariableSet(GKey("bm" + IntegerToString((long)ticket)), 1); }
 
@@ -204,7 +204,7 @@ void GuardPyramid()
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
    double sl = NormalizeDouble(buy ? px - lastR : px + lastR, _Digits);
-   // Tong rui ro TRUOC khi gui (v5.10.12): rui ro con mo cua cac lop (sau hoa von ~0) + lop moi khong vuot InpGuardMaxRiskPct
+   // Tong rui ro TRUOC khi gui (v5.10.13): rui ro con mo cua cac lop (sau hoa von ~0) + lop moi khong vuot InpGuardMaxRiskPct
    double eq = AccountInfoDouble(ACCOUNT_EQUITY), newRisk = 0;
    double openRisk = GuardOpenRisk(buy);
    if(openRisk < 0 || eq <= 0) return;
@@ -271,7 +271,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
    if(candles && barAfter && against1 && with2 && body1 >= body2 && body1 >= 0.5 * atr)
    { why = StringFormat("nen %s nhan chim %s", m, buy ? "giam" : "tang"); return true; }
    // Giat nguoc (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh). Bat ngay, khong
-   // cho nen dong. ext = gia tot nhat SAU KHI lop dau khop, tinh tu moi tick (v5.10.12, GuardExit doc CopyTicksRange) - khong dung dinh / day
+   // cho nen dong. ext = gia tot nhat SAU KHI lop dau khop, tinh tu moi tick (v5.10.13, GuardExit doc CopyTicksRange) - khong dung dinh / day
    // cua nen da co tu truoc luc vao lenh.
    if(InpGuardSpikeATR > 0)
    {
@@ -290,7 +290,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 bool GuardBotMade()
 {
    if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_TICKET))))) return true;
-   return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0;   // lenh mo truoc v5.10.12
+   return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0;   // lenh mo truoc v5.10.13
 }
 
 void GuardExit()
@@ -328,7 +328,7 @@ void GuardExit()
    }
    if(cnt == 0) return;
    bool buy = dir > 0;
-   // Phi (commission) cua chuoi (v5.10.12): phi luc vao da tru vao so du nhung khong nam trong POSITION_PROFIT; luc dong thuong
+   // Phi (commission) cua chuoi (v5.10.13): phi luc vao da tru vao so du nhung khong nam trong POSITION_PROFIT; luc dong thuong
    // tinh them bang ay. Tru uoc 2 lan phi vao de quyet dinh chot theo lai THAT. Tai khoan Standard cua Exness: phi = 0.
    for(int i = 0; i < cnt; i++)
       if(HistorySelectByPosition(posIds[i]))
@@ -447,7 +447,7 @@ void GuardAutoEntry()
    datetime bar = iTime(_Symbol, tf, 0);
    if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
    if(GuardDayLocked() || MainStopped()) return;
-   // Bo loc chung voi chien luoc chinh (v5.10.12): khung gio nghi / cuoi tuan / tin (InpSkipWeekend, InpBlock*...) va spread toi da
+   // Bo loc chung voi chien luoc chinh (v5.10.13): khung gio nghi / cuoi tuan / tin (InpSkipWeekend, InpBlock*...) va spread toi da
    string gateWhy = "";
    if(!TimeAllowed(gateWhy)) return;
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;

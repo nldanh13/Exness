@@ -15,7 +15,7 @@ ulong    g_gLast      = 0;      // GetTickCount64 (ms): chay duoc ca tu OnTimer 
 // Trang thai luu qua lan khoi dong lai (Global Variables cua terminal)
 string GKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_" + k; }
 int    GDayKey(const datetime t) { MqlDateTime d; TimeToStruct(t, d); return d.year * 10000 + d.mon * 100 + d.day; }
-// Dung han theo sut giam CA TAI KHOAN (v5.10.12, InpGuardMaxDDPct): lenh tay / tu vao dung magic 0 nen KHONG nam trong moc
+// Dung han theo sut giam CA TAI KHOAN (v5.10.13, InpGuardMaxDDPct): lenh tay / tu vao dung magic 0 nen KHONG nam trong moc
 // lo ngay 3% / sut giam 15% cua chien luoc chinh (chi tinh P_Magic). Moc nay tinh equity ca tai khoan so voi dinh, chung moi ma.
 // Cham thi dong lenh tay, khong tu vao, khong nhoi, toi khi dat InpResetHalt = true mot lan.
 string GAcctKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + k; }
@@ -215,7 +215,7 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
 void GuardManual()
 {
    if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
-   if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.12: 2 giay)
+   if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.13: 2 giay)
    g_gLast = GetTickCount64();
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
 

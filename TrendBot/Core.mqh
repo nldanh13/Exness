@@ -153,7 +153,7 @@ void LogSlippage(const bool isBuy, const double fill)
    g_reqPrice = 0;
 }
 
-// Truot gia luc cham SL / TP (v5.10.12): lenh dung khong bao dam khop dung gia dat khi thi truong chay manh.
+// Truot gia luc cham SL / TP (v5.10.13): lenh dung khong bao dam khop dung gia dat khi thi truong chay manh.
 // Ghi vao cung file TrendBot_truotgia.csv, cot Chieu = "SL Buy" / "TP Sell"... GiaYeuCau = muc SL / TP, GiaKhop = gia dong that.
 void LogStopSlippage(const ulong deal)
 {
@@ -178,7 +178,7 @@ void LogStopSlippage(const ulong deal)
    FileClose(h);
 }
 
-// Thoi gian xu ly moi lan OnTick / OnTimer (v5.10.12), de xem bot co xu ly cham lam lo tick khong
+// Thoi gian xu ly moi lan OnTick / OnTimer (v5.10.13), de xem bot co xu ly cham lam lo tick khong
 ulong  g_tkMaxUs = 0, g_tkSumUs = 0;
 long   g_tkCount = 0, g_tkSlow = 0;      // so lan > 100 ms
 void TickTimeRecord(const ulong us)
