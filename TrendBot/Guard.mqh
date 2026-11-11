@@ -179,10 +179,14 @@ double GuardManualDayPL(const datetime dayStart)
 // Khong dat / sua TP. Chi dich SL theo huong co loi, khong bao gio noi SL ra.
 int g_gATR = INVALID_HANDLE;
 
+// Khoa luu theo POSITION_IDENTIFIER (v5.10.18): khong doi suot doi vi the, ke ca khi may chu doi ticket. Lenh cu: con doc khoa theo ticket.
+long GuardPosId(const ulong t) { return PositionSelectByTicket(t) ? PositionGetInteger(POSITION_IDENTIFIER) : (long)t; }
 double GuardInitialR(const ulong t, const double open, const double sl)
 {
-   string n = GKey("r" + IntegerToString((long)t));
+   string n = GKey("r" + IntegerToString(GuardPosId(t)));
    if(GlobalVariableCheck(n)) return GlobalVariableGet(n);
+   string old = GKey("r" + IntegerToString((long)t));
+   if(GlobalVariableCheck(old)) { double r0 = GlobalVariableGet(old); GlobalVariableSet(n, r0); return r0; }
    if(sl <= 0) return 0;
    double r = MathAbs(open - sl);
    GlobalVariableSet(n, r);

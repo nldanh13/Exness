@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.17"
-#property version   "5.1017"
+#define  BOT_VERSION "5.10.18"
+#property version   "5.1018"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -791,10 +791,14 @@ bool FundingOk(const bool buy)
 }
 void OnTickBody();
 // An toan truoc (bao ve lenh tay, chot loi), hien thi / bao cao sau. Goi tu OnTick va OnTimer (v5.10.13).
+ulong g_gvFlush = 0;
 void SafetyStep()
 {
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+   // Ghi Global Variable xuong dia moi 30 giay (v5.10.18): MT5 chi tu ghi khi tat binh thuong; mat dien / treo may thi
+   // moc von, R ban dau, bo dem lenh, khoa ngay... khong bi mat qua 30 giay gan nhat.
+   if(GetTickCount64() - g_gvFlush >= 30000) { g_gvFlush = GetTickCount64(); GlobalVariablesFlush(); }
 }
 
 void OnTimer()

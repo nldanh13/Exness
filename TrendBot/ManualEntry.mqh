@@ -211,6 +211,11 @@ void GuardPyramid()
    double spr = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
    if((buy ? px - lastOpen : lastOpen - px) < InpGuardPyramidStepR * lastR) return;
    if(spr > lastR * 0.2) return;
+   // Cung bo loc voi lenh tu vao (v5.10.18): gio nghi / cuoi tuan, spread toi da, tin My. Truoc day nhoi chi xet spread so voi R.
+   string gw = "", nw = "";
+   if(!TimeAllowed(gw)) return;
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
+   if(P_AvoidUSNews && USNewsNear(nw)) return;
    int tc = TrendCount(buy);
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
@@ -364,9 +369,11 @@ void GuardExit()
          }
 
    // R cua lop dau: chi dung khi da luu luc lenh con SL ban dau; neu chua luu ma SL da ve hoa von thi bo qua (tranh R ~ 0)
-   string key = GKey("r" + IntegerToString((long)firstT));
+   long   firstId = GuardPosId(firstT);                     // khoa trang thai theo identifier (v5.10.18)
+   string key = GKey("r" + IntegerToString(firstId)), keyOld = GKey("r" + IntegerToString((long)firstT));
    double r = 0;
    if(GlobalVariableCheck(key)) r = GlobalVariableGet(key);
+   else if(GlobalVariableCheck(keyOld)) r = GlobalVariableGet(keyOld);
    else if(PositionSelectByTicket(firstT))
    {
       double sl = PositionGetDouble(POSITION_SL);
@@ -383,7 +390,7 @@ void GuardExit()
    string why = "", rev = "";
    // Gia tot nhat tu luc lop dau khop (cho chot khi giat nguoc): bat dau tu gia vao, cap nhat moi giay
    // Doc MOI tick tu lan kiem tra truoc (CopyTicksRange), khong chi gia luc kiem tra, nen khong bo sot dinh / day giua hai lan.
-   string extKey = GKey("ext" + IntegerToString((long)firstT)), extMsKey = GKey("extms" + IntegerToString((long)firstT));
+   string extKey = GKey("ext" + IntegerToString(firstId)), extMsKey = GKey("extms" + IntegerToString(firstId));
    double ext = GlobalVariableCheck(extKey) ? GlobalVariableGet(extKey) : firstOpen;
    ulong  fromMs = GlobalVariableCheck(extMsKey) ? (ulong)GlobalVariableGet(extMsKey) : (ulong)firstTime * 1000;
    // Toi da 5000 tick moi lan (v5.10.17): lenh mo lau thi doc dan qua nhieu chu ky, khong doc mot luc ca ngay tick.
@@ -402,7 +409,7 @@ void GuardExit()
    if(pxNow > 0 && (buy ? pxNow > ext : pxNow < ext)) ext = pxNow;
    GlobalVariableSet(extKey, ext);
    GlobalVariableSet(extMsKey, (double)lastMs);
-   string runKey = GKey("run" + IntegerToString((long)firstT));      // da qua muc chot gop, dang de loi chay
+   string runKey = GKey("run" + IntegerToString(firstId));      // da qua muc chot gop, dang de loi chay
    bool running = GlobalVariableCheck(runKey);
    if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, ext, rev))
       why = "dau hieu dao chieu: " + rev;
