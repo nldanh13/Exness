@@ -151,6 +151,33 @@ def monthly(tr, t_start, t_end):
     return v
 
 
+
+def btc_hold_monthly(T, C, t_start, t_end):
+    """BTC buy & hold, close-to-close log returns by UTC calendar month.
+    Risk-normalize at MONTHLY stdev to compare with an active strategy; NOT R.
+    """
+    m0 = datetime.fromtimestamp(int(t_start), timezone.utc)
+    m1 = datetime.fromtimestamp(int(t_end), timezone.utc)
+    size = (m1.year - m0.year) * 12 + m1.month - m0.month + 1
+    closes = {}
+    initial = None
+    for t, px in zip(T, C):
+        if t < t_start:
+            initial = float(px)
+        if t_start <= t < t_end and px > 0:
+            d = datetime.fromtimestamp(int(t), timezone.utc)
+            month = (d.year - m0.year) * 12 + d.month - m0.month
+            closes[month] = float(px)
+    out = np.zeros(size)
+    previous = initial if initial and initial > 0 else closes.get(0, 0)
+    for month in range(size):
+        px = closes.get(month, previous)
+        if px and previous and px > 0 and previous > 0:
+            out[month] = np.log(px / previous)
+        if px > 0: previous = px
+    return out
+
+
 def compare(args, T, O, H, L, C, ATR, E200, ADX, D1E, D1C, t_start, t_end, edges):
     res = variants(T, O, H, L, C, ATR, E200, ADX, D1E, D1C)
     m0 = datetime.fromtimestamp(int(t_start), timezone.utc)
@@ -173,6 +200,19 @@ def compare(args, T, O, H, L, C, ATR, E200, ADX, D1E, D1C, t_start, t_end, edges
     # Chuan hoa cung muc rui ro: nhan moi phuong an de do lech chuan R theo thang bang cua goc.
     # Khong chuan hoa thi phuong an nao dung rui ro cao hon (vd kl_atr nhan 1,25) se "hon goc" chi vi danh lon hon.
     sd0 = mon["goc"].std(ddof=1)
+    # Passive benchmark: compare at the same MONTHLY volatility as Donchian,
+    # rather than comparing BTC % returns directly with strategy R.
+    hold = btc_hold_monthly(T, C, t_start, t_end)
+    hold_sd = hold.std(ddof=1)
+    if hold_sd > 0 and sd0 > 0:
+        matched = hold * (sd0 / hold_sd)
+        mean = matched.mean()
+        sharpe = mean / matched.std(ddof=1)
+        eq = np.cumsum(matched)
+        dd = np.max(np.maximum.accumulate(np.r_[0.0, eq]) - np.r_[0.0, eq])
+        print("  Buy-and-hold BTC (monthly volatility-matched): total equivalent %+0.1fR, Sharpe/month %.3f, DD %.1fR"
+              % (matched.sum(), sharpe, dd))
+        print("  Luu y: benchmark la log-return quy doi bien dong, khong phai R vao/SL hay mo phong phi.")
     for k in mon:
         if mon[k].std(ddof=1) > 0: mon[k] = mon[k] * sd0 / mon[k].std(ddof=1)
     print("\nTren %d cach chon %d khoi kiem tra, CUNG muc rui ro voi goc: so lan hon goc (tong R) / chenh lech trung vi:" % (len(combos), args.kiemtra))
