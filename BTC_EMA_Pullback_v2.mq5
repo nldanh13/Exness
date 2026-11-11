@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.10"
-#property version   "5.1010"
+#define  BOT_VERSION "5.10.11"
+#property version   "5.1011"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -154,6 +154,7 @@ input int             InpGuardRunTrend    = 0;          // Đạt mức chốt g
 input bool            InpGuardRevExit     = false;      // Chốt sớm khi nến báo đảo chiều (đang lời)
 input double          InpGuardRevMinR     = 0.5;        // Chỉ chốt đảo chiều khi tổng lời ít nhất x R
 input double          InpGuardSpikeATR    = 0.0;        // Chốt ngay khi giá giật ngược x × ATR trong nến đang chạy (0 = tắt)
+input int             InpGuardExitScope   = 0;          // Chốt gộp / đảo chiều áp dụng cho: 0 = chỉ lệnh bot mở, 1 = mọi lệnh tay
 input bool            InpGuardAutoEntry   = false;      // TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)
 input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
 input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
@@ -690,7 +691,7 @@ void OnDeinit(const int reason)
 {
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
-   if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); }
+   if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
    IndicatorRelease(hFast);
    IndicatorRelease(hTrend);
    IndicatorRelease(hHTF);
