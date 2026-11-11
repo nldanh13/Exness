@@ -234,6 +234,7 @@ void GuardPyramid()
    if(openRisk < 0 || eq <= 0) return;
    if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, newLot, px, sl, newRisk)) return;
    newRisk = MathAbs(newRisk);
+   if(newRisk > GuardAlgoBudgetRemaining() + 1e-8) return;
    if(InpGuardMaxRiskPct > 0 && openRisk + newRisk > eq * InpGuardMaxRiskPct / 100.0)
    {
       if(ShouldNotify("pyrRisk", 3600))
@@ -578,8 +579,7 @@ void GuardAutoEntry()
    // Hard budget: voi 0.01 BTC neu SL gay lo > 2% von thi bo tin hieu, khong mo roi moi khoa.
    if(P_GuardAlgoDayPct > 0)
    {
-      double spent = MathMin(0.0, GuardManualDayPL(DayStart(), 2) + DayPL());
-      double remaining = eq * P_GuardAlgoDayPct / 100.0 + spent;
+      double remaining = GuardAlgoBudgetRemaining();
       if(remaining <= 0 || loss1 * lot > remaining + 1e-8)
       {
          if(ShouldNotify("autoBudget", 86400))
