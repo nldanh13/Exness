@@ -591,6 +591,15 @@ int OnInit()
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;
+   // Tai khoan Cent dung BTCUSDc/ETHUSDc, khong phai BTCUSDm/ETHUSDm.
+   // Chi doi Nhom MAC DINH, khong ghi de nhom do nguoi dung chu dong chon.
+   if((_Symbol == "BTCUSDc" || _Symbol == "ETHUSDc") &&
+      P_CorrSymbols == "BTCUSDm,ETHUSDm")
+   {
+      P_CorrSymbols = "BTCUSDc,ETHUSDc";
+      Print("STANDARD CENT: nhom quan ly rui ro -> ", P_CorrSymbols,
+            ". Tai khoan USC: InpCapital phai theo don vi USC, KHONG nhap USD.");
+   }
    if(MQLInfoInteger(MQL_TESTER) && P_GuardBacktest)
    {
       // Moi optimization pass khong duoc thua huong bien global cua pass truoc.
