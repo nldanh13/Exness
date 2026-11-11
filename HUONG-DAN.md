@@ -597,3 +597,12 @@ Trước đây mỗi lớp nhồi có TP riêng: lớp đầu chốt ở 2R tron
 Bộ `06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM.set` (CHƯA BACKTEST, chỉ demo): như bộ 05 nhưng SL 0,15%, hòa vốn và nhồi ở 0,5R,
 chốt gộp 2R, không TP từng lớp. Đủ 3 lớp thì chốt khi giá đi khoảng 1,2R từ lớp đầu; chỉ 1 lớp thì chốt ở 2R.
 SL gần hơn nên dễ bị quét hơn, spread chiếm khoảng 6% của R.
+
+**Chốt lời linh hoạt** (cùng bản, mặc định tắt cả, tính trên tổng lời của chuỗi lớp):
+- `InpGuardRunTrend`: đạt mức chốt gộp mà còn ≥ x/9 khung cùng chiều thì để lời chạy tiếp. Chốt khi xu hướng yếu đi (dưới x/9),
+  khi có dấu hiệu đảo chiều, hoặc khi tổng lời rút về dưới mức chốt gộp (nên không trả lại phần đã đạt).
+- `InpGuardRevExit` + `InpGuardRevMinR`: đang lời ≥ x R mà nến vừa đóng (khung kéo SL, mặc định khung vào lệnh) báo đảo chiều thì chốt hết:
+  đóng cửa vượt lại EMA20 ngược chiều lệnh, nến nhấn chìm ngược chiều, hoặc râu nến dài về phía lệnh.
+- `InpGuardSpikeATR`: không chờ nến đóng. Giá vừa chạy về phía lệnh rồi giật ngược x × ATR (râu nến đang hình thành) thì chốt ngay.
+  Dùng cùng ngưỡng lời tối thiểu `InpGuardRevMinR`.
+- Bộ 06 bật: để lời chạy khi ≥ 7/9 khung, chốt đảo chiều khi lời ≥ 0,5R, chốt khi giật ngược 1 ATR M5.

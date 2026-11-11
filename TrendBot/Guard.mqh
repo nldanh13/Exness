@@ -117,7 +117,8 @@ double GuardInitialR(const ulong t, const double open, const double sl)
 // Khung (phut) cho keo SL va dem nen: InpGuardTrailTFmin, 0 = theo khung tu vao lenh (v5.10.8)
 int GuardTFmin() { return InpGuardTrailTFmin > 0 ? InpGuardTrailTFmin : InpGuardAutoEntry ? InpGuardAutoTFmin : 15; }
 
-void GuardRelease() { if(g_gATR != INVALID_HANDLE) IndicatorRelease(g_gATR); g_gATR = INVALID_HANDLE; }
+void GuardExitRelease();
+void GuardRelease() { if(g_gATR != INVALID_HANDLE) IndicatorRelease(g_gATR); g_gATR = INVALID_HANDLE; GuardExitRelease(); }
 
 void GuardProfitLock(const ulong t, const bool buy, const double open, const double sl, const double tp)
 {
