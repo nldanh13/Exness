@@ -83,19 +83,9 @@ void RefreshClosedPL()
 {
    if(!g_plDirty && TimeCurrent() - g_lastPLCalc < 60) return;
    datetime epoch = (datetime)GVGet("epoch", 0);
-   datetime today = DayStart();
-   if(!HistorySelect(epoch, TimeCurrent() + 60)) return;
    double all = 0, day = 0;
-   for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
-   {
-      ulong d = HistoryDealGetTicket(i);
-      if(d == 0) continue;
-      if(HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol ||
-         HistoryDealGetInteger(d, DEAL_MAGIC) != (long)P_Magic) continue;
-      double net = DealNet(d);
-      all += net;
-      if((datetime)HistoryDealGetInteger(d, DEAL_TIME) >= today) day += net;
-   }
+   // Exit deal co the mang Magic cua nguoi dong. Origin la deal VAO cua P_Magic.
+   if(!LedgerMainClosedPL(epoch, all, day)) return;
    g_closedPL    = all;
    g_closedToday = day;
    g_plDirty     = false;
