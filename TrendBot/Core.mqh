@@ -77,6 +77,8 @@ bool TradeDone(const bool sent, const string kind, const string detail = "")
    uint rc = trade.ResultRetcode();
    // Chi DONE / DONE_PARTIAL moi la da khop; PLACED chi la da dat lenh, chua chac khop
    bool ok = sent && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
+   // DONE_PARTIAL: chi khop MOT PHAN. Lenh dong phai tu kiem tra vi the con hay khong (GuardPosLeft), khong coi la da dong het.
+   if(ok && rc == TRADE_RETCODE_DONE_PARTIAL) Print(StringFormat("[%s] %s %s chi khop mot phan", _Symbol, kind, detail));
    if(ok) return true;
    string msg;
    if(!sent && rc == 0)
@@ -139,18 +141,24 @@ void ReleaseMagic() { GlobalVariableDel(MagicPrefix() + IntegerToString(ChartID(
 // roi dua nguoc vao backtest. File Common\Files\TrendBot_truotgia.csv.
 void LogSlippage(const bool isBuy, const double fill)
 {
-   if(MQLInfoInteger(MQL_TESTER) || g_reqPrice <= 0) return;
+   if(g_reqPrice <= 0) return;
+   LogSlippageAt(isBuy, g_reqPrice, g_reqSpread, fill, (long)P_Magic);
+   g_reqPrice = 0;
+}
+// Ghi truot gia vao lenh cho moi loai lenh (v5.10.17): ca lenh tu vao / nhoi magic 0 cua bo 05 / 06
+void LogSlippageAt(const bool isBuy, const double req, const long spread, const double fill, const long magic)
+{
+   if(MQLInfoInteger(MQL_TESTER) || req <= 0 || fill <= 0) return;
    string f = "TrendBot_truotgia.csv";
    bool isNew = !FileIsExist(f, FILE_COMMON);
    int h = FileOpen(f, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ, ',');
    if(h == INVALID_HANDLE) return;
    if(isNew) FileWrite(h, "ThoiGian", "Ma", "Magic", "Chieu", "GiaYeuCau", "GiaKhop", "Truot_diem_batLoi", "Spread_diem_luocGui");
    FileSeek(h, 0, SEEK_END);
-   double slip = (isBuy ? fill - g_reqPrice : g_reqPrice - fill) / _Point;   // duong = khop xau hon
-   FileWrite(h, TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS), _Symbol, (long)P_Magic, isBuy ? "Buy" : "Sell",
-             DoubleToString(g_reqPrice, _Digits), DoubleToString(fill, _Digits), DoubleToString(slip, 0), g_reqSpread);
+   double slip = (isBuy ? fill - req : req - fill) / _Point;   // duong = khop xau hon
+   FileWrite(h, TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS), _Symbol, magic, isBuy ? "Buy" : "Sell",
+             DoubleToString(req, _Digits), DoubleToString(fill, _Digits), DoubleToString(slip, 0), spread);
    FileClose(h);
-   g_reqPrice = 0;
 }
 
 // Truot gia luc cham SL / TP (v5.10.13): lenh dung khong bao dam khop dung gia dat khi thi truong chay manh.
