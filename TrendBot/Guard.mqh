@@ -254,6 +254,16 @@ void GuardBucketSetLock(const int bucket)
    GlobalVariableSet(GKey(bucket == 1 ? "humanLock" : "algoLock"), GDayKey(TimeCurrent()));
    if(!MQLInfoInteger(MQL_TESTER)) GlobalVariablesFlush();
 }
+// So tien lo thuat toan duoc phep them theo bucket ngay (co the = 0).
+double GuardAlgoBudgetRemaining()
+{
+   if(P_GuardAlgoDayPct <= 0) return DBL_MAX;
+   if(GuardBucketLocked(2)) return 0;
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   if(eq <= 0) return 0;
+   double used = MathMin(0.0, GuardManualDayPL(DayStart(), 2) + DayPL());
+   return MathMax(0.0, eq * P_GuardAlgoDayPct / 100.0 + used);
+}
 
 //--- Chot loi lenh tay (v5.10.4): hoa von o InpGuardBreakevenR x R, roi keo SL theo InpGuardTrailATR x ATR khung InpGuardTrailTFmin.
 // R = khoang cach gia vao -> SL luc bot thay lenh lan dau (luu Global Variable theo ticket, qua khoi dong lai).
