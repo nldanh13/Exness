@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.19
+# Hướng dẫn bot BTC (MT5) v5.10.20
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -756,3 +756,7 @@ Xử lý lỗi:
 - **Mã ở chế độ "chỉ đóng lệnh":** không mở lệnh mới, vẫn chốt lời / đóng được.
 - **Đóng lệnh thất bại** (thị trường đóng, giá đổi, sàn từ chối): chờ 5 giây rồi thử lại, không gửi liên tục mỗi giây và không làm đầy nhật ký.
 - **Tự vào:** bỏ qua khi chưa có giá hoặc SL gần hơn khoảng cách tối thiểu sàn cho phép (sàn sẽ từ chối).
+
+## Rà soát rủi ro v5.10.20
+
+Xem [phân tích định lượng và hướng dẫn thử nghiệm](RA-SOAT-RUI-RO-5.10.20.md): SL theo ATR và vốn tối thiểu dựa trên giá trị tick / lot thực tế; lọc tâm lý theo chiến lược; nhồi giảm khối lượng nếu sàn cho phép; khóa theo bucket lệnh tay 1%/thuật toán 2%; snapshot peak equity và backtest bộ 05/06 khi bật `InpGuardBacktest`. Chế độ đóng lệnh vẫn đồng bộ và cần xác nhận server vì lệnh async không bảo đảm đóng nguyên tử. Chưa compile hay xác minh lợi nhuận trên MT5.
