@@ -240,7 +240,7 @@ void GuardPyramid()
 // Lenh mo truoc khi bat bao ve (lenh cu) khong tinh, tru khi InpGuardOldTrades. Dang giu ca 2 chieu: khong lam gi.
 // Nhom lenh (v5.10.11, InpGuardExitScope): 0 = chi lenh bot mo (ghi chu "TB tu vao" / "TB nhoi tay"), lenh ban tu dat khong bi
 // cong lai hay dong theo; 1 = moi lenh tay cung ma (nhu v5.10.9).
-datetime g_gbLast = 0;
+ulong    g_gbLast = 0;         // GetTickCount64 (ms)
 int      g_grEMA = INVALID_HANDLE, g_grATR = INVALID_HANDLE;
 
 void GuardExitRelease()
@@ -271,7 +271,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
    if(candles && barAfter && against1 && with2 && body1 >= body2 && body1 >= 0.5 * atr)
    { why = StringFormat("nen %s nhan chim %s", m, buy ? "giam" : "tang"); return true; }
    // Giat nguoc (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh). Bat ngay, khong
-   // cho nen dong. ext = gia tot nhat GHI NHAN SAU KHI lop dau khop (v5.10.11, GuardExit cap nhat moi giay) - khong dung dinh / day
+   // cho nen dong. ext = gia tot nhat SAU KHI lop dau khop, tinh tu moi tick (v5.10.12, GuardExit doc CopyTicksRange) - khong dung dinh / day
    // cua nen da co tu truoc luc vao lenh.
    if(InpGuardSpikeATR > 0)
    {
@@ -296,8 +296,8 @@ bool GuardBotMade()
 void GuardExit()
 {
    if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
-   if(TimeCurrent() - g_gbLast < 1 || g_gOtherChart != 0) return;
-   g_gbLast = TimeCurrent();
+   if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
+   g_gbLast = GetTickCount64();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
    datetime since = GuardSince();
@@ -358,11 +358,23 @@ void GuardExit()
 
    string why = "", rev = "";
    // Gia tot nhat tu luc lop dau khop (cho chot khi giat nguoc): bat dau tu gia vao, cap nhat moi giay
-   string extKey = GKey("ext" + IntegerToString((long)firstT));
-   double pxNow = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   // Doc MOI tick tu lan kiem tra truoc (CopyTicksRange), khong chi gia luc kiem tra, nen khong bo sot dinh / day giua hai lan.
+   string extKey = GKey("ext" + IntegerToString((long)firstT)), extMsKey = GKey("extms" + IntegerToString((long)firstT));
    double ext = GlobalVariableCheck(extKey) ? GlobalVariableGet(extKey) : firstOpen;
+   ulong  fromMs = GlobalVariableCheck(extMsKey) ? (ulong)GlobalVariableGet(extMsKey) : (ulong)firstTime * 1000;
+   MqlTick tk[];
+   int nt = CopyTicksRange(_Symbol, tk, COPY_TICKS_INFO, fromMs, 0);
+   ulong lastMs = fromMs;
+   for(int i = 0; i < nt; i++)
+   {
+      double p = buy ? tk[i].bid : tk[i].ask;
+      if(p > 0 && (buy ? p > ext : p < ext)) ext = p;
+      if((ulong)tk[i].time_msc > lastMs) lastMs = (ulong)tk[i].time_msc;
+   }
+   double pxNow = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    if(pxNow > 0 && (buy ? pxNow > ext : pxNow < ext)) ext = pxNow;
    GlobalVariableSet(extKey, ext);
+   GlobalVariableSet(extMsKey, (double)lastMs);
    string runKey = GKey("run" + IntegerToString((long)firstT));      // da qua muc chot gop, dang de loi chay
    bool running = GlobalVariableCheck(runKey);
    if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, ext, rev))
@@ -390,7 +402,7 @@ void GuardExit()
    int closed = 0;
    for(int i = 0; i < cnt; i++)
       if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) closed++;
-   if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); }
+   if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); GlobalVariableDel(extMsKey); }
    Notify(StringFormat("[%s] CHOT LOI: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR). Ly do: %s.", _Symbol, closed, cnt,
                        buy ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), rNow, why));
 }

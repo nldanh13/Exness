@@ -647,3 +647,14 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
     đừng vào lệnh tay trên mã đang chạy bộ 05/06, hoặc vào lệnh tay trên mã khác.
   - Khóa "một chart mỗi mã" và trạng thái dừng hẳn dùng Global Variable, chỉ có hiệu lực trong CÙNG một MT5. Không chạy bot cho
     cùng tài khoản trên hai máy / hai VPS cùng lúc.
+
+**Tốc độ phản ứng (cùng bản 5.10.12):**
+- Thêm timer 500 ms: bảo vệ lệnh tay và chốt lời linh hoạt chạy cả khi không có tick mới, không chỉ trong `OnTick()`.
+  Các bước an toàn chạy trước, hiển thị / nhật ký chạy sau. Bộ đếm dùng đồng hồ máy (`GetTickCount64`) thay vì giờ server
+  (giờ server đứng yên khi không có tick). Bảo vệ lệnh tay kiểm tra mỗi 1 giây (trước 2 giây), chốt linh hoạt 4 lần / giây.
+- Giá tốt nhất kể từ khi khớp (cho chốt khi giật ngược) đọc MỌI tick bằng `CopyTicksRange`, không bỏ sót đỉnh / đáy giữa hai lần kiểm tra.
+- Đo thời gian xử lý: bảng trên chart và file trạng thái (`xuly=`) ghi thời gian trung bình, lớn nhất và số lần > 100 ms.
+- Trượt giá khi chạm SL / TP: ghi thêm vào `TrendBot_truotgia.csv` (cột Chiều = "SL Buy", "TP Sell"..., cả lệnh magic 0),
+  GiaYeuCau = mức SL / TP, GiaKhop = giá đóng thật. Bấm "Gửi nhật ký" sau vài tuần demo để đo.
+- Giới hạn không sửa được: EA chỉ chạy khi MT5 mở và có mạng. SL / TP nằm trên máy chủ nên vẫn hoạt động, còn chốt gộp,
+  chốt khi đảo chiều, kéo SL, tự vào thì dừng. Dùng VPS để chạy liên tục. SL không bảo đảm khớp đúng giá khi thị trường chạy mạnh.

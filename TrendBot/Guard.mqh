@@ -10,7 +10,7 @@
 //+------------------------------------------------------------------+
 ulong    g_gSeen[];            // lenh tay da xem (de chi xu ly "lenh moi" 1 lan)
 bool     g_gInit      = false;
-datetime g_gLast      = 0;
+ulong    g_gLast      = 0;      // GetTickCount64 (ms): chay duoc ca tu OnTimer khi khong co tick (TimeCurrent dung yen)
 
 // Trang thai luu qua lan khoi dong lai (Global Variables cua terminal)
 string GKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_" + k; }
@@ -215,8 +215,8 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
 void GuardManual()
 {
    if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
-   if(TimeCurrent() - g_gLast < 2) return;
-   g_gLast = TimeCurrent();
+   if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.12: 2 giay)
+   g_gLast = GetTickCount64();
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);

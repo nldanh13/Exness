@@ -55,6 +55,7 @@ void WriteStatus()
    FileWriteString(h, "tien=" + AccountInfoString(ACCOUNT_CURRENCY) + "\r\n");
    FileWriteString(h, "laihomnay=" + DoubleToString(DayPL(), 2) + "\r\n");
    FileWriteString(h, "trangthai=" + (IsHalted() ? "DUNG HAN (sut giam)" : g_status) + "\r\n");
+   FileWriteString(h, "xuly=" + TickTimeText() + "\r\n");
    FileWriteString(h, "choGD=" + (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED) ? "1" : "0") + "\r\n");
    FileClose(h);
 }

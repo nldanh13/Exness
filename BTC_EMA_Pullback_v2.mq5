@@ -615,6 +615,8 @@ int OnInit()
    trade.SetDeviationInPoints(100);
 
    TryInitState();          // neu chua dang nhap, se thu lai o cac tick sau
+   // Timer 500 ms (v5.10.12): kiem tra an toan lenh tay / chot loi ca khi khong co tick moi (thi truong im, tick bi gop)
+   if(!MQLInfoInteger(MQL_TESTER) && InpGuardManual) EventSetMillisecondTimer(500);
    return INIT_SUCCEEDED;
 }
 
@@ -691,6 +693,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 
 void OnDeinit(const int reason)
 {
+   EventKillTimer();
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
@@ -784,14 +787,36 @@ bool FundingOk(const bool buy)
    }
    return true;
 }
+void OnTickBody();
+// An toan truoc (bao ve lenh tay, chot loi), hien thi / bao cao sau. Goi tu OnTick va OnTimer (v5.10.12).
+void SafetyStep()
+{
+   GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
+   GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+}
+
+void OnTimer()
+{
+   if(!g_stateReady && !TryInitState()) return;
+   ulong t0 = GetMicrosecondCount();
+   SafetyStep();
+   TickTimeRecord(GetMicrosecondCount() - t0);
+}
+
 void OnTick()
 {
+   ulong t0 = GetMicrosecondCount();
+   OnTickBody();
+   TickTimeRecord(GetMicrosecondCount() - t0);
+}
+
+void OnTickBody()
+{
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
-   GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
+   SafetyStep();
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
-   GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);
@@ -1000,6 +1025,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 {
    if(trans.type != TRADE_TRANSACTION_DEAL_ADD || !g_stateReady) return;
    if(!HistoryDealSelect(trans.deal)) return;
+   LogStopSlippage(trans.deal);                     // truot gia khi cham SL / TP (moi magic tren ma nay, v5.10.12)
    if(HistoryDealGetInteger(trans.deal, DEAL_MAGIC) != (long)P_Magic ||
       HistoryDealGetString(trans.deal, DEAL_SYMBOL) != _Symbol) return;
    g_plDirty = true;                                // tinh lai lai/lo cua bot o tick sau

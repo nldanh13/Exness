@@ -118,7 +118,7 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
    color  cTxt = C'205,210,220', cDim = C'130,138,152', cOk = C'90,200,120', cBad = C'235,95,85', cWarn = C'240,180,60';
 
-   string txt[20]; color col[20]; int n = 0;
+   string txt[24]; color col[24]; int n = 0;
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
@@ -199,11 +199,12 @@ void UpdatePanel()
    }
    txt[n] = StringFormat("Spread: %d point ≈ %s mỗi %.2f lot", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
                          PNMoney(PNMinLotMoney(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point), cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));  col[n++] = cDim;
+   if(InpGuardManual) { txt[n] = "Xử lý: " + TickTimeText(); col[n++] = g_tkSlow > 0 ? cWarn : cDim; }
 
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
-   for(int i = 0; i < 20; i++)
+   for(int i = 0; i < 24; i++)
    {
       if(i < n) PNText("l" + IntegerToString(i), x + 10, y + 26 + i * lh, txt[i], col[i], 9);
       else ObjectDelete(0, PN_PFX + "l" + IntegerToString(i));
