@@ -10,6 +10,59 @@ double GVGet(const string key, const double def = 0)
    string k = GVName(key);
    return GlobalVariableCheck(k) ? GlobalVariableGet(k) : def;
 }
+// Snapshot thu 2 (Common Files) cho peak/halt cua chien luoc P_Magic.
+// Ghep voi Terminal GlobalVariables; khong tu dong mo khoa khi khoi dong lai.
+bool g_botRiskLoaded = false;
+ulong g_botRiskSavedMs = 0;
+string BotRiskFile()
+{
+   return "TrendBot_botdd_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" +
+          _Symbol + "_" + IntegerToString((long)P_Magic) + ".txt";
+}
+void BotRiskSave(const bool urgent = false)
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   ulong ms = GetTickCount64();
+   if(!urgent && ms - g_botRiskSavedMs < 30000) return;
+   g_botRiskSavedMs = ms;
+   int h = FileOpen(BotRiskFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h != INVALID_HANDLE)
+   {
+      // Snapshot du cac moc can thiet de khong ResetBaseline khi Global Variables bi mat sau crash.
+      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\r\n" +
+                      (GVGet("halt") > 0 ? "1" : "0") + "\r\n" +
+                      DoubleToString(GVGet("base"), 8) + "\r\n" +
+                      DoubleToString(GVGet("epoch"), 0) + "\r\n" +
+                      DoubleToString(GVGet("dayId", -1), 0) + "\r\n" +
+                      DoubleToString(GVGet("dayEq"), 8) + "\r\n" +
+                      DoubleToString(GVGet("dayLock", -1), 0) + "\r\n");
+      FileClose(h);
+   }
+   GlobalVariablesFlush();
+}
+void BotRiskLoad()
+{
+   if(g_botRiskLoaded) return;
+   g_botRiskLoaded = true;
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   int h = FileOpen(BotRiskFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   double savedPeak = StringToDouble(FileReadString(h));
+   bool savedHalt = StringToInteger(FileReadString(h)) != 0;
+   double savedBase = StringToDouble(FileReadString(h));
+   double savedEpoch = StringToDouble(FileReadString(h));
+   double savedDayId = StringToDouble(FileReadString(h));
+   double savedDayEq = StringToDouble(FileReadString(h));
+   double savedDayLock = StringToDouble(FileReadString(h));
+   FileClose(h);
+   if(savedBase > 0 && !GlobalVariableCheck(GVName("base"))) GlobalVariableSet(GVName("base"), savedBase);
+   if(savedEpoch > 0 && !GlobalVariableCheck(GVName("epoch"))) GlobalVariableSet(GVName("epoch"), savedEpoch);
+   if(savedDayId > 0 && !GlobalVariableCheck(GVName("dayId"))) GlobalVariableSet(GVName("dayId"), savedDayId);
+   if(savedDayEq > 0 && !GlobalVariableCheck(GVName("dayEq"))) GlobalVariableSet(GVName("dayEq"), savedDayEq);
+   if(savedDayLock > 0 && !GlobalVariableCheck(GVName("dayLock"))) GlobalVariableSet(GVName("dayLock"), savedDayLock);
+   if(savedPeak > GVGet("peak")) GlobalVariableSet(GVName("peak"), savedPeak);
+   if(savedHalt && GVGet("halt") <= 0) GlobalVariableSet(GVName("halt"), 1.0);
+}
 
 datetime DayStart()
 {
@@ -85,6 +138,7 @@ void ResetBaseline(const bool unlock)
    g_plDirty = true;
    RefreshClosedPL();
    GlobalVariableSet(GVName("peak"), BotEquityForLimits());
+   BotRiskSave(true);
 }
 
 // Von cua bot luc dau ngay duoc luu vao Global Variable, nen khoi dong lai giua ngay khong reset
@@ -172,6 +226,7 @@ void CheckDrawdown()
    if(++hits >= 2)
    {
       GlobalVariableSet(GVName("halt"), 1);
+      BotRiskSave(true);
       Notify(StringFormat("[%s] BOT DUNG HAN: von cua bot sut %.1f%% tu dinh %.2f. Dat InpResetHalt=true de chay lai.",
                           _Symbol, (1.0 - eq / peak) * 100.0, peak));
       if(P_CloseOnHalt) CloseAll();

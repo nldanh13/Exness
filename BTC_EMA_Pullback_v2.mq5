@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.19"
-#property version   "5.1019"
+#define  BOT_VERSION "5.10.20"
+#property version   "5.1020"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -65,6 +65,7 @@ input int             InpMTFAlign         = 0;          // Đồng thuận đa k
 input bool            InpUseCandle        = false;      // Bắt buộc mẫu nến (pin bar / nhấn chìm)
 
 input group "5. Bộ lọc dữ liệu bên ngoài"
+input bool            InpBreakoutUseSentiment = false;  // Donchian: dùng lọc F&G và funding (mặc định tắt)
 input bool            InpUseFunding       = false;      // Lọc theo funding rate Binance Futures
 input double          InpFundingMax       = 0.03;       // Ngưỡng funding (% mỗi 8 giờ)
 input string          InpFundingSymbol    = "";         // Mã hợp đồng Binance (trống = tự nhận)
@@ -84,11 +85,13 @@ input double          InpEntryPullATR     = 0;          // Chờ giá hồi trư
 input int             InpEntryPullMode    = 0;          // Hết nến mà giá chưa hồi: 0 = bỏ, 1 = vào giá thị trường
 input int             InpReEntryMax       = 0;          // Vào lại sau khi dính SL: tối đa (lần, 0 = tắt)
 input int             InpReEntryBars      = 6;          // Chỉ vào lại trong vòng (số nến khung chính)
+input double          InpPyramidLotFactor = 0.5;        // Hệ số giảm lot mỗi lớp nhồi chính (0–1)
 input int             InpPyramidMax       = 1;          // Nhồi lệnh: tổng số lớp tối đa (1 = tắt)
 input double          InpPyramidStepATR   = 1.0;        // Nhồi thêm khi giá đi tiếp (× ATR)
 input int             InpPyramidTFmin     = 0;          // Kiểm tra nhồi mỗi (phút, 0 = mỗi nến khung chính)
 
 input group "7. Dừng lỗ và chốt lời"
+input double          InpMinSLATRMult     = 1.0;        // SL tối thiểu theo ATR (0 = tắt)
 input double          InpATRMult          = 2.5;        // Dừng lỗ (SL) = ATR ×
 input int             InpSLTFmin          = 0;          // Tính SL theo ATR khung (phút, 0 = khung chính)
 input double          InpRR               = 0.0;        // Chốt lời (TP) = SL × (0 = không đặt TP)
@@ -138,6 +141,8 @@ input double          InpGuardSLPct       = 1.5;        // Lệnh chưa có SL: 
 input double          InpGuardMaxRiskPct  = 3.0;        // Rủi ro tối đa mỗi lệnh tay (% vốn, 0 = tắt)
 input bool            InpGuardNoAverage   = true;       // Đóng ngay lệnh nhồi vào lệnh cùng chiều đang lỗ
 input int             InpGuardMaxHoldH    = 24;         // Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)
+input double          InpGuardHumanDayPct = 0.0;        // Bucket lỗ ngày lệnh tay (% vốn, 0 = tắt)
+input double          InpGuardAlgoDayPct  = 0.0;        // Bucket lỗ ngày thuật toán (% vốn, 0 = tắt)
 input double          InpGuardDayLossPct  = 5.0;        // Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)
 input double          InpGuardMaxDDPct    = 15.0;       // Dừng hẳn khi vốn tài khoản sụt từ đỉnh (%, 0 = tắt)
 input bool            InpGuardOldTrades   = false;      // Áp dụng cả cho lệnh đã mở trước khi bật
@@ -147,6 +152,7 @@ input double          InpGuardTrailATR    = 2.0;        // Sau đó kéo SL theo
 input int             InpGuardTrailTFmin  = 15;         // Khung ATR để kéo SL lệnh tay (phút, 0 = theo khung vào lệnh)
 input double          InpGuardTPR         = 0.0;        // Chốt lời cố định khi lời x R (đặt TP, 0 = tắt)
 input int             InpGuardMaxBars     = 0;          // Đóng lệnh chưa tới hòa vốn sau x nến (0 = tắt)
+input double          InpGuardPyramidLotFactor = 0.5;   // Hệ số giảm lot nhồi lệnh tay (0–1)
 input int             InpGuardPyramidMax  = 1;          // Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)
 input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)
 input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
@@ -156,6 +162,7 @@ input bool            InpGuardRevExit     = false;      // Chốt sớm khi nế
 input double          InpGuardRevMinR     = 0.5;        // Chỉ chốt đảo chiều khi tổng lời ít nhất x R
 input double          InpGuardSpikeATR    = 0.0;        // Chốt ngay khi giá giật ngược x × ATR trong nến đang chạy (0 = tắt)
 input int             InpGuardExitScope   = 0;          // Chốt gộp / đảo chiều áp dụng cho: 0 = chỉ lệnh bot mở, 1 = mọi lệnh tay
+input bool            InpGuardBacktest    = false;      // Cho phép backtest bảo vệ và tự vào/nhồi
 input bool            InpGuardAutoEntry   = false;      // TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)
 input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
 input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
@@ -208,6 +215,7 @@ int             P_OrbStartMin;
 bool            P_OrbNewYork;
 bool            P_DDScale;
 int             P_PyramidMax;
+double          P_PyramidLotFactor;
 double          P_PyramidStepATR;
 int             P_PyramidTFmin;
 int             P_SLTFmin;
@@ -233,6 +241,7 @@ ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
 int             P_TrendEMA;
 int             P_ATRPeriod;
+bool            P_BreakoutUseSentiment;
 bool            P_UseFunding;
 double          P_FundingMax;
 string          P_FundingSymbol;
@@ -253,6 +262,7 @@ int             P_ADXPeriod;
 double          P_ADXMin;
 bool            P_UseCandle;
 double          P_ATRMult;
+double          P_MinSLATRMult;
 double          P_RR;
 double          P_RiskPercent;
 double          P_MaxRiskRoundUp;
@@ -292,6 +302,10 @@ bool            P_ShowPanel;
 ulong           P_Magic;
 string          P_TestLabel;
 int             P_ManageEverySec;
+double          P_GuardPyramidLotFactor;
+double          P_GuardHumanDayPct;
+double          P_GuardAlgoDayPct;
+bool            P_GuardBacktest;
 int             P_Preset;
 void LoadParams()
 {
@@ -309,6 +323,7 @@ void LoadParams()
    P_OrbNewYork = InpOrbNewYork;
    P_DDScale = InpDDScale;
    P_PyramidMax = InpPyramidMax;
+   P_PyramidLotFactor = InpPyramidLotFactor;
    P_PyramidStepATR = InpPyramidStepATR;
    P_PyramidTFmin = InpPyramidTFmin;
    P_SLTFmin = InpSLTFmin;
@@ -334,6 +349,7 @@ void LoadParams()
    P_FastEMA = InpFastEMA;
    P_TrendEMA = InpTrendEMA;
    P_ATRPeriod = InpATRPeriod;
+   P_BreakoutUseSentiment = InpBreakoutUseSentiment;
    P_UseFunding = InpUseFunding;
    P_FundingMax = InpFundingMax;
    P_FundingSymbol = InpFundingSymbol;
@@ -354,6 +370,7 @@ void LoadParams()
    P_ADXMin = InpADXMin;
    P_UseCandle = InpUseCandle;
    P_ATRMult = InpATRMult;
+   P_MinSLATRMult = InpMinSLATRMult;
    P_RR = InpRR;
    P_RiskPercent = InpRiskPercent;
    P_MaxRiskRoundUp = InpMaxRiskRoundUp;
@@ -394,6 +411,10 @@ void LoadParams()
    P_TestLabel = InpTestLabel;
    P_ManageEverySec = InpManageEverySec;
    P_Preset = InpPreset;
+   P_GuardPyramidLotFactor = InpGuardPyramidLotFactor;
+   P_GuardHumanDayPct = InpGuardHumanDayPct;
+   P_GuardAlgoDayPct = InpGuardAlgoDayPct;
+   P_GuardBacktest = InpGuardBacktest;
 }
 bool SetParam(const string k, const string v)
 {
@@ -413,6 +434,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
+   if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
    if(k == "InpEntryPullMode") { P_EntryPullMode = (int)StringToInteger(v); return true; }
    if(k == "InpManualEntry") { P_ManualEntry = (v == "true" || v == "1"); return true; }
@@ -436,6 +458,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpFastEMA") { P_FastEMA = (int)StringToInteger(v); return true; }
    if(k == "InpTrendEMA") { P_TrendEMA = (int)StringToInteger(v); return true; }
    if(k == "InpATRPeriod") { P_ATRPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpBreakoutUseSentiment") { P_BreakoutUseSentiment = (v == "true" || v == "1"); return true; }
    if(k == "InpUseFunding") { P_UseFunding = (v == "true" || v == "1"); return true; }
    if(k == "InpFundingMax") { P_FundingMax = StringToDouble(v); return true; }
    if(k == "InpFundingSymbol") { P_FundingSymbol = v; return true; }
@@ -456,6 +479,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpADXMin") { P_ADXMin = StringToDouble(v); return true; }
    if(k == "InpUseCandle") { P_UseCandle = (v == "true" || v == "1"); return true; }
    if(k == "InpATRMult") { P_ATRMult = StringToDouble(v); return true; }
+   if(k == "InpMinSLATRMult") { P_MinSLATRMult = StringToDouble(v); return true; }
    if(k == "InpRR") { P_RR = StringToDouble(v); return true; }
    if(k == "InpRiskPercent") { P_RiskPercent = StringToDouble(v); return true; }
    if(k == "InpMaxRiskRoundUp") { P_MaxRiskRoundUp = StringToDouble(v); return true; }
@@ -495,6 +519,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpMagic") { P_Magic = (ulong)StringToInteger(v); return true; }
    if(k == "InpTestLabel") { P_TestLabel = v; return true; }
    if(k == "InpManageEverySec") { P_ManageEverySec = (int)StringToInteger(v); return true; }
+   if(k == "InpGuardPyramidLotFactor") { P_GuardPyramidLotFactor = StringToDouble(v); return true; }
+   if(k == "InpGuardHumanDayPct") { P_GuardHumanDayPct = StringToDouble(v); return true; }
+   if(k == "InpGuardAlgoDayPct") { P_GuardAlgoDayPct = StringToDouble(v); return true; }
+   if(k == "InpGuardBacktest") { P_GuardBacktest = (v == "true" || v == "1"); return true; }
    if(k == "InpPreset") { P_Preset = (int)StringToInteger(v); return true; }
    return false;
 }
@@ -557,7 +585,14 @@ int OnInit()
 {
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
-   if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
+   if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;
+   if(MQLInfoInteger(MQL_TESTER) && P_GuardBacktest)
+   {
+      // Moi optimization pass khong duoc thua huong bien global cua pass truoc.
+      GlobalVariablesDeleteAll(GKey(""));
+      GlobalVariableDel(GAcctKey("peak"));
+      GlobalVariableDel(GAcctKey("halt"));
+   }   // het cau hinh: bo qua lan nay
    // Moi chien luoc / khung co Magic rieng, de nhieu bot tren CUNG ma khong quan ly nham lenh cua nhau.
    // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
    if(!(P_Strategy == STRAT_DONCHIAN && P_TF == PERIOD_H4))
@@ -629,6 +664,8 @@ bool g_stateReady = false;
 void ResetRuntimeState()
 {
    g_stateReady   = false;
+   g_botRiskLoaded = false;
+   g_guardRiskLoaded = false;
    currentDay     = -1;
    dayStartEquity = 0;
    g_plDirty      = true;
@@ -641,6 +678,8 @@ bool TryInitState()
       g_status = "Cho dang nhap tai khoan...";
       return false;
    }
+   BotRiskLoad();  // khoi phuc peak/halt cua P_Magic
+   GuardRiskLoad(); // khoi phuc moc peak/halt toan tai khoan; tester khong doc/ghi dia
    // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
    // bi hieu nham la sut giam 66% va bot dung han.
    bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != P_Capital;
@@ -734,7 +773,7 @@ void CheckPendingEntry()
    // spread gian rong, du so lenh trong ngay, cham lo ngay, gan tin My, hoac cac khung nho het dong thuan.
    bool mtf = MTFOk(buy);
    if(!mtf) g_status = "cac khung nho het dong thuan";
-   if(!mtf || !EntryGatesOk() || !FundingOk(buy) || !MarketFiltersOk(buy))
+   if(!mtf || !EntryGatesOk() || !FundingOk(buy, P_Strategy == STRAT_DONCHIAN) || !MarketFiltersOk(buy, P_Strategy == STRAT_DONCHIAN))
    {
       g_pendDir = 0;
       if(hit) g_pendHit++; else g_pendMissed++;
@@ -752,6 +791,7 @@ void CheckPendingEntry()
 // Dieu kien bat buoc truoc moi lan vao lenh moi (dung chung cho vao ngay va vao khi gia hoi ve)
 bool EntryGatesOk()
 {
+   if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { g_status = "Da khoa bucket thuat toan trong ngay"; return false; }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
    // Khoa sut giam ca tai khoan cua bo bao ve (InpGuardMaxDDPct) chan ca chien luoc chinh (v5.10.16)
    if(GuardHalted())    { g_status = "DUNG HAN: von tai khoan sut qua gioi han"; return false; }
@@ -777,9 +817,10 @@ bool EntryGatesOk()
 }
 // Funding qua duong: phe Long dang dong va tra phi cao, de bi thanh ly dong loat -> khong mua duoi.
 // Funding qua am: nguoc lai voi Sell.
-bool FundingOk(const bool buy)
+bool FundingOk(const bool buy, const bool breakout = false)
 {
-   if(!P_UseFunding) return true;
+   // Donchian can giu cac dot bung no; chi loc funding neu nguoi dung chu dong bat.
+   if(!P_UseFunding || (breakout && !P_BreakoutUseSentiment)) return true;
    double f = FundingNow();
    if(f != EMPTY_VALUE && ((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax)))
    {
@@ -796,9 +837,11 @@ void SafetyStep()
 {
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+   BotRiskSave();                   // sao luu peak/halt chien luoc chinh toi da 30s (tester skip)
+   if((IsHalted() || GuardHalted()) && P_CloseOnHalt && HasOwnPosition()) CloseAll(); // ca khi thi truong khong co tick
    // Ghi Global Variable xuong dia moi 30 giay (v5.10.18): MT5 chi tu ghi khi tat binh thuong; mat dien / treo may thi
    // moc von, R ban dau, bo dem lenh, khoa ngay... khong bi mat qua 30 giay gan nhat.
-   if(GetTickCount64() - g_gvFlush >= 30000) { g_gvFlush = GetTickCount64(); GlobalVariablesFlush(); }
+   if(!MQLInfoInteger(MQL_TESTER) && GetTickCount64() - g_gvFlush >= 30000) { g_gvFlush = GetTickCount64(); GlobalVariablesFlush(); }
 }
 
 void OnTimer()
@@ -900,9 +943,9 @@ void OnTickBody()
    bool sellSignal = P_AllowSell && sellBase
                      && (!P_UseHTF || (P_HTFMacd ? htfDn : htfClose < htfEma)) && adxOk
                      && (!P_UseCandle || BearCandle()) && MTFOk(false);
-   if((buySignal || sellSignal) && !FundingOk(buySignal)) return;
+   if((buySignal || sellSignal) && !FundingOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
 
-   if((buySignal || sellSignal) && !MarketFiltersOk(buySignal)) return;
+   if((buySignal || sellSignal) && !MarketFiltersOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
 
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
@@ -962,7 +1005,7 @@ void CheckReEntry()
    double c = iClose(_Symbol, tf, 1), fast, atr;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr)) return;
    if(buy ? (c <= g_reLevel || c <= fast) : (c >= g_reLevel || c >= fast)) return;
-   if(!MTFOk(buy) || !EntryGatesOk() || !FundingOk(buy) || !MarketFiltersOk(buy)) return;
+   if(!MTFOk(buy) || !EntryGatesOk() || !FundingOk(buy, P_Strategy == STRAT_DONCHIAN) || !MarketFiltersOk(buy, P_Strategy == STRAT_DONCHIAN)) return;
    g_sigSL = 0; g_sigTP = 0;
    int r = SendEntry(buy, atr, true);
    if(r == 0) { lastReBar = 0; return; }   // chua lay duoc khoa chung: thu lai o tick sau
@@ -975,7 +1018,9 @@ void CheckReEntry()
 int SendEntry(const bool buySignal, const double atr, const bool fromPending)
 {
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
-   double slDist   = g_sigSL > 0 ? g_sigSL : SLAtr(atr) * P_ATRMult;
+   double slAtr = SLAtr(atr);
+   double slDist   = g_sigSL > 0 ? g_sigSL : slAtr * P_ATRMult;
+   if(P_MinSLATRMult > 0 && slAtr > 0) slDist = MathMax(slDist, slAtr * P_MinSLATRMult);
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 
@@ -991,6 +1036,11 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    double lots = CalcLots(slDist);
    MqlTick tick;
    if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return -1; }
+   if(g_lastRisk > GuardAlgoBudgetRemaining() + 1e-8)
+   {
+      g_status = "Bucket thuat toan con lai khong du cho rui ro lenh moi";
+      GroupUnlock(); return -1;
+   }
    GroupReserve(g_lastRisk);
 
    bool ok;

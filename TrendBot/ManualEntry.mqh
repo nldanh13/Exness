@@ -178,8 +178,8 @@ double GuardOpenRisk(const bool buy)
 
 void GuardPyramid()
 {
-   if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
+   if(!InpGuardManual || InpGuardPyramidMax <= 1 || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || !IsHedging()) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || GuardBucketLocked(1) || GuardBucketLocked(2) || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!GuardTradeOk()) return;
 
@@ -219,13 +219,22 @@ void GuardPyramid()
    int tc = TrendCount(buy);
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
+   // Khong the nhoi 0.005 lot neu san chi cho 0.01: bo lop, KHONG lam tron len (pha vo cap so nhan).
+   if(P_GuardPyramidLotFactor <= 0 || P_GuardPyramidLotFactor > 1) return;
+   double newLot = NormalizeVolume(lot * P_GuardPyramidLotFactor);
+   if(newLot < SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN) - 1e-9)
+   {
+      if(ShouldNotify("guardPyrMin", 3600)) PrintFormat("Khong nhoi: lot %.2f x he so %.2f < lot toi thieu. Can von du de mo lop lon hon.", lot, P_GuardPyramidLotFactor);
+      return;
+   }
    double sl = NormalizeDouble(buy ? px - lastR : px + lastR, _Digits);
    // Tong rui ro TRUOC khi gui (v5.10.13): rui ro con mo cua cac lop (sau hoa von ~0) + lop moi khong vuot InpGuardMaxRiskPct
    double eq = AccountInfoDouble(ACCOUNT_EQUITY), newRisk = 0;
    double openRisk = GuardOpenRisk(buy);
    if(openRisk < 0 || eq <= 0) return;
-   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, lot, px, sl, newRisk)) return;
+   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, newLot, px, sl, newRisk)) return;
    newRisk = MathAbs(newRisk);
+   if(newRisk > GuardAlgoBudgetRemaining() + 1e-8) return;
    if(InpGuardMaxRiskPct > 0 && openRisk + newRisk > eq * InpGuardMaxRiskPct / 100.0)
    {
       if(ShouldNotify("pyrRisk", 3600))
@@ -237,13 +246,13 @@ void GuardPyramid()
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
    double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB nhoi tay")
-                                         : trade.Sell(lot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
+   bool ok = PrepSend() && TradeDone(buy ? trade.Buy(newLot, _Symbol, 0, sl, 0, "TB nhoi tay")
+                                         : trade.Sell(newLot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
    if(ok) { GuardMarkBotMade(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] NHOI THEO XU HUONG: them lop %d/%d %s %.2f lot, SL %.2f. Cac lop truoc da hoa von; %d/9 khung cung chieu.",
-                          _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
+                          _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", newLot, sl, tc));
 }
 
 //--- Chot loi linh hoat cho chuoi lenh tay cung chieu tren ma nay (v5.10.9). R = so tien lop DAU TIEN mat neu cham SL ban dau
@@ -306,6 +315,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 
 // Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
 ulong g_gbWait = 0;
+datetime g_gbTestLast = 0;
 bool GuardBotMade()
 {
    if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_IDENTIFIER))))) return true;
@@ -315,11 +325,20 @@ bool GuardBotMade()
 
 void GuardExit()
 {
-   if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
-   if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
-   if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;              // vua dong that bai: doi 5 giay
+   if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest)) return;
+   if(g_gOtherChart != 0) return;
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      if(g_gbTestLast == TimeCurrent()) return;
+      g_gbTestLast = TimeCurrent();
+   }
+   else
+   {
+      if(GetTickCount64() - g_gbLast < 250) return;
+      if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;
+      g_gbLast = GetTickCount64();
+   }
    g_gbWait = 0;
-   g_gbLast = GetTickCount64();
    if(!GuardTradeOk(true)) return;
 
    datetime since = GuardSince();
@@ -491,13 +510,13 @@ int GuardAutoCountToday(datetime &lastLossClose)
 
 void GuardAutoEntry()
 {
-   if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER) || g_gOtherChart != 0) return;
+   if(!InpGuardManual || !InpGuardAutoEntry || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || g_gOtherChart != 0) return;
    int ti = InpGuardAutoTFmin == 1 ? 0 : InpGuardAutoTFmin == 3 ? 1 : InpGuardAutoTFmin == 10 ? 3 :
             InpGuardAutoTFmin == 15 ? 4 : InpGuardAutoTFmin == 30 ? 5 : 2;      // vi tri trong bang xu huong (mac dinh M5)
    ENUM_TIMEFRAMES tf = g_tbTF[ti];
    datetime bar = iTime(_Symbol, tf, 0);
    if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
-   if(GuardDayLocked() || MainStopped()) return;
+   if(GuardDayLocked() || GuardBucketLocked(2) || MainStopped()) return;
    // Bo loc chung voi chien luoc chinh (v5.10.13): khung gio nghi / cuoi tuan / tin (InpSkipWeekend, InpBlock*...) va spread toi da
    string gateWhy = "";
    if(!TimeAllowed(gateWhy)) return;
@@ -521,7 +540,7 @@ void GuardAutoEntry()
    // Bo loc thi truong cua chien luoc chinh (v5.10.16): tin My (InpAvoidUSNews), funding, Fear & Greed, su chu y, Nasdaq.
    // Cac ham nay ghi g_status cua chien luoc chinh, nen giu lai trang thai cu.
    string keepStatus = g_status;
-   bool mktOk = FundingOk(dir > 0) && MarketFiltersOk(dir > 0);
+   bool mktOk = FundingOk(dir > 0, false) && MarketFiltersOk(dir > 0, false);
    g_status = keepStatus;
    if(!mktOk) return;
 
@@ -557,6 +576,17 @@ void GuardAutoEntry()
    if(budget > 0 && step > 0) lot = MathMin(MathFloor(budget / loss1 / step + 1e-9) * step, vmax);
    lot = NormalizeDouble(lot, 2);
    double riskMin = loss1 * vmin;
+   // Hard budget: voi 0.01 BTC neu SL gay lo > 2% von thi bo tin hieu, khong mo roi moi khoa.
+   if(P_GuardAlgoDayPct > 0)
+   {
+      double remaining = GuardAlgoBudgetRemaining();
+      if(remaining <= 0 || loss1 * lot > remaining + 1e-8)
+      {
+         if(ShouldNotify("autoBudget", 86400))
+            Notify(StringFormat("[%s] BO TU VAO: rui ro du kien %.2f > bucket thuat toan con %.2f %s. Min lot khong phu hop von.", _Symbol, loss1 * lot, remaining, AccountInfoString(ACCOUNT_CURRENCY)));
+         return;
+      }
+   }
    bool tooBig = lot < vmin - 1e-9 || (cap > 0 && loss1 * lot > cap * 1.0001);
    if(tooBig)
    {
@@ -566,8 +596,9 @@ void GuardAutoEntry()
       {
          g_aeSkipDay = dayKey;
          Notify(StringFormat("[%s] BO TIN HIEU TU VAO: %.2f lot (nho nhat) voi SL %.2f%% se lo %.0f %s = %.1f%% von, vuot gioi han %.1f%%. "
-                             "Can von lon hon, SL gan hon hoac noi gioi han. Bao 1 lan / ngay.", _Symbol, vmin, slp, riskMin,
-                             AccountInfoString(ACCOUNT_CURRENCY), riskMin / eq * 100.0, limPct));
+                             "Can von >= %.0f (1%%) hoac %.0f (2%%) %s, khong noi rui ro de ep lot. Bao 1 lan/ngay.", _Symbol, vmin, slp, riskMin,
+                             AccountInfoString(ACCOUNT_CURRENCY), riskMin / eq * 100.0, limPct,
+                             riskMin / 0.01, riskMin / 0.02, AccountInfoString(ACCOUNT_CURRENCY)));
       }
       return;
    }
@@ -654,6 +685,7 @@ void ManualUIDelete()
 void ManualFire(const bool buy)
 {
    if(IsHalted() || GuardHalted()) { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh, ke ca nhoi."); return; }
+   if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { Notify("[" + _Symbol + "] Da khoa bucket thuat toan, khong vao / nhoi."); return; }
    int dir = OwnDirection();
    // Cung bo loc voi bot cho CA vao moi lan nhoi tay (v5.10.19): truoc day nut nhoi bo qua lo ngay, gio nghi, spread, tin My
    string nw = "", gw = "";

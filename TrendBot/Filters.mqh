@@ -307,11 +307,13 @@ bool USNewsNear(string &name)
    return false;
 }
 
-bool MarketFiltersOk(const bool isBuy)
+bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
 {
    RefreshDailyLive();
    datetime yday = DayOf(TimeCurrent()) - 86400;          // chi dung so lieu da biet: hom qua tro ve truoc
-   if(P_UseFearGreed)
+   // Tam ly qua mua/qua ban khong phai tin hieu dao chieu bat buoc cho breakout.
+   // EMA pullback va auto-entry M5 van duoc ap dung neu bat F&G.
+   if(P_UseFearGreed && (!breakout || P_BreakoutUseSentiment))
    {
       double f = DailyAvg(g_fngT, g_fngV, yday, 1);
       if(f != EMPTY_VALUE && ((isBuy && f >= P_FngGreedMax) || (!isBuy && f <= P_FngFearMin)))
