@@ -149,6 +149,16 @@ bool MainStopped() { return IsHalted() || DailyLossHit(); }
 // Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable theo ticket (v5.10.13). Truoc chi dua vao ghi chu "TB ...",
 // ma san co the doi / cat ghi chu. Trong MT5 ticket vi the = ticket lenh da mo no (trade.ResultOrder()).
 void GuardMarkBotMade(const ulong ticket) { if(ticket > 0) GlobalVariableSet(GKey("bm" + IntegerToString((long)ticket)), 1); }
+// Lenh TU VAO (khong tinh nhoi) - danh dau rieng de dem so lenh/ngay khong phu thuoc ghi chu (v5.10.14)
+void GuardMarkAuto(const ulong ticket)
+{
+   if(ticket == 0) return;
+   GuardMarkBotMade(ticket);
+   GlobalVariableSet(GKey("ba" + IntegerToString((long)ticket)), 1);
+   MqlDateTime d; TimeToStruct(TimeCurrent(), d);
+   string k = GKey("acnt" + IntegerToString(d.year * 1000 + d.day_of_year));    // bo dem trong ngay (gio server)
+   GlobalVariableSet(k, (GlobalVariableCheck(k) ? GlobalVariableGet(k) : 0) + 1);
+}
 
 // Rui ro tien te cua cac lenh tay dang mo cung chieu tren ma nay neu tat ca cham SL (lop da hoa von tinh 0)
 double GuardOpenRisk(const bool buy)
@@ -430,11 +440,17 @@ int GuardAutoCountToday(datetime &lastLossClose)
       if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
       datetime t = (datetime)HistoryDealGetInteger(d, DEAL_TIME);
       long entry = HistoryDealGetInteger(d, DEAL_ENTRY);
-      if(entry == DEAL_ENTRY_IN && t >= dayStart && StringFind(HistoryDealGetString(d, DEAL_COMMENT), "TB tu vao") == 0) n++;
+      if(entry == DEAL_ENTRY_IN && t >= dayStart &&
+         (StringFind(HistoryDealGetString(d, DEAL_COMMENT), "TB tu vao") == 0 ||
+          GlobalVariableCheck(GKey("ba" + IntegerToString(HistoryDealGetInteger(d, DEAL_POSITION_ID)))))) n++;
       if(entry != DEAL_ENTRY_IN && lastLossClose == 0 &&
          HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION) < 0)
          lastLossClose = t;
    }
+   // Bo dem rieng (tang moi lan tu vao thanh cong): lay so lon hon, de san doi / cat ghi chu cung khong lam dem thieu
+   MqlDateTime d0; TimeToStruct(TimeCurrent(), d0);
+   string k = GKey("acnt" + IntegerToString(d0.year * 1000 + d0.day_of_year));
+   if(GlobalVariableCheck(k)) n = MathMax(n, (int)GlobalVariableGet(k));
    return n;
 }
 
@@ -515,7 +531,7 @@ void GuardAutoEntry()
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
-   if(ok) GuardMarkBotMade(trade.ResultOrder());
+   if(ok) GuardMarkAuto(trade.ResultOrder());
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f (rui ro %.1f%% von). %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
