@@ -50,6 +50,19 @@ PRESETS = [
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "5",
         "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0",
         "InpGuardTrailTFmin": "0", "InpGuardTPR": "2.0", "InpGuardMaxBars": "12"}),
+    ("06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM.set", [
+        "06. THỬ NGHIỆM: như bộ 05 nhưng nhồi sớm hơn và chốt gộp mọi lớp một lượt",
+        "CHẾ ĐỘ TỰ GIAO DỊCH BẬT: bot tự mở lệnh mà không cần bạn bấm BUY hoặc SELL. CHƯA BACKTEST, chỉ chạy demo.",
+        "SL 0,15% (~110 USD giá, ~3% vốn với 0,01 lot). Lời 0,5R thì dời SL về hòa vốn và nhồi thêm lớp (tối đa 3 lớp).",
+        "Chốt gộp: tổng lời mọi lớp đạt 2R thì đóng hết. Ví dụ đủ 3 lớp thì chốt khi giá đi khoảng 1,2R (~130 USD) từ lớp đầu;",
+        "chỉ 1 lớp thì chốt khi đi 2R (~220 USD). Không đặt TP từng lớp. Kéo SL 2 × ATR M5 sau khi hòa vốn.",
+        "SL gần hơn bộ 05 nên dễ bị quét hơn; spread ~6 USD chiếm khoảng 6% của R.",
+    ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
+        "InpGuardSLPct": "0.15", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3",
+        "InpGuardBreakevenR": "0.5", "InpGuardPyramidStepR": "0.5", "InpGuardBasketR": "2.0",
+        "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "5",
+        "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0",
+        "InpGuardTrailTFmin": "0", "InpGuardTPR": "0.0", "InpGuardMaxBars": "12"}),
 ]
 
 

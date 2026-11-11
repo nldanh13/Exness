@@ -142,6 +142,7 @@ GROUPS = [
         ("InpGuardPyramidMax",   "Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)", "Chỉ trên tài khoản hedging. Lớp mới cùng lot với lớp đầu, SL cách 1R, vẫn là lệnh tay nên mọi luật bảo vệ đều áp dụng."),
         ("InpGuardPyramidStepR", "Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)", "Chỉ nhồi khi mọi lớp đang mở đã dời SL về hòa vốn, nên rủi ro mở của cả chuỗi chỉ khoảng 1 lớp."),
         ("InpGuardPyramidTrend", "Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)", "Đếm theo bảng xu hướng M1 → D1 (giá đóng cửa so với EMA20 / EMA50)."),
+        ("InpGuardBasketR",      "Chốt tất cả các lớp khi tổng lời đạt x R (0 = tắt)", "Cộng lãi đang chạy của mọi lệnh tay cùng chiều trên mã này; đạt x lần R (số tiền lớp đầu mất nếu chạm SL ban đầu) thì đóng hết một lượt. Bật thì không đặt TP từng lớp (bỏ qua Chốt lời cố định). Bot kiểm tra mỗi giây, cần MT5 đang mở."),
         ("InpGuardAutoEntry",       "TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)", "BẬT thì bot tự mở lệnh dù Cho phép mua / bán đang tắt. CHƯA BACKTEST. Vào khi đa số khung cùng chiều và nến vừa hồi về EMA20 rồi đóng cửa bật lại. Lệnh được xử lý như lệnh tay."),
         ("InpGuardAutoTrend",       "Tự vào khi ít nhất x / 9 khung cùng chiều", ""),
         ("InpGuardAutoNeedHTF",     "Tự vào chỉ khi H1 và H4 cũng cùng chiều", "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn."),

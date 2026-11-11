@@ -191,6 +191,69 @@ void GuardPyramid()
                           _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
 }
 
+//--- Chot gop cac lop (v5.10.9, InpGuardBasketR > 0): dong MOI lenh tay cung chieu tren ma nay khi tong lai tha noi
+// (lai + swap cua moi lop) dat InpGuardBasketR x R. R = so tien mat neu lop DAU TIEN cham SL ban dau (khoang cach luc bot
+// thay lenh lan dau, xem GuardInitialR) - cac lop nhoi cung lot nen 1R cua chuoi = 1R cua lop dau.
+// Bat chot gop thi khong dat TP tung lop (InpGuardTPR bi bo qua), de cac lop nhoi chay cung nhau va chot mot luot.
+// Lenh mo truoc khi bat bao ve (lenh cu) khong tinh, tru khi InpGuardOldTrades. Dang giu ca 2 chieu: khong lam gi.
+datetime g_gbLast = 0;
+
+void GuardBasket()
+{
+   if(!InpGuardManual || InpGuardBasketR <= 0 || MQLInfoInteger(MQL_TESTER)) return;
+   if(TimeCurrent() - g_gbLast < 1) return;
+   g_gbLast = TimeCurrent();
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+
+   datetime since = GuardSince();
+   int cnt = 0, dir = 0;
+   double pl = 0, firstOpen = 0, firstVol = 0;
+   ulong firstT = 0;
+   ulong tickets[];
+   datetime firstTime = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsManualSelected()) continue;
+      datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
+      if(ot < since && !InpGuardOldTrades) continue;
+      int d = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
+      if(dir != 0 && d != dir) return;
+      dir = d;
+      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      ArrayResize(tickets, cnt + 1); tickets[cnt++] = t;
+      if(firstT == 0 || ot < firstTime)
+      {
+         firstT = t; firstTime = ot;
+         firstOpen = PositionGetDouble(POSITION_PRICE_OPEN); firstVol = PositionGetDouble(POSITION_VOLUME);
+      }
+   }
+   if(cnt == 0) return;
+
+   // R cua lop dau: chi dung khi da luu luc lenh con SL ban dau; neu chua luu ma SL da ve hoa von thi bo qua (tranh R ~ 0)
+   string key = GKey("r" + IntegerToString((long)firstT));
+   double r = 0;
+   if(GlobalVariableCheck(key)) r = GlobalVariableGet(key);
+   else if(PositionSelectByTicket(firstT))
+   {
+      double sl = PositionGetDouble(POSITION_SL);
+      if(sl > 0 && (dir > 0 ? sl < firstOpen : sl > firstOpen)) r = GuardInitialR(firstT, firstOpen, sl);
+   }
+   if(r <= 0) return;
+   double rMoney = 0;
+   if(!OrderCalcProfit(dir > 0 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, firstVol, firstOpen,
+                       dir > 0 ? firstOpen - r : firstOpen + r, rMoney)) return;
+   rMoney = MathAbs(rMoney);
+   if(rMoney <= 0 || pl < InpGuardBasketR * rMoney) return;
+
+   string why = StringFormat("chot gop %d lop: tong lai %.0f >= %.1fR (%.0f)", cnt, pl, InpGuardBasketR, InpGuardBasketR * rMoney);
+   int closed = 0;
+   for(int i = 0; i < cnt; i++)
+      if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot gop lenh tay", why)) closed++;
+   Notify(StringFormat("[%s] CHOT GOP: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR).", _Symbol, closed, cnt,
+                       dir > 0 ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), pl / rMoney));
+}
+
 //--- Bot tu vao lenh dau tien o che do bao ve lenh tay (v5.10.5, InpGuardAutoEntry, THU NGHIEM - chua backtest)
 // Vao 1 lenh (magic 0, ghi chu "TB tu vao", lot nho nhat, SL cach InpGuardSLPct %) khi:
 //  - khong co lenh tay / lenh cho nao tren ma nay, chua khoa lo ngay, Algo Trading bat

@@ -155,7 +155,7 @@ void UpdatePanel()
                (InpGuardMaxHoldH > 0 ? StringFormat("  ·  đóng lệnh lỗ sau %d giờ", InpGuardMaxHoldH) : "");  col[n++] = cDim;
       txt[n] = "Chốt lời: " + (InpGuardBreakevenR > 0 ? StringFormat("hòa vốn khi lời %.1fR", InpGuardBreakevenR) : "không dời hòa vốn") +
                (InpGuardTrailATR > 0 ? StringFormat("  ·  kéo SL %.1f×ATR M%d", InpGuardTrailATR, GuardTFmin()) : "  ·  không kéo SL") +
-               (InpGuardTPR > 0 ? StringFormat("  ·  TP %.1fR", InpGuardTPR) : "");  col[n++] = cDim;
+               (InpGuardBasketR > 0 ? StringFormat("  ·  chốt gộp mọi lớp ở %.1fR", InpGuardBasketR) : InpGuardTPR > 0 ? StringFormat("  ·  TP %.1fR", InpGuardTPR) : "");  col[n++] = cDim;
       if(InpGuardMaxBars > 0) { txt[n] = StringFormat("Đóng lệnh chưa hòa vốn sau %d nến M%d (%d phút)", InpGuardMaxBars, GuardTFmin(), InpGuardMaxBars * GuardTFmin()); col[n++] = cDim; }
       if(InpGuardPyramidMax > 1)
       {
