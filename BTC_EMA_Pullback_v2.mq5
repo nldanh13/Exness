@@ -788,6 +788,7 @@ void CheckPendingEntry()
 // Dieu kien bat buoc truoc moi lan vao lenh moi (dung chung cho vao ngay va vao khi gia hoi ve)
 bool EntryGatesOk()
 {
+   if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { g_status = "Da khoa bucket thuat toan trong ngay"; return false; }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
    // Khoa sut giam ca tai khoan cua bo bao ve (InpGuardMaxDDPct) chan ca chien luoc chinh (v5.10.16)
    if(GuardHalted())    { g_status = "DUNG HAN: von tai khoan sut qua gioi han"; return false; }
