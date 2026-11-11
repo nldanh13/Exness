@@ -103,6 +103,17 @@ bool GuardPosLeft(const long posId)
    return false;
 }
 
+// Dieu kien gui lenh (v5.10.19): co ket noi may chu, Algo Trading bat, ma cho phep giao dich.
+// closeOnly = true: chi can dong lenh (ma o che do "chi dong" van cho dong).
+bool GuardTradeOk(const bool closeOnly = false)
+{
+   if(!TerminalInfoInteger(TERMINAL_CONNECTED) || !TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return false;
+   long mode = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_MODE);
+   return closeOnly ? mode != SYMBOL_TRADE_MODE_DISABLED : mode == SYMBOL_TRADE_MODE_FULL;
+}
+// Dong lenh that bai (thi truong dong, mat ket noi, gia doi...): cho 5 giay roi thu lai, khong gui lien tuc moi giay (v5.10.19)
+ulong g_gcFailT = 0, g_gcFailMs = 0;
+
 bool IsManualSelected() { return PositionGetInteger(POSITION_MAGIC) == 0 && PositionGetString(POSITION_SYMBOL) == _Symbol; }
 
 double GuardFloating(const ulong ticket)
@@ -113,8 +124,9 @@ double GuardFloating(const ulong ticket)
 
 void GuardClose(const ulong ticket, const string reason)
 {
+   if(ticket == g_gcFailT && GetTickCount64() - g_gcFailMs < 5000) return;
    long posId = PositionSelectByTicket(ticket) ? PositionGetInteger(POSITION_IDENTIFIER) : (long)ticket;
-   if(!(PrepSend() && TradeDone(trade.PositionClose(ticket), "Dong lenh tay", reason))) return;
+   if(!(PrepSend() && TradeDone(trade.PositionClose(ticket), "Dong lenh tay", reason))) { g_gcFailT = ticket; g_gcFailMs = GetTickCount64(); return; }
    if(GuardPosLeft(posId))                                  // khop mot phan: phan con lai se dong o lan kiem tra sau
       Print(StringFormat("[%s] Lenh #%I64u moi dong mot phan, se dong tiep. Ly do: %s", _Symbol, ticket, reason));
    else
@@ -249,6 +261,7 @@ void GuardManual()
    if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.13: 2 giay)
    g_gLast = GetTickCount64();
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
+   if(!TerminalInfoInteger(TERMINAL_CONNECTED)) return;        // mat ket noi: so du / gia cu, khong quyet dinh gi (v5.10.19)
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
    datetime dayStart = TimeCurrent() - (dt.hour * 3600 + dt.min * 60 + dt.sec);

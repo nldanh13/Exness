@@ -181,7 +181,7 @@ void GuardPyramid()
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
    if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
-   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+   if(!GuardTradeOk()) return;
 
    int cnt = 0, dir = 0;
    double lastOpen = 0, lastR = 0, lot = 0;
@@ -305,6 +305,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 }
 
 // Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
+ulong g_gbWait = 0;
 bool GuardBotMade()
 {
    if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_IDENTIFIER))))) return true;
@@ -316,8 +317,10 @@ void GuardExit()
 {
    if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
    if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
+   if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;              // vua dong that bai: doi 5 giay
+   g_gbWait = 0;
    g_gbLast = GetTickCount64();
-   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+   if(!GuardTradeOk(true)) return;
 
    datetime since = GuardSince();
    int cnt = 0, dir = 0;
@@ -351,9 +354,11 @@ void GuardExit()
    if(GlobalVariableCheck(clsKey))
    {
       // Lan truoc da quyet dinh chot nhung lenh dong chi khop mot phan: dong not phan con lai, khong xet lai dieu kien
-      for(int i = 0; i < cnt; i++) if(PrepSend()) TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", "dong not phan con lai");
+      bool fail = false;
+      for(int i = 0; i < cnt; i++) if(PrepSend() && !TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", "dong not phan con lai")) fail = true;
       int left = 0;
       for(int i = 0; i < cnt; i++) if(GuardPosLeft(posIds[i])) left++;
+      if(left > 0 && fail) g_gbWait = GetTickCount64() + 5000;
       if(left == 0) { GlobalVariableDel(clsKey); Notify(StringFormat("[%s] CHOT LOI: da dong not phan con lai (%d lop).", _Symbol, cnt)); }
       return;
    }
@@ -433,8 +438,10 @@ void GuardExit()
       why = StringFormat("loi rut ve duoi muc chot %.1fR", InpGuardBasketR);
    if(why == "") return;
 
+   bool fail = false;
    for(int i = 0; i < cnt; i++)
-      if(PrepSend()) TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why);
+      if(PrepSend() && !TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) fail = true;
+   if(fail) g_gbWait = GetTickCount64() + 5000;
    // Chi tinh la DA DONG khi vi the that su khong con (v5.10.17): khop mot phan (DONE_PARTIAL) van con khoi luong,
    // giu trang thai chot gop de chu ky sau (250 ms) dong tiep phan con lai.
    int closed = 0;
@@ -495,7 +502,7 @@ void GuardAutoEntry()
    string gateWhy = "";
    if(!TimeAllowed(gateWhy)) return;
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
-   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+   if(!GuardTradeOk()) return;
    for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsManualSelected()) return;
    for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
    if(!g_tbReady && !TrendBoardInit()) return;
@@ -526,8 +533,11 @@ void GuardAutoEntry()
    bool   buy = dir > 0;
    double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double slp = InpGuardSLPct > 0 ? InpGuardSLPct : 0.25;
+   if(px <= 0) return;                                      // chua co gia (mat ket noi / chua tai)
    double sl  = NormalizeDouble(buy ? px * (1 - slp / 100.0) : px * (1 + slp / 100.0), _Digits);
    if(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point > MathAbs(px - sl) * 0.2) return;   // spread > 20% R: nhu luat nhoi
+   double stopsMin = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
+   if(stopsMin > 0 && MathAbs(px - sl) < stopsMin * 1.1) return;      // SL gan hon muc san cho phep: san se tu choi
    // Khoi luong tinh TRUOC khi vao (v5.10.10): lo khi cham SL khong vuot ngan sach. Truoc day luon vao lot nho nhat roi de
    // bo bao ve (buoc 4 trong GuardManual) dong / giam lot SAU khi da khop - mat spread va truot gia vo ich.
    //  - InpGuardAutoRiskPct > 0: lot = von x % / lo cua 1 lot tai SL, lam tron xuong theo buoc lot.
@@ -645,9 +655,15 @@ void ManualFire(const bool buy)
 {
    if(IsHalted() || GuardHalted()) { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh, ke ca nhoi."); return; }
    int dir = OwnDirection();
+   // Cung bo loc voi bot cho CA vao moi lan nhoi tay (v5.10.19): truoc day nut nhoi bo qua lo ngay, gio nghi, spread, tin My
+   string nw = "", gw = "";
+   if(DailyLossHit()) { Notify("[" + _Symbol + "] Cham gioi han lo ngay: khong vao / nhoi toi het ngay."); return; }
+   if(P_AvoidUSNews && USNewsNear(nw)) { Notify("[" + _Symbol + "] Gan tin My (" + nw + "): khong vao / nhoi."); return; }
    if(dir != 0)
    {
       if((dir > 0) != buy) { Notify("[" + _Symbol + "] Dang giu lenh nguoc chieu. Bam DONG HET truoc neu muon dao chieu."); return; }
+      if(!TimeAllowed(gw)) { Notify("[" + _Symbol + "] Tam nghi: " + gw + ", chua nhoi."); return; }
+      if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) { Notify("[" + _Symbol + "] Spread qua rong, chua nhoi."); return; }
       // Nhoi tay: chi khi cac lop cu da doi duoc SL ve hoa von (giong luat nhoi cua bot)
       int cnt = 0;
       for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsOwnSelected()) cnt++;

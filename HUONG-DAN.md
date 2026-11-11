@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.18
+# Hướng dẫn bot BTC (MT5) v5.10.19
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -736,3 +736,23 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
 - Bot ghi Global Variable xuống đĩa mỗi 30 giây: tắt MT5 đột ngột (mất điện) không mất mốc vốn, R ban đầu, bộ đếm lệnh, khóa ngày.
 - R ban đầu, giá tốt nhất, trạng thái "để lời chạy" lưu theo mã định danh vị thế (không đổi khi sàn đổi ticket). Lệnh cũ vẫn đọc được.
 - Nhồi lệnh (magic 0) nay cũng tuân thủ giờ nghỉ / cuối tuần, spread tối đa và tránh tin Mỹ, như lệnh tự vào.
+
+## Bảng điều kiện chặn ở mọi đường vào lệnh, xử lý lỗi (v5.10.19)
+✓ = có kiểm tra trước khi gửi lệnh. "—" = không áp dụng theo thiết kế (hai nhóm lệnh có hạn mức lỗ ngày riêng).
+
+| Đường vào lệnh | Dừng hẳn cả tài khoản (15%) | Dừng hẳn / lỗ ngày chiến lược chính (3%) | Khóa ngày lệnh tay (6%) | Giờ nghỉ, cuối tuần | Spread tối đa | Tin Mỹ | Funding, F&G, Nasdaq |
+|---|---|---|---|---|---|---|---|
+| Chiến lược chính: vào mới, chờ giá hồi, vào lại | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| Chiến lược chính: nhồi lớp | ✓ | ✓ | — | ✓ (mới) | ✓ | ✓ (mới) | — |
+| Nút BUY / SELL: vào mới | ✓ | ✓ | — | ✓ | ✓ | ✓ (mới) | — |
+| Nút BUY / SELL: nhồi | ✓ | ✓ (mới) | — | ✓ (mới) | ✓ (mới) | ✓ (mới) | — |
+| Tự vào (bộ 05 / 06) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Nhồi lệnh tay / tự vào | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+
+Nhồi không xét funding, Fear & Greed, Nasdaq vì đó là bộ lọc chọn hướng vào lệnh; lệnh nhồi đã cùng hướng lệnh đầu.
+
+Xử lý lỗi:
+- **Mất kết nối:** bảo vệ lệnh tay tạm dừng quyết định (số dư, giá lúc đó là số cũ); tự vào, nhồi, chốt lời đều chờ có kết nối lại.
+- **Mã ở chế độ "chỉ đóng lệnh":** không mở lệnh mới, vẫn chốt lời / đóng được.
+- **Đóng lệnh thất bại** (thị trường đóng, giá đổi, sàn từ chối): chờ 5 giây rồi thử lại, không gửi liên tục mỗi giây và không làm đầy nhật ký.
+- **Tự vào:** bỏ qua khi chưa có giá hoặc SL gần hơn khoảng cách tối thiểu sàn cho phép (sàn sẽ từ chối).
