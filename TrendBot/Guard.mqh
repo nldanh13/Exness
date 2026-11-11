@@ -11,6 +11,7 @@
 ulong    g_gSeen[];            // lenh tay da xem (de chi xu ly "lenh moi" 1 lan)
 bool     g_gInit      = false;
 ulong    g_gLast      = 0;      // GetTickCount64 (ms): chay duoc ca tu OnTimer khi khong co tick (TimeCurrent dung yen)
+datetime g_gTestLast = 0;   // tester: dong ho gia lap, khong phu thuoc wall-clock
 
 // Trang thai luu qua lan khoi dong lai (Global Variables cua terminal)
 string GKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_" + k; }
@@ -145,6 +146,7 @@ bool GuardPosLeft(const long posId)
 // closeOnly = true: chi can dong lenh (ma o che do "chi dong" van cho dong).
 bool GuardTradeOk(const bool closeOnly = false)
 {
+   if(MQLInfoInteger(MQL_TESTER)) return MQLInfoInteger(MQL_TRADE_ALLOWED) != 0;
    if(!TerminalInfoInteger(TERMINAL_CONNECTED) || !TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return false;
    long mode = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_MODE);
    return closeOnly ? mode != SYMBOL_TRADE_MODE_DISABLED : mode == SYMBOL_TRADE_MODE_FULL;
@@ -325,10 +327,18 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
 void GuardManual()
 {
    if(!InpGuardManual || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest)) return;
-   if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.13: 2 giay)
-   g_gLast = GetTickCount64();
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      if(g_gTestLast == TimeCurrent()) return;
+      g_gTestLast = TimeCurrent();
+   }
+   else
+   {
+      if(GetTickCount64() - g_gLast < 1000) return;
+      g_gLast = GetTickCount64();
+   }
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
-   if(!TerminalInfoInteger(TERMINAL_CONNECTED)) return;        // mat ket noi: so du / gia cu, khong quyet dinh gi (v5.10.19)
+   if(!MQLInfoInteger(MQL_TESTER) && !TerminalInfoInteger(TERMINAL_CONNECTED)) return; // khong xu ly khi mat ket noi
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
    datetime dayStart = TimeCurrent() - (dt.hour * 3600 + dt.min * 60 + dt.sec);
