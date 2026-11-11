@@ -150,6 +150,7 @@ double CalcLots(const double slDistance)
    // Rui ro tinh tren "von cua bot" (cung moc voi gioi han lo), khong phai equity ca tai khoan.
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
    double riskBase   = BotEquity();
+   if(riskBase <= 0 || P_RiskPercent <= 0) return 0;
    double riskMoney  = riskBase * P_RiskPercent / 100.0;
    // Giam co theo sut giam tu dinh von cua bot: < 5% giu nguyen, 5-10% con 50%, > 10% con 25%.
    // Chi tro lai muc chuan khi von lap dinh moi. Khong bao gio tang co de "go".
@@ -215,7 +216,11 @@ double CalcLots(const double slDistance)
    {
       g_status = "Von qua nho cho SL nay, bo qua lenh";
       g_minLotSkips++;
-      PrintFormat("Can %.4f lot < toi thieu %.2f. Bo qua de khong vuot rui ro.", riskMoney / lossPerLot, minL);
+      // VON TOI THIEU PHU THUOC THUC TE vao tick value, volume min va SL/ATR - khong dung muc USD co dinh.
+      double minLoss = minL * lossPerLot;
+      PrintFormat("Can %.4f lot < min %.2f. SL=%.2f: minlot rui ro %.2f %s; can von >= %.2f (1%%) hoac %.2f (2%%). BO lenh.",
+                  riskMoney / lossPerLot, minL, slDistance, minLoss, AccountInfoString(ACCOUNT_CURRENCY),
+                  minLoss / 0.01, minLoss / 0.02);
       return 0;
    }
    if(lots > maxL) lots = maxL;
