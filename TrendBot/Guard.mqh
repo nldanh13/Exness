@@ -20,11 +20,47 @@ int    GDayKey(const datetime t) { MqlDateTime d; TimeToStruct(t, d); return d.y
 // Cham thi dong lenh tay, khong tu vao, khong nhoi, toi khi dat InpResetHalt = true mot lan.
 string GAcctKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + k; }
 bool   GuardHalted() { return GlobalVariableCheck(GAcctKey("halt")); }
+// Dua moc equity / trang thai halt vao file phu; GV van la nguon dang chay.
+// FILE_COMMON dung ten theo account; bo qua file trong tester/optimization.
+bool g_guardRiskLoaded = false;
+ulong g_guardRiskSavedMs = 0;
+string GuardRiskFile() { return "TrendBot_dd_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + ".txt"; }
+void GuardRiskSave(const bool urgent = false)
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   ulong now = GetTickCount64();
+   if(!urgent && now - g_guardRiskSavedMs < 30000) return;
+   g_guardRiskSavedMs = now;
+   int h = FileOpen(GuardRiskFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h != INVALID_HANDLE)
+   {
+      double peak = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
+      FileWriteString(h, DoubleToString(peak, 8) + "\r\n" + (GuardHalted() ? "1" : "0") + "\r\n");
+      FileClose(h);
+   }
+   GlobalVariablesFlush();
+}
+void GuardRiskLoad()
+{
+   if(g_guardRiskLoaded) return;
+   g_guardRiskLoaded = true;
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   int h = FileOpen(GuardRiskFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   double savedPeak = StringToDouble(FileReadString(h));
+   bool savedHalt = StringToInteger(FileReadString(h)) != 0;
+   FileClose(h);
+   double peak = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
+   if(savedPeak > peak) GlobalVariableSet(GAcctKey("peak"), savedPeak);
+   if(savedHalt && !GuardHalted()) GlobalVariableSet(GAcctKey("halt"), (double)TimeCurrent());
+}
+
 void   GuardResetHalt()
 {
    GlobalVariableDel(GAcctKey("halt"));
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
    if(eq > 0) GlobalVariableSet(GAcctKey("peak"), eq);
+   GuardRiskSave(true);
 }
 // true = vua cham hoac dang dung han
 bool GuardCheckAcctDD(const double eq)
@@ -33,10 +69,11 @@ bool GuardCheckAcctDD(const double eq)
    if(InpGuardMaxDDPct <= 0 || eq <= 0) return false;
    string pk = GAcctKey("peak");
    double peak = GlobalVariableCheck(pk) ? GlobalVariableGet(pk) : 0;
-   if(eq > peak) { GlobalVariableSet(pk, eq); return false; }
+   if(eq > peak) { GlobalVariableSet(pk, eq); GuardRiskSave(); return false; }
    double dd = (peak - eq) / peak * 100.0;
    if(dd < InpGuardMaxDDPct) return false;
    GlobalVariableSet(GAcctKey("halt"), (double)TimeCurrent());
+   GuardRiskSave(true);
    Notify(StringFormat("[%s] DUNG HAN: von tai khoan sut %.1f%% tu dinh %.0f (gioi han %.1f%%). Dong lenh tay, ngung tu vao va nhoi. "
                        "Muon chay lai: dat InpResetHalt = true mot lan roi doi ve false.", _Symbol, dd, peak, InpGuardMaxDDPct));
    return true;
@@ -75,6 +112,7 @@ long   GOwnChartOf(const double tok)                        // chart dang mo co 
 }
 bool GuardOwner()
 {
+   if(MQLInfoInteger(MQL_TESTER)) { g_gOtherChart = 0; return true; }
    string n = GOwnPre() + "lock";
    double mine = GOwnTok(ChartID());
    if(!GlobalVariableCheck(n)) GlobalVariableTemp(n);       // tao voi gia tri 0 neu chua co (mat khi tat terminal)
@@ -257,7 +295,7 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
 
 void GuardManual()
 {
-   if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
+   if(!InpGuardManual || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest)) return;
    if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.13: 2 giay)
    g_gLast = GetTickCount64();
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
