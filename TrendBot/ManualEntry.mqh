@@ -179,7 +179,7 @@ double GuardOpenRisk(const bool buy)
 void GuardPyramid()
 {
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || GuardBucketLocked(1) || GuardBucketLocked(2) || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!GuardTradeOk()) return;
 
@@ -314,6 +314,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 
 // Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
 ulong g_gbWait = 0;
+datetime g_gbTestLast = 0;
 bool GuardBotMade()
 {
    if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_IDENTIFIER))))) return true;
@@ -324,10 +325,19 @@ bool GuardBotMade()
 void GuardExit()
 {
    if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest)) return;
-   if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
-   if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;              // vua dong that bai: doi 5 giay
+   if(g_gOtherChart != 0) return;
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      if(g_gbTestLast == TimeCurrent()) return;
+      g_gbTestLast = TimeCurrent();
+   }
+   else
+   {
+      if(GetTickCount64() - g_gbLast < 250) return;
+      if(g_gbWait > 0 && GetTickCount64() < g_gbWait) return;
+      g_gbLast = GetTickCount64();
+   }
    g_gbWait = 0;
-   g_gbLast = GetTickCount64();
    if(!GuardTradeOk(true)) return;
 
    datetime since = GuardSince();
@@ -505,7 +515,7 @@ void GuardAutoEntry()
    ENUM_TIMEFRAMES tf = g_tbTF[ti];
    datetime bar = iTime(_Symbol, tf, 0);
    if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
-   if(GuardDayLocked() || MainStopped()) return;
+   if(GuardDayLocked() || GuardBucketLocked(2) || MainStopped()) return;
    // Bo loc chung voi chien luoc chinh (v5.10.13): khung gio nghi / cuoi tuan / tin (InpSkipWeekend, InpBlock*...) va spread toi da
    string gateWhy = "";
    if(!TimeAllowed(gateWhy)) return;
@@ -565,6 +575,18 @@ void GuardAutoEntry()
    if(budget > 0 && step > 0) lot = MathMin(MathFloor(budget / loss1 / step + 1e-9) * step, vmax);
    lot = NormalizeDouble(lot, 2);
    double riskMin = loss1 * vmin;
+   // Hard budget: voi 0.01 BTC neu SL gay lo > 2% von thi bo tin hieu, khong mo roi moi khoa.
+   if(P_GuardAlgoDayPct > 0)
+   {
+      double spent = MathMin(0.0, GuardManualDayPL(DayStart(), 2) + DayPL());
+      double remaining = eq * P_GuardAlgoDayPct / 100.0 + spent;
+      if(remaining <= 0 || loss1 * lot > remaining + 1e-8)
+      {
+         if(ShouldNotify("autoBudget", 86400))
+            Notify(StringFormat("[%s] BO TU VAO: rui ro du kien %.2f > bucket thuat toan con %.2f %s. Min lot khong phu hop von.", _Symbol, loss1 * lot, remaining, AccountInfoString(ACCOUNT_CURRENCY)));
+         return;
+      }
+   }
    bool tooBig = lot < vmin - 1e-9 || (cap > 0 && loss1 * lot > cap * 1.0001);
    if(tooBig)
    {
