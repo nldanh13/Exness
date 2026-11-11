@@ -311,6 +311,10 @@ void PyramidStep(const bool addOnly = false)
    if(!MTFOk(buy)) return;                                   // cac khung nho/lon chua dong thuan thi chua nhoi
    if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
+   // Gio nghi / cuoi tuan va tin My (v5.10.19): nhoi la them rui ro, phai qua cung bo loc nhu lenh vao moi
+   string pw = "", pn = "";
+   if(!TimeAllowed(pw)) return;
+   if(P_AvoidUSNews && USNewsNear(pn)) return;
 
    // Doi SL cac lenh cu ve it nhat hoa von
    for(int i = PositionsTotal() - 1; i >= 0; i--)
