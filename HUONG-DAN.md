@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.20
+# Hướng dẫn bot BTC (MT5) v5.10.21
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -148,6 +148,9 @@ File `ket-qua-so-sanh.csv` trong zip có một dòng cho mỗi lần chạy:
 | `ChoHoi_ChamGia`, `ChoHoi_HetNen`, `ChoHoi_BiHuy`, `ChoHoi_Khop` | Chỉ khi bật `InpEntryPullATR`: số lần giá chạm mức chờ, số lần hết nến mà giá chưa hồi, số lần bị hủy vì kiểm tra lại thấy không đủ điều kiện (giờ, spread, số lệnh/ngày, lỗ ngày, tin Mỹ, đồng thuận khung nhỏ, các bộ lọc), và số lệnh **server đã khớp thật**. Chạm giá chưa chắc là khớp |
 | `RuiRoMoMax%` | Rủi ro mở lớn nhất của bot ngay sau khi vào một lớp: rủi ro còn lại của các lớp cũ (giá vào → SL hiện tại) cộng lớp mới, theo % vốn của bot. Nhồi lệnh đúng thiết kế thì xấp xỉ `InpRiskPercent` |
 | `NhoiBiBoVoiRuiRo` | Số lần nhồi bị bỏ vì các lớp cũ vẫn còn rủi ro bằng một lệnh chuẩn (chưa dời được SL về hòa vốn) |
+| `SkewR`, `KurtR` | Độ lệch và độ nhọn của R mỗi đợt. Skew dương (vài lệnh thắng rất lớn) là bình thường với Donchian và giúp cần ít lệnh hơn để tin kết quả |
+| `SoLanThu`, `SR0`, `DSR%` | Từ v5.10.21. `SoLanThu` = `InpTrials`: số cấu hình đã thử cạnh tranh trên cùng dữ liệu. `SR0` = Sharpe mỗi đợt mà cấu hình tốt nhất trong ngần ấy lần thử đạt được dù không có lợi thế. `DSR%` = xác suất Sharpe thật cao hơn `SR0` (Bailey & López de Prado). Trên 95% mới đáng tin |
+| `MinTRL_dot` | Số đợt tối thiểu để tin Sharpe > `SR0` với độ tin cậy 95%. Nhỏ hơn `SoDot` là đủ dữ liệu; −1 là không bao giờ đủ (Sharpe chưa vượt `SR0`) |
 | `MC_SutGiamTB%`, `MC_SutGiam95%`, `MC_XacSuatDungHan%` | Monte Carlo: rút lại các lệnh 1.000 lần theo khối 5 lệnh liền nhau (giữ các chuỗi thua theo cụm). Cho biết sụt giảm thường gặp, sụt giảm ở trường hợp xấu (chỉ 5% số lần tệ hơn), và xác suất bot chạm mức dừng hẳn `InpMaxDrawdownPct` (15%). Dưới 200 lệnh thì chỉ nên xem là tham khảo |
 
 Lượt so sánh hiện tại kiểm tra độ bền của Donchian H4: B (không lọc ADX), C (có ADX), D (Donchian 55), cùng các lần chạy với vốn 30.000, trên `ETHUSDm`, và trên 3 năm **trước** giai đoạn đã dùng để chọn cấu hình. Các lần này tắt giới hạn sụt giảm để so sánh chiến lược. Lần cuối `MacDinh-nhu-chay-that` dùng nguyên cài đặt mặc định của bot, gồm cả dừng hẳn khi sụt 15% và khóa lỗ ngày 3%, đúng như khi chạy thật. **Bộ lọc chất lượng breakout** (mặc định tắt, đang thử trên cấu hình C):
@@ -760,3 +763,19 @@ Xử lý lỗi:
 ## Rà soát rủi ro v5.10.20
 
 Xem [phân tích định lượng và hướng dẫn thử nghiệm](RA-SOAT-RUI-RO-5.10.20.md): SL theo ATR và vốn tối thiểu dựa trên giá trị tick / lot thực tế; lọc tâm lý theo chiến lược; nhồi giảm khối lượng nếu sàn cho phép; khóa theo bucket lệnh tay 1%/thuật toán 2%; snapshot peak equity và backtest bộ 05/06 khi bật `InpGuardBacktest`. Chế độ đóng lệnh vẫn đồng bộ và cần xác nhận server vì lệnh async không bảo đảm đóng nguyên tử. Chưa compile hay xác minh lợi nhuận trên MT5.
+
+## Đo độ tin cậy và theo dõi khi chạy thật (v5.10.21, 11/11/2026)
+
+Không đổi cách bot vào lệnh. Thêm ba thứ để đánh giá đúng kết quả:
+
+- **Sharpe điều chỉnh trong file kết quả:** đặt `InpTrials` = số cấu hình khác nhau đã thử trên cùng dữ liệu trước khi chọn cấu hình đang chạy. File kết quả có thêm `SkewR`, `KurtR`, `SoLanThu`, `SR0`, `DSR%`, `MinTRL_dot` (xem bảng ở mục Đọc kết quả backtest). Tính lại tay trên 98 lệnh C (2023–2026): `InpTrials` = 1 cho DSR 99% và cần 54 đợt; 10 lần thử cho DSR 74% và cần khoảng 610 đợt; 50 lần thử cho DSR 48%, không đạt.
+- **Tổng R thật trên bảng thông tin:** dòng "Tổng R thật: … / n lệnh · ngưỡng xem lại …". Ngưỡng = `InpLiveExpR` × n − 2 × `InpLiveSdR` × √n (mặc định 0,31 và 1,69 lấy từ backtest C). Sau ít nhất 10 lệnh mà tổng R xuống dưới ngưỡng thì bot báo một lần qua điện thoại/Telegram. Bot **không** tự dừng: đây là lúc dừng tay và xem lại, không phải lúc sửa cấu hình. Sau 20 lệnh ngưỡng khoảng −9R, sau 50 lệnh khoảng −8R. Chỉ tính lệnh bot (magic của bot) đã đóng có SL lúc vào, theo từng vị thế; khi nhồi lệnh thì chỉ gần đúng vì backtest tính theo đợt. Đặt `InpLiveExpR` = 0 để tắt.
+- **Kiểm thử chia tổ hợp (CPCV):** `python cong-cu/cpcv.py ket-qua/gia-BTCUSDm_M10.zip`. Chia 11/2020–11/2026 thành 6 khối 1 năm, thử 15 cách chọn 2 khối làm kiểm tra với lưới 9 cấu hình định trước (Donchian 10/20/40 × SL 2/2,5/3 ATR), bỏ lệnh chạm khối kiểm tra cộng 1 tuần.
+
+Kết quả CPCV lần đầu (mô phỏng Python, 11/11/2026):
+- Cả 9 cấu hình đều dương trên toàn kỳ; Donchian 20 với SL 2,5–3 ATR tốt nhất (t ≈ 2,0, khoảng 120 lệnh).
+- Cấu hình được chọn trong mẫu có Sharpe ngoài mẫu **dương ở 15/15 cách chia** (trung vị 0,14 mỗi lệnh).
+- PBO 60%: chọn cấu hình "tốt nhất" trong lưới không giúp gì so với chọn bừa một cấu hình trong lưới.
+- Nghĩa là lợi thế nằm ở cả họ chiến lược (phá kênh theo xu hướng), không nằm ở con số 20 hay 2,5. Đừng dò thêm tham số; nếu muốn cải thiện thì gộp nhiều chu kỳ thay vì tìm chu kỳ tốt nhất.
+
+Chưa compile trên MetaEditor. Cần compile và chạy một lần backtest để kiểm tra các cột mới trước khi dùng.
