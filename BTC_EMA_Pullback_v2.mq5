@@ -572,6 +572,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
 #include "TrendBot/Notify.mqh"
+#include "TrendBot/Ledger.mqh"
 #include "TrendBot/Protection.mqh"
 #include "TrendBot/Filters.mqh"
 #include "TrendBot/Signals.mqh"
