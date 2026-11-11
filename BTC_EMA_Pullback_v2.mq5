@@ -1032,6 +1032,11 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    double lots = CalcLots(slDist);
    MqlTick tick;
    if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return -1; }
+   if(g_lastRisk > GuardAlgoBudgetRemaining() + 1e-8)
+   {
+      g_status = "Bucket thuat toan con lai khong du cho rui ro lenh moi";
+      GroupUnlock(); return -1;
+   }
    GroupReserve(g_lastRisk);
 
    bool ok;
