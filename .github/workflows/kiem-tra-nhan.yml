@@ -1,0 +1,44 @@
+name: Kiem tra nhan thong so
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  kiem-tra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # Khong can tai file .zip LFS cho buoc kiem tra nay
+        with:
+          lfs: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Cai thu vien
+        run: pip install -r requirements.txt
+
+      - name: Bien dich cac script Python
+        run: python -m compileall -q cong-cu
+
+      - name: Sinh lai nhan trong .mq5 va file giai thich
+        run: python cong-cu/viet_lai_nhan.py
+
+      - name: Sinh lai cac bo cai dat
+        run: python cong-cu/tao_cai_dat.py
+
+      - name: So sanh voi ban da commit
+        run: |
+          if ! git diff --exit-code -- BTC_EMA_Pullback_v2.mq5 giao-dien/giai-thich-thong-so.json cai-dat/; then
+            echo "::error::Nhan thong so hoac cai-dat/*.set chua khop voi cong-cu/nhan_thong_so.py. Chay 'python cong-cu/viet_lai_nhan.py' va 'python cong-cu/tao_cai_dat.py' roi commit lai."
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain -- cai-dat/)" ]; then
+            git status --short -- cai-dat/
+            echo "::error::tao_cai_dat.py sinh ra file .set moi chua duoc commit."
+            exit 1
+          fi
