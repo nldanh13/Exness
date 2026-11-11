@@ -174,7 +174,22 @@ void GuardClose(const ulong ticket, const string reason)
 // Lai/lo lenh tay tren ma nay PHAT SINH trong ngay:
 //   da dong hom nay + tha noi bay gio - tha noi luc 0:00 (cua cac lenh da mo tu truoc 0:00, tinh theo gia mo cua nen D1)
 // Lenh am 200 tu hom qua, hom nay van am 200 -> lo trong ngay = 0.
-double GuardManualDayPL(const datetime dayStart)
+// Nh an dien nguon giao dich theo identifier, fallback comment cho lich su cu.
+bool GuardDealAuto(const ulong deal)
+{
+   string id = IntegerToString(HistoryDealGetInteger(deal, DEAL_POSITION_ID));
+   if(GlobalVariableCheck(GKey("bm" + id)) || GlobalVariableCheck(GKey("ba" + id))) return true;
+   return StringFind(HistoryDealGetString(deal, DEAL_COMMENT), "TB ") == 0;
+}
+bool GuardPositionAuto()
+{
+   string id = IntegerToString(PositionGetInteger(POSITION_IDENTIFIER));
+   string tk = IntegerToString(PositionGetInteger(POSITION_TICKET));
+   if(GlobalVariableCheck(GKey("bm" + id)) || GlobalVariableCheck(GKey("bm" + tk))) return true;
+   return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0;
+}
+// bucket: 0=tat ca magic0, 1=nguoi vao, 2=EA auto/nh oi magic0.
+double GuardManualDayPL(const datetime dayStart, const int bucket = 0)
 {
    double pl = 0;
    if(HistorySelect(dayStart, TimeCurrent() + 60))
@@ -182,6 +197,7 @@ double GuardManualDayPL(const datetime dayStart)
       {
          ulong d = HistoryDealGetTicket(i);
          if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
+         if(bucket != 0 && GuardDealAuto(d) != (bucket == 2)) continue;
          if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) { pl += HistoryDealGetDouble(d, DEAL_COMMISSION); continue; }
          pl += HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_COMMISSION);
       }
@@ -189,6 +205,7 @@ double GuardManualDayPL(const datetime dayStart)
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       if(PositionGetTicket(i) == 0 || !IsManualSelected()) continue;
+      if(bucket != 0 && GuardPositionAuto() != (bucket == 2)) continue;
       pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
       if((datetime)PositionGetInteger(POSITION_TIME) < dayStart && dayOpen > 0)
       {
@@ -205,6 +222,7 @@ double GuardManualDayPL(const datetime dayStart)
       {
          ulong d = HistoryDealGetTicket(i);
          if(d == 0 || HistoryDealGetInteger(d, DEAL_MAGIC) != 0 || HistoryDealGetString(d, DEAL_SYMBOL) != _Symbol) continue;
+         if(bucket != 0 && GuardDealAuto(d) != (bucket == 2)) continue;
          if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) continue;
          ulong pos = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
          double vol = HistoryDealGetDouble(d, DEAL_VOLUME);
@@ -222,6 +240,17 @@ double GuardManualDayPL(const datetime dayStart)
          if(!HistorySelect(dayStart, TimeCurrent() + 60)) break;    // chon lai lich su ngay de lap tiep
       }
    return pl;
+}
+// Khoa bucket den cuoi ngay server; muc % 0 = tat (giu nguyen hanh vi cu).
+bool GuardBucketLocked(const int bucket)
+{
+   string n = GKey(bucket == 1 ? "humanLock" : "algoLock");
+   return GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent());
+}
+void GuardBucketSetLock(const int bucket)
+{
+   GlobalVariableSet(GKey(bucket == 1 ? "humanLock" : "algoLock"), GDayKey(TimeCurrent()));
+   if(!MQLInfoInteger(MQL_TESTER)) GlobalVariablesFlush();
 }
 
 //--- Chot loi lenh tay (v5.10.4): hoa von o InpGuardBreakevenR x R, roi keo SL theo InpGuardTrailATR x ATR khung InpGuardTrailTFmin.
@@ -333,7 +362,29 @@ void GuardManual()
       }
    }
 
-   GuardPending(locked, since, eq);                          // lenh cho dat tay (truoc khi khop)
+   // Hai bucket rieng theo magic0 (human / auto) + P_Magic cung chart. 
+   bool humanLocked = GuardBucketLocked(1), algoLocked = GuardBucketLocked(2);
+   if(!locked && !humanLocked && P_GuardHumanDayPct > 0)
+   {
+      double hp = GuardManualDayPL(dayStart, 1);
+      double hb = eq - hp;
+      if(hb > 0 && hp <= -hb * P_GuardHumanDayPct / 100.0)
+      {
+         GuardBucketSetLock(1); humanLocked = true;
+         Notify(StringFormat("[%s] KHOA LENH TAY: lo ngay %.1f%% >= %.1f%%.", _Symbol, -hp / hb * 100.0, P_GuardHumanDayPct));
+      }
+   }
+   if(!locked && !algoLocked && P_GuardAlgoDayPct > 0)
+   {
+      double ap = GuardManualDayPL(dayStart, 2) + DayPL();
+      double ab = eq - ap;
+      if(ab > 0 && ap <= -ab * P_GuardAlgoDayPct / 100.0)
+      {
+         GuardBucketSetLock(2); algoLocked = true;
+         Notify(StringFormat("[%s] KHOA THUAT TOAN: lo ngay %.1f%% >= %.1f%%.", _Symbol, -ap / ab * 100.0, P_GuardAlgoDayPct));
+      }
+   }
+   GuardPending(locked || humanLocked, since, eq);                          // lenh cho dat tay (truoc khi khop)
 
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -353,7 +404,11 @@ void GuardManual()
       // diem dung khan cap khong duoc bo sot chung (truoc v5.10.14 chung bi bo qua vi luat "lenh cu chi canh bao").
       // Khoa lo ngay cung vay (v5.10.15): lai/lo lenh cu DA duoc tinh vao lo ngay (GuardManualDayPL), nen khi khoa cung dong chung,
       // khong de lenh cu tiep tuc lo sau khi da cham gioi han.
-      if(locked) { GuardClose(t, GuardHalted() ? "dung han vi von tai khoan sut giam qua gioi han" : "da cham gioi han lo ngay cua lenh tay"); continue; }
+      if(locked || (GuardPositionAuto() ? algoLocked : humanLocked))
+      {
+         GuardClose(t, locked ? "khoa lo tong / sut giam" : "khoa bucket tay / thuat toan");
+         continue;
+      }
       // Lenh mo truoc khi bat bao ve lan dau: chi canh bao 1 lan, khong tu sua / dong
       if(ot < since && !InpGuardOldTrades)
       {
@@ -362,7 +417,11 @@ void GuardManual()
                                 _Symbol, t, sl == 0 ? " chua co SL" : " dang trong ngay da cham gioi han lo"));
          continue;
       }
-      if(locked) { GuardClose(t, GuardHalted() ? "dung han vi von tai khoan sut giam qua gioi han" : "da cham gioi han lo ngay cua lenh tay"); continue; }
+      if(locked || (GuardPositionAuto() ? algoLocked : humanLocked))
+      {
+         GuardClose(t, locked ? "khoa lo tong / sut giam" : "khoa bucket tay / thuat toan");
+         continue;
+      }
 
       // 2) Nhoi them khi lenh cung chieu dang lo: dong lenh moi
       if(isNew && InpGuardNoAverage)
