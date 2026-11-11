@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.17
+# Hướng dẫn bot BTC (MT5) v5.10.18
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -730,3 +730,9 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
 - **Trượt giá vào lệnh của bộ 05 / 06:** lệnh tự vào và lệnh nhồi (magic 0) nay cũng ghi vào `TrendBot_truotgia.csv`, cột Magic = 0.
 - **Đọc tick:** tối đa 5000 tick mỗi lần; lỗi đọc thì giữ mốc cũ, đọc lại lần sau, ghi log tối đa 1 lần / phút.
 - **Trạng thái trên trình duyệt:** hiện rõ "DỪNG HẲN: vốn tài khoản sụt quá giới hạn" và khi đang khóa lệnh tay + tự vào tới hết ngày.
+
+## Chuẩn bị kiểm thử demo (v5.10.18)
+- Bảng 8 bài thử và cách làm từng bài: xem `KIEM-THU-DEMO.md`.
+- Bot ghi Global Variable xuống đĩa mỗi 30 giây: tắt MT5 đột ngột (mất điện) không mất mốc vốn, R ban đầu, bộ đếm lệnh, khóa ngày.
+- R ban đầu, giá tốt nhất, trạng thái "để lời chạy" lưu theo mã định danh vị thế (không đổi khi sàn đổi ticket). Lệnh cũ vẫn đọc được.
+- Nhồi lệnh (magic 0) nay cũng tuân thủ giờ nghỉ / cuối tuần, spread tối đa và tránh tin Mỹ, như lệnh tự vào.
