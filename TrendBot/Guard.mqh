@@ -288,8 +288,19 @@ double GuardManualDayPL(const datetime dayStart, const int bucket = 0)
 // Khoa bucket den cuoi ngay server; muc % 0 = tat (giu nguyen hanh vi cu).
 bool GuardBucketLocked(const int bucket)
 {
-   string n = GAcctKey(bucket == 1 ? "humanLock" : "algoLock");
-   return GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent());
+   string suffix = bucket == 1 ? "humanLock" : "algoLock";
+   string n = GAcctKey(suffix);
+   int today = GDayKey(TimeCurrent());
+   if(GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == today) return true;
+   // v5.10.22 luu lock theo symbol: nang cap trong ngay KHONG duoc mo khoa.
+   string legacy = GKey(suffix);
+   if(GlobalVariableCheck(legacy) && (int)GlobalVariableGet(legacy) == today)
+   {
+      GlobalVariableSet(n, today);
+      if(!MQLInfoInteger(MQL_TESTER)) GlobalVariablesFlush();
+      return true;
+   }
+   return false;
 }
 void GuardBucketSetLock(const int bucket)
 {
