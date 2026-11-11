@@ -367,6 +367,8 @@ void PyramidStep(const bool addOnly = false)
    g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    double sl = buy ? price - slDist : price + slDist;
    double tp = P_RR > 0 ? (buy ? price + slDist * P_RR : price - slDist * P_RR) : 0.0;
+   if(!EntryMarginOk(buy, lots, price, sl, tp))
+   { g_status = "BO NHOI: thieu ky quy du tru"; GroupClear(); GroupUnlock(); return; }
    bool ok = PrepSend() && (buy ? trade.Buy(lots, _Symbol, price, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY+")
                                 : trade.Sell(lots, _Symbol, price, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL+"));
    uint rc = trade.ResultRetcode();
