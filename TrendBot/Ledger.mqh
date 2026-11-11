@@ -14,12 +14,15 @@ bool LedgerOrigin(const ulong pid, string &sym, int &source, long &magic,
    if(pid == 0 || !HistorySelectByPosition(pid)) return false;
    long firstMs = LONG_MAX;
    ulong firstDeal = 0;
+   double totalVolume = 0, weightedEntry = 0;
    for(int i = 0; i < HistoryDealsTotal(); i++)
    {
       ulong d = HistoryDealGetTicket(i);
       if(d == 0 || HistoryDealGetInteger(d, DEAL_ENTRY) != DEAL_ENTRY_IN) continue;
       long ty = HistoryDealGetInteger(d, DEAL_TYPE);
       if(ty != DEAL_TYPE_BUY && ty != DEAL_TYPE_SELL) continue;
+      double vol = HistoryDealGetDouble(d, DEAL_VOLUME), px = HistoryDealGetDouble(d, DEAL_PRICE);
+      if(vol > 0 && px > 0) { totalVolume += vol; weightedEntry += px * vol; }
       long when = HistoryDealGetInteger(d, DEAL_TIME_MSC);
       if(firstDeal == 0 || when < firstMs || (when == firstMs && d < firstDeal))
       { firstMs = when; firstDeal = d; }
@@ -27,7 +30,7 @@ bool LedgerOrigin(const ulong pid, string &sym, int &source, long &magic,
    if(firstDeal == 0 || !HistoryDealSelect(firstDeal)) return false;
    sym = HistoryDealGetString(firstDeal, DEAL_SYMBOL);
    magic = HistoryDealGetInteger(firstDeal, DEAL_MAGIC);
-   openPrice = HistoryDealGetDouble(firstDeal, DEAL_PRICE);
+   openPrice = totalVolume > 0 ? weightedEntry / totalVolume : HistoryDealGetDouble(firstDeal, DEAL_PRICE); // partial fills
    opened = (datetime)HistoryDealGetInteger(firstDeal, DEAL_TIME);
    wasBuy = HistoryDealGetInteger(firstDeal, DEAL_TYPE) == DEAL_TYPE_BUY;
    if(sym == "" || openPrice <= 0) return false;
