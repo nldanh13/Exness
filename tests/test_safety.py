@@ -175,5 +175,70 @@ class MqlSafetyRegression(unittest.TestCase):
         self.assertIn("if(lots < minL)", source("TrendBot/Risk.mqh"))
 
 
+    def test_origin_ledger_attributes_exits_by_opening_position(self):
+        ledger = source("TrendBot/Ledger.mqh")
+        self.assertIn("DEAL_POSITION_ID", ledger)
+        self.assertIn("DEAL_ENTRY_IN", function("LedgerOrigin", "TrendBot/Ledger.mqh"))
+        self.assertIn("DEAL_MAGIC", function("LedgerOrigin", "TrendBot/Ledger.mqh"))
+        self.assertIn("HistorySelectByPosition(pid)", ledger)
+        self.assertIn("DEAL_COMMISSION", ledger)
+        self.assertIn("DEAL_FEE", ledger)
+        self.assertIn("net -= oldPL", ledger)
+        self.assertIn("LedgerMainClosedPL", source("TrendBot/Protection.mqh"))
+        guard = source("TrendBot/Guard.mqh")
+        self.assertIn("LedgerDayPL(bucket, pl)", guard)
+        self.assertNotIn("GuardManualDayPL(DayStart(), 2) + DayPL()", guard)
+        self.assertIn("LedgerDayPL(2, dailyPL)", guard)
+
+    def test_account_wide_bucket_keys(self):
+        guard = source("TrendBot/Guard.mqh")
+        self.assertIn('GAcctKey(bucket == 1 ? "humanLock" : "algoLock")', guard)
+        self.assertIn("LedgerDayPL(2, dailyPL)", guard)
+
+    def test_first_order_group_cap_and_missing_stop_fail_closed(self):
+        risk = source("TrendBot/Risk.mqh")
+        lots = function("CalcLots", "TrendBot/Risk.mqh")
+        self.assertIn("if(P_MaxGroupRiskPct > 0 && InGroup())", lots)
+        self.assertNotIn('if(P_MaxGroupRiskPct > 0 && corr != "")', lots)
+        self.assertIn("return DBL_MAX;", function("GroupOpenRisk", "TrendBot/Risk.mqh"))
+        self.assertIn("return DBL_MAX;", function("OwnOpenRisk", "TrendBot/Risk.mqh"))
+        self.assertIn("MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY))", risk)
+
+    def test_margin_preflight_covers_every_entry_path(self):
+        core = source("TrendBot/Core.mqh")
+        checker = function("EntryMarginOk", "TrendBot/Core.mqh")
+        for frag in ("OrderCalcMargin(", "OrderCheck(", "result.margin_free",
+                     "result.margin_level", "free * 0.35"):
+            self.assertIn(frag, checker)
+        main = source("BTC_EMA_Pullback_v2.mq5")
+        manage = source("TrendBot/Manage.mqh")
+        me = source("TrendBot/ManualEntry.mqh")
+        self.assertIn("EntryMarginOk(true, lots", main)
+        self.assertIn("EntryMarginOk(false, lots", main)
+        self.assertIn("EntryMarginOk(buy, lots", manage)
+        self.assertIn("EntryMarginOk(buy, newLot", me)
+        self.assertIn("EntryMarginOk(buy, lot", me)
+
+    def test_cent_symbol_mapping_and_usc_are_not_hardcoded_into_pnl(self):
+        main = source("BTC_EMA_Pullback_v2.mq5")
+        self.assertIn('_Symbol == "BTCUSDc"', main)
+        self.assertIn('P_CorrSymbols = "BTCUSDc,ETHUSDc"', main)
+        self.assertIn('P_CorrSymbols == "BTCUSDm,ETHUSDm"', main)
+        self.assertIn("OrderCalcProfit", source("TrendBot/Ledger.mqh"))
+
+    def test_mtm_drawdown_has_separate_peak_and_is_not_forced_halt(self):
+        protect = source("TrendBot/Protection.mqh")
+        self.assertIn('GVGet("mtmPeak"', protect)
+        self.assertIn('GVName("mtmPeak")', protect)
+        self.assertIn("BotMtmDrawdownPct()", protect)
+        self.assertIn("DD mark-to-market", source("TrendBot/Panel.mqh"))
+
+    def test_tester_news_calendar_has_coverage_guard(self):
+        filters = source("TrendBot/Filters.mqh")
+        self.assertIn("g_newsT[ArraySize(g_newsT)-1] + 7*86400", filters)
+        self.assertIn("nearest > 40.0 * 24.0", filters)
+        self.assertIn("!g_newsDataOk", filters)
+
+
 if __name__ == "__main__":
     unittest.main()
