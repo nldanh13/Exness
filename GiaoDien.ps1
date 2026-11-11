@@ -2,7 +2,14 @@
 #   Bam dup GiaoDien.cmd, hoac VS Code: Terminal > Run Task > "0. Mo giao dien".
 # Giao dien lam dung cac viec cua nut 1/2/3 (goi Chay.ps1), nhung hoi truoc bang nut bam
 # (lay code moi? dong MT5?), hien tien trinh + nhat ky, va xem bang ket qua trong ket-qua/.
-# Chi nghe tren localhost: may khac trong mang khong vao duoc.
+# Bao ve (v5.10.12):
+#  - Chi nghe tren localhost, va tu choi moi yeu cau khong den tu chinh may nay (IsLocal) hoac co Host khac localhost /
+#    127.0.0.1 (chan DNS rebinding, chan truong hop lo tay chuyen tiep cong ra ngoai qua proxy / tunnel).
+#  - Moi lan mo sinh 1 ma truy cap ngau nhien. API dieu khien (/api/*) va file ket qua (/ket-qua/*) bat buoc gui ma nay
+#    trong header X-TrendBot-Khoa. Trinh duyet nhan ma qua dia chi http://localhost:8765/#k=<ma> (phan sau # khong gui
+#    len mang, khong nam trong lich su truy cap may chu). Ma luu o %TEMP%\TrendBot-giaodien\khoa.txt de lan mo sau mo
+#    lai dung tab neu giao dien da chay san.
+#  - KHONG mo cong nay ra Internet / mang LAN (port forward, ngrok, ...): ma truy cap chi la lop bao ve phu.
 param([int]$Port = 8765, [switch]$KhongMoTrinhDuyet)
 
 $ErrorActionPreference = "Stop"
@@ -19,8 +26,9 @@ $MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu 
 # (PowerShell da nap vao bo nho) -> bao nguoi dung dong cua so va mo lai GiaoDien.cmd.
 $SelfFile  = $MyInvocation.MyCommand.Path
 $SelfStamp = (Get-Item $SelfFile).LastWriteTimeUtc.Ticks
-$ApiVer    = 2   # tang khi them API moi; trang web so voi so nay
+$ApiVer    = 3   # tang khi them API moi; trang web so voi so nay (3: bat buoc ma truy cap)
 $ErrFile    = Join-Path $WorkDir "loi.txt"
+$KeyFile    = Join-Path $WorkDir "khoa.txt"
 
 # Viec dang chay (chi 1 viec mot luc, giong cac nut VS Code)
 $script:Job = $null          # @{ Proc; Viec; Nhom; Start; End; ExitCode }
@@ -191,6 +199,9 @@ function Send-Bytes($ctx, [byte[]]$bytes, [string]$type, [int]$code = 200) {
     $res.StatusCode = $code
     $res.ContentType = $type
     $res.Headers.Add("Cache-Control", "no-store")
+    $res.Headers.Add("X-Content-Type-Options", "nosniff")
+    $res.Headers.Add("X-Frame-Options", "DENY")            # khong cho trang khac nhung giao dien vao khung de lua bam nut
+    $res.Headers.Add("Referrer-Policy", "no-referrer")
     $res.ContentLength64 = $bytes.Length
     $res.OutputStream.Write($bytes, 0, $bytes.Length)
     $res.OutputStream.Close()
@@ -205,17 +216,45 @@ function Read-Body($ctx) {
     if ($t) { return ($t | ConvertFrom-Json) } else { return @{} }
 }
 
+# ---- Ma truy cap ----
+function New-AccessKey {
+    $b = New-Object byte[] 24
+    $rng = New-Object Security.Cryptography.RNGCryptoServiceProvider
+    try { $rng.GetBytes($b) } finally { $rng.Dispose() }
+    return (($b | ForEach-Object { $_.ToString("x2") }) -join "")
+}
+# So sanh khong phu thuoc vi tri ky tu sai dau tien (tranh do ma qua thoi gian tra loi)
+function Test-AccessKey([string]$got) {
+    if (-not $got -or $got.Length -ne $script:AccessKey.Length) { return $false }
+    $diff = 0
+    for ($i = 0; $i -lt $got.Length; $i++) { $diff = $diff -bor ([int][char]$got[$i] -bxor [int][char]$script:AccessKey[$i]) }
+    return ($diff -eq 0)
+}
+# Chi chap nhan yeu cau tu chinh may nay, voi Host la localhost / 127.0.0.1 dung cong
+function Test-LocalRequest($req) {
+    if (-not $req.IsLocal) { return $false }
+    $h = $req.Url.Host
+    return (($h -eq "localhost" -or $h -eq "127.0.0.1") -and $req.Url.Port -eq $Port)
+}
+
 $listener = New-Object Net.HttpListener
 $prefix = "http://localhost:$Port/"
 $listener.Prefixes.Add($prefix)
 try { $listener.Start() } catch {
-    Write-Host "Khong mo duoc cong $Port ($($_.Exception.Message)). Co the giao dien da mo san: vao $prefix" -ForegroundColor Yellow
-    if (-not $KhongMoTrinhDuyet) { Start-Process $prefix }
+    Write-Host "Khong mo duoc cong $Port ($($_.Exception.Message)). Co the giao dien da mo san." -ForegroundColor Yellow
+    $old = if (Test-Path $KeyFile) { (Get-Content $KeyFile -Raw -ErrorAction SilentlyContinue) } else { "" }
+    $url = if ($old) { $prefix + "#k=" + $old.Trim() } else { $prefix }
+    if (-not $KhongMoTrinhDuyet) { Start-Process $url }
     exit 1
 }
+$script:AccessKey = New-AccessKey
+Set-Content -Path $KeyFile -Value $script:AccessKey -NoNewline -Encoding ASCII
+$openUrl = $prefix + "#k=" + $script:AccessKey
 Write-Host "Giao dien dang chay tai $prefix  (dong cua so nay de tat)" -ForegroundColor Green
+Write-Host "Mo bang dia chi co ma truy cap (moi lan mo GiaoDien.cmd doi ma): $openUrl" -ForegroundColor DarkGray
+Write-Host "KHONG mo cong $Port ra Internet / mang LAN." -ForegroundColor DarkGray
 $script:Git = Get-GitStatus -Fetch
-if (-not $KhongMoTrinhDuyet) { Start-Process $prefix }
+if (-not $KhongMoTrinhDuyet) { Start-Process $openUrl }
 
 $types = @{ ".json" = "application/json; charset=utf-8"; ".html" = "text/html; charset=utf-8"; ".js" = "text/javascript; charset=utf-8"; ".css" = "text/css; charset=utf-8"; ".svg" = "image/svg+xml" }
 try {
@@ -224,9 +263,15 @@ try {
         $path = $ctx.Request.Url.AbsolutePath
         $method = $ctx.Request.HttpMethod
         try {
+            # Chi chinh may nay, Host dung (chan may khac / DNS rebinding / chuyen tiep cong)
+            if (-not (Test-LocalRequest $ctx.Request)) { Send-Json $ctx @{ Loi = "Khong cho phep." } 403; continue }
             # Chan trang web khac goi API (chi chap nhan yeu cau tu chinh giao dien nay)
             $origin = $ctx.Request.Headers["Origin"]
-            if ($method -eq "POST" -and $origin -and $origin.TrimEnd('/') -ne $prefix.TrimEnd('/')) { Send-Json $ctx @{ Loi = "Khong cho phep." } 403; continue }
+            if ($method -eq "POST" -and $origin -and $origin.TrimEnd('/') -ne $prefix.TrimEnd('/') -and $origin.TrimEnd('/') -ne "http://127.0.0.1:$Port") { Send-Json $ctx @{ Loi = "Khong cho phep." } 403; continue }
+            # API dieu khien va file ket qua: bat buoc ma truy cap
+            if (($path -like "/api/*" -or $path -like "/ket-qua/*") -and -not (Test-AccessKey $ctx.Request.Headers["X-TrendBot-Khoa"])) {
+                Send-Json $ctx @{ Loi = "Thieu hoac sai ma truy cap. Dong tab nay va mo lai giao dien bang GiaoDien.cmd."; CanMa = $true } 401; continue
+            }
 
             if ($path -eq "/api/trangthai") {
                 $offset = 0; [void][int]::TryParse($ctx.Request.QueryString["tu"], [ref]$offset)
@@ -279,4 +324,5 @@ try {
     }
 } finally {
     $listener.Stop()
+    Remove-Item $KeyFile -Force -ErrorAction SilentlyContinue
 }
