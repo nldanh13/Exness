@@ -792,8 +792,6 @@ void OnTick()
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
-   GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
-   GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);
@@ -807,6 +805,10 @@ void OnTick()
    // Da dung han ma van con lenh (vd. dong that bai lan truoc) thi thu dong lai moi tick
    if(IsHalted() && P_CloseOnHalt && HasOwnPosition()) CloseAll();
    if(ready) CheckDailyLoss();
+   // Tu nhoi / tu vao chay SAU khi da cap nhat lo ngay va sut giam cua chien luoc chinh (v5.10.12), va tu bo qua
+   // khi chien luoc chinh dang dung han hoac cham lo ngay (MainStopped trong ManualEntry.mqh).
+   GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
+   GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    ManagePositions();
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay

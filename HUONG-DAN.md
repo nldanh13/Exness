@@ -631,4 +631,5 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   ngừng tự vào và tự nhồi, và giữ trạng thái dừng qua khởi động lại. Mọi chart bảo vệ trên cùng tài khoản đều thấy trạng thái này.
 - Mở lại: đặt `InpResetHalt = true` một lần (đặt lại đỉnh bằng equity hiện tại), rồi đổi về `false`.
 - Rút tiền làm equity giảm và có thể bị tính là sụt giảm: sau khi rút, bật `InpResetHalt` một lần.
-- Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".
+- Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".- Chiến lược chính đang dừng hẳn (sụt giảm `InpMaxDrawdownPct`) hoặc chạm lỗ ngày (`InpMaxDailyLossPct`) thì bot cũng KHÔNG tự vào,
+  không tự nhồi. Hai bước này nay chạy sau khi đã cập nhật lỗ ngày / sụt giảm của tick đó (trước đây chạy trước và không kiểm tra).

@@ -139,6 +139,7 @@ void UpdatePanel()
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
       txt[n] = algo ? (locked ? (GuardHalted() ? StringFormat("DỪNG HẲN: vốn tài khoản sụt ≥ %.0f%% từ đỉnh. Bật Đặt lại mốc vốn 1 lần để chạy lại", InpGuardMaxDDPct) : "ĐÃ KHÓA lệnh tay tới hết ngày") : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
+      if(InpGuardAutoEntry && MainStopped()) { txt[n] = IsHalted() ? "Chiến lược chính DỪNG HẲN (sụt giảm): không tự vào / nhồi" : "Chiến lược chính chạm lỗ ngày: không tự vào / nhồi tới mai"; col[n++] = cBad; }
       if(g_gOtherChart != 0) { txt[n] = "CHART KHÁC đang bảo vệ " + _Symbol + ": chart này KHÔNG làm gì. Gỡ bot khỏi 1 trong 2 chart."; col[n++] = cBad; }
       if(InpGuardAutoEntry) { txt[n] = "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL"; col[n++] = cBad; }
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;

@@ -142,10 +142,14 @@ int TrendCount(const bool up)
    return c;
 }
 
+// Chien luoc chinh (magic P_Magic) dang dung han vi sut giam hoac da cham lo ngay: khong mo them lenh nao,
+// ke ca tu nhoi / tu vao (magic 0). Hai co che nay truoc v5.10.12 doc lap voi nhau.
+bool MainStopped() { return IsHalted() || DailyLossHit(); }
+
 void GuardPyramid()
 {
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
@@ -381,7 +385,7 @@ void GuardAutoEntry()
    ENUM_TIMEFRAMES tf = g_tbTF[ti];
    datetime bar = iTime(_Symbol, tf, 0);
    if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
-   if(GuardDayLocked()) return;
+   if(GuardDayLocked() || MainStopped()) return;
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
    for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsManualSelected()) return;
    for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
