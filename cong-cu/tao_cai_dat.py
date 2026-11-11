@@ -60,7 +60,7 @@ PRESETS = [
         "CHẾ ĐỘ TỰ GIAO DỊCH BẬT; backtest được bật nhưng CHƯA CHẠY / XÁC NHẬN. Chỉ demo.",
         "SL 0,15% (~110 USD giá, ~3% vốn với 0,01 lot). Rủi ro tối đa mỗi lệnh 4% (bộ 05: 6%, vì SL 0,25% đã ~5% vốn với lot nhỏ nhất).",
         "Lời 0,5R dời SL về hòa vốn; nhồi tối đa 3 lớp theo hệ số 0,5, nếu 0,01 lot thì bỏ nhồi.",
-        "Chốt gộp: tổng lời mọi lớp đạt 2R thì đóng hết. Ví dụ đủ 3 lớp thì chốt khi giá đi khoảng 1,2R (~130 USD) từ lớp đầu;",
+        "Chốt gộp: tổng lời các lớp đạt 2R tính theo rủi ro lớp đầu thì đóng hết; mục tiêu giá thay đổi theo khối lượng từng lớp.",
         "chỉ 1 lớp thì chốt khi đi 2R (~220 USD). Không đặt TP từng lớp. Kéo SL 2 × ATR M5 sau khi hòa vốn.",
         "Linh hoạt: đạt 2R mà còn ≥ 7/9 khung cùng chiều thì để lời chạy tiếp, chốt khi xu hướng yếu đi hoặc lời rút về 2R.",
         "Đang lời ≥ 0,5R mà nến M5 báo đảo chiều (vượt lại EMA20, nhấn chìm, râu dài) hoặc giá giật ngược 1 ATR M5 thì chốt hết ngay.",
