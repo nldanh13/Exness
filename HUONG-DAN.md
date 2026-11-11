@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.13
+# Hướng dẫn bot BTC (MT5) v5.10.14
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -681,3 +681,13 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   GiaYeuCau = mức SL / TP, GiaKhop = giá đóng thật. Bấm "Gửi nhật ký" sau vài tuần demo để đo.
 - Giới hạn không sửa được: EA chỉ chạy khi MT5 mở và có mạng. SL / TP nằm trên máy chủ nên vẫn hoạt động, còn chốt gộp,
   chốt khi đảo chiều, kéo SL, tự vào thì dừng. Dùng VPS để chạy liên tục. SL không bảo đảm khớp đúng giá khi thị trường chạy mạnh.
+
+## Rà soát lần 2 (v5.10.14)
+- Đếm số lệnh tự vào mỗi ngày (`InpGuardAutoMaxDay`): ngoài ghi chú `TB tu vao`, bot lưu ticket lệnh tự vào và một bộ đếm riêng
+  theo ngày (Global Variable), lấy số lớn hơn. Sàn đổi / cắt ghi chú cũng không làm đếm thiếu.
+- Dừng hẳn vì sụt giảm cả tài khoản: nay đóng CẢ lệnh tay mở trước khi bật bảo vệ và hủy CẢ lệnh chờ đặt trước đó
+  (trước đây chúng bị bỏ qua theo luật "lệnh cũ chỉ cảnh báo"). Đây là điểm dừng khẩn cấp, không bỏ sót lệnh nào trên mã.
+- Bộ 06: rủi ro tối đa mỗi lệnh giảm từ 6% xuống 4% (0,01 lot với SL 0,15% khoảng 3% vốn ~900 nghìn).
+  Bộ 05 giữ 6% vì với SL 0,25%, lot nhỏ nhất đã khoảng 5% vốn; giảm nữa thì bot bỏ mọi tín hiệu. Muốn rủi ro thấp hơn cần vốn lớn hơn.
+- Không sửa được trong code (giới hạn của MT5): khóa giữa các bot chỉ trong một terminal; chốt gộp / đảo chiều / kéo SL cần MT5 mở
+  và có mạng. Chạy MỘT terminal trên VPS cho mỗi tài khoản.

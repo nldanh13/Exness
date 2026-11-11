@@ -267,6 +267,9 @@ void GuardManual()
       double vol  = PositionGetDouble(POSITION_VOLUME);
       datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
 
+      // Dung han vi sut giam ca tai khoan (v5.10.14): dong CA lenh mo truoc khi bat bao ve. Lenh cu cung lam von sut,
+      // diem dung khan cap khong duoc bo sot chung (truoc v5.10.14 chung bi bo qua vi luat "lenh cu chi canh bao").
+      if(GuardHalted()) { GuardClose(t, "dung han vi von tai khoan sut giam qua gioi han"); continue; }
       // Lenh mo truoc khi bat bao ve lan dau: chi canh bao 1 lan, khong tu sua / dong
       if(ot < since && !InpGuardOldTrades)
       {
@@ -414,6 +417,8 @@ void GuardPending(const bool locked, const datetime since, const double eq)
       datetime setup = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       string   cmt   = OrderGetString(ORDER_COMMENT);
 
+      // Dung han vi sut giam ca tai khoan (v5.10.14): huy CA lenh cho dat truoc khi bat bao ve - day la diem dung khan cap
+      if(GuardHalted()) { GuardDeletePending(t, name, "dung han vi von tai khoan sut giam qua gioi han"); continue; }
       if(setup < since && !InpGuardOldTrades)
       {
          if((sl == 0 || locked) && ShouldNotify("gpold" + IntegerToString((long)t), 24 * 3600))
