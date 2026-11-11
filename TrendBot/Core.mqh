@@ -241,6 +241,8 @@ bool EntryMarginOk(const bool buy, const double lots, const double price,
                    const double sl, const double tp)
 {
    if(lots <= 0 || price <= 0 || sl <= 0) return false;
+   double accounting = 0;
+   if(!LedgerDayPL(2, accounting)) return false; // khong du history de kiem soat tong rui ro
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
    double free = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    double used = AccountInfoDouble(ACCOUNT_MARGIN);
