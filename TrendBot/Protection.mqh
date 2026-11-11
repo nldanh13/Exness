@@ -10,6 +10,42 @@ double GVGet(const string key, const double def = 0)
    string k = GVName(key);
    return GlobalVariableCheck(k) ? GlobalVariableGet(k) : def;
 }
+// Snapshot thu 2 (Common Files) cho peak/halt cua chien luoc P_Magic.
+// Ghep voi Terminal GlobalVariables; khong tu dong mo khoa khi khoi dong lai.
+bool g_botRiskLoaded = false;
+ulong g_botRiskSavedMs = 0;
+string BotRiskFile()
+{
+   return "TrendBot_botdd_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" +
+          _Symbol + "_" + IntegerToString((long)P_Magic) + ".txt";
+}
+void BotRiskSave(const bool urgent = false)
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   ulong ms = GetTickCount64();
+   if(!urgent && ms - g_botRiskSavedMs < 30000) return;
+   g_botRiskSavedMs = ms;
+   int h = FileOpen(BotRiskFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h != INVALID_HANDLE)
+   {
+      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\r\n" + (GVGet("halt") > 0 ? "1" : "0") + "\r\n");
+      FileClose(h);
+   }
+   GlobalVariablesFlush();
+}
+void BotRiskLoad()
+{
+   if(g_botRiskLoaded) return;
+   g_botRiskLoaded = true;
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   int h = FileOpen(BotRiskFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   double savedPeak = StringToDouble(FileReadString(h));
+   bool savedHalt = StringToInteger(FileReadString(h)) != 0;
+   FileClose(h);
+   if(savedPeak > GVGet("peak")) GlobalVariableSet(GVName("peak"), savedPeak);
+   if(savedHalt && GVGet("halt") <= 0) GlobalVariableSet(GVName("halt"), 1.0);
+}
 
 datetime DayStart()
 {
