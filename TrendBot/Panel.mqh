@@ -139,6 +139,7 @@ void UpdatePanel()
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
       txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
+      if(g_gOtherChart != 0) { txt[n] = "CHART KHÁC đang bảo vệ " + _Symbol + ": chart này KHÔNG làm gì. Gỡ bot khỏi 1 trong 2 chart."; col[n++] = cBad; }
       if(InpGuardAutoEntry) { txt[n] = "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL"; col[n++] = cBad; }
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
       txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)", PNMoney(mpl, cur), pct);
@@ -162,7 +163,7 @@ void UpdatePanel()
          if(InpGuardBasketR > 0 && InpGuardRunTrend > 0) fx += StringFormat("để lời chạy khi ≥ %d/9 khung", InpGuardRunTrend);
          if(InpGuardRevExit) fx += (fx == "" ? "" : "  ·  ") + StringFormat("chốt khi nến đảo chiều (lời ≥ %.1fR)", InpGuardRevMinR);
          if(InpGuardSpikeATR > 0) fx += (fx == "" ? "" : "  ·  ") + StringFormat("chốt khi giật ngược %.1f ATR", InpGuardSpikeATR);
-         txt[n] = "Linh hoạt: " + fx;  col[n++] = cDim;
+         txt[n] = "Linh hoạt: " + fx + (InpGuardExitScope == 0 ? "  ·  chỉ lệnh bot mở" : "  ·  mọi lệnh tay");  col[n++] = cDim;
       }
       if(InpGuardMaxBars > 0) { txt[n] = StringFormat("Đóng lệnh chưa hòa vốn sau %d nến M%d (%d phút)", InpGuardMaxBars, GuardTFmin(), InpGuardMaxBars * GuardTFmin()); col[n++] = cDim; }
       if(InpGuardPyramidMax > 1)

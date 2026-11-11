@@ -145,7 +145,7 @@ int TrendCount(const bool up)
 void GuardPyramid()
 {
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked()) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0) return;
    g_gpLast = TimeCurrent();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
@@ -201,6 +201,8 @@ void GuardPyramid()
 //     (than >= than nen truoc va >= 0,5 ATR), hoac rau nen dai ve phia lenh (>= 2 lan than va >= 0,6 ATR: gia bi tu choi).
 //     Chi xet nen dong SAU khi lop dau da vao. Them: gia dang giat nguoc >= InpGuardSpikeATR x ATR trong nen dang chay (khong cho nen dong).
 // Lenh mo truoc khi bat bao ve (lenh cu) khong tinh, tru khi InpGuardOldTrades. Dang giu ca 2 chieu: khong lam gi.
+// Nhom lenh (v5.10.11, InpGuardExitScope): 0 = chi lenh bot mo (ghi chu "TB tu vao" / "TB nhoi tay"), lenh ban tu dat khong bi
+// cong lai hay dong theo; 1 = moi lenh tay cung ma (nhu v5.10.9).
 datetime g_gbLast = 0;
 int      g_grEMA = INVALID_HANDLE, g_grATR = INVALID_HANDLE;
 
@@ -248,10 +250,13 @@ bool GuardReversal(const bool buy, const datetime firstTime, string &why)
    return false;
 }
 
+// Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
+bool GuardBotMade() { return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0; }
+
 void GuardExit()
 {
    if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
-   if(TimeCurrent() - g_gbLast < 1) return;
+   if(TimeCurrent() - g_gbLast < 1 || g_gOtherChart != 0) return;
    g_gbLast = TimeCurrent();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
@@ -265,6 +270,7 @@ void GuardExit()
    {
       ulong t = PositionGetTicket(i);
       if(t == 0 || !IsManualSelected()) continue;
+      if(InpGuardExitScope == 0 && !GuardBotMade()) continue;          // chi lenh bot mo (tu vao / nhoi)
       datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
       if(ot < since && !InpGuardOldTrades) continue;
       int d = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
@@ -364,7 +370,7 @@ int GuardAutoCountToday(datetime &lastLossClose)
 
 void GuardAutoEntry()
 {
-   if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER)) return;
+   if(!InpGuardManual || !InpGuardAutoEntry || MQLInfoInteger(MQL_TESTER) || g_gOtherChart != 0) return;
    int ti = InpGuardAutoTFmin == 1 ? 0 : InpGuardAutoTFmin == 3 ? 1 : InpGuardAutoTFmin == 10 ? 3 :
             InpGuardAutoTFmin == 15 ? 4 : InpGuardAutoTFmin == 30 ? 5 : 2;      // vi tri trong bang xu huong (mac dinh M5)
    ENUM_TIMEFRAMES tf = g_tbTF[ti];

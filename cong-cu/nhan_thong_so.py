@@ -147,6 +147,7 @@ GROUPS = [
         ("InpGuardRevExit",      "Chốt sớm khi nến báo đảo chiều (đang lời)", "Xét nến vừa đóng của khung kéo SL (mặc định khung vào lệnh): đóng cửa vượt lại EMA20 ngược chiều lệnh, nến nhấn chìm ngược chiều, hoặc râu nến dài về phía lệnh (giá bị từ chối). Đóng hết các lớp."),
         ("InpGuardRevMinR",      "Chỉ chốt đảo chiều khi tổng lời ít nhất x R", "Dùng cho cả chốt khi nến đảo chiều và chốt khi giá giật ngược. Lời ít hơn mức này thì để SL / hòa vốn xử lý."),
         ("InpGuardSpikeATR",     "Chốt ngay khi giá giật ngược x × ATR trong nến đang chạy (0 = tắt)", "Không chờ nến đóng: giá vừa chạy về phía lệnh rồi bật ngược x lần ATR (râu nến đang hình thành) thì đóng hết các lớp, giữ phần lời trước khi cú giật lấy mất."),
+        ("InpGuardExitScope",    "Chốt gộp / đảo chiều áp dụng cho: 0 = chỉ lệnh bot mở, 1 = mọi lệnh tay", "0: chỉ cộng và đóng lệnh do bot tự vào hoặc tự nhồi (ghi chú \"TB tu vao\" / \"TB nhoi tay\"); lệnh bạn tự đặt trên cùng mã không bị đóng theo. 1: mọi lệnh tay cùng chiều trên mã này."),
         ("InpGuardAutoEntry",       "TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)", "BẬT thì bot tự mở lệnh dù Cho phép mua / bán đang tắt. CHƯA BACKTEST. Vào khi đa số khung cùng chiều và nến vừa hồi về EMA20 rồi đóng cửa bật lại. Lệnh được xử lý như lệnh tay."),
         ("InpGuardAutoTrend",       "Tự vào khi ít nhất x / 9 khung cùng chiều", ""),
         ("InpGuardAutoNeedHTF",     "Tự vào chỉ khi H1 và H4 cũng cùng chiều", "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn."),

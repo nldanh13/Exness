@@ -66,6 +66,7 @@
  "InpGuardRevExit": "Xét nến vừa đóng của khung kéo SL (mặc định khung vào lệnh): đóng cửa vượt lại EMA20 ngược chiều lệnh, nến nhấn chìm ngược chiều, hoặc râu nến dài về phía lệnh (giá bị từ chối). Đóng hết các lớp.",
  "InpGuardRevMinR": "Dùng cho cả chốt khi nến đảo chiều và chốt khi giá giật ngược. Lời ít hơn mức này thì để SL / hòa vốn xử lý.",
  "InpGuardSpikeATR": "Không chờ nến đóng: giá vừa chạy về phía lệnh rồi bật ngược x lần ATR (râu nến đang hình thành) thì đóng hết các lớp, giữ phần lời trước khi cú giật lấy mất.",
+ "InpGuardExitScope": "0: chỉ cộng và đóng lệnh do bot tự vào hoặc tự nhồi (ghi chú \"TB tu vao\" / \"TB nhoi tay\"); lệnh bạn tự đặt trên cùng mã không bị đóng theo. 1: mọi lệnh tay cùng chiều trên mã này.",
  "InpGuardAutoEntry": "BẬT thì bot tự mở lệnh dù Cho phép mua / bán đang tắt. CHƯA BACKTEST. Vào khi đa số khung cùng chiều và nến vừa hồi về EMA20 rồi đóng cửa bật lại. Lệnh được xử lý như lệnh tay.",
  "InpGuardAutoNeedHTF": "Không cho các khung nhỏ (M1–M30) quay đầu kéo bot vào lệnh ngược xu hướng lớn.",
  "InpGuardAutoTFmin": "Khung nhỏ hơn: nhiều lệnh hơn, nhiễu hơn.",

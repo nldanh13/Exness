@@ -32,6 +32,27 @@ bool GuardSeen(const ulong t)
 }
 void GuardMark(const ulong t) { int n = ArraySize(g_gSeen); ArrayResize(g_gSeen, n + 1); g_gSeen[n] = t; }
 
+// Moi tai khoan + ma chi 1 chart duoc bat bao ve lenh tay (v5.10.11). Hai chart cung canh lenh magic 0 tren mot ma se cung
+// dat SL, cung nhoi, cung tu vao, cung chot gop - lenh bi xu ly 2 lan. Chart bat truoc giu quyen; chart sau chi hien canh bao.
+string GOwnPre() { return "TBO_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_"; }
+long   g_gOtherChart = 0;          // chart khac dang giu quyen (0 = chart nay giu)
+bool GuardOwner()
+{
+   string pre = GOwnPre(), mine = pre + IntegerToString(ChartID());
+   for(int i = GlobalVariablesTotal() - 1; i >= 0; i--)
+   {
+      string n = GlobalVariableName(i);
+      if(StringFind(n, pre) != 0 || n == mine) continue;
+      long id = StringToInteger(StringSubstr(n, StringLen(pre)));
+      if(ChartSymbol(id) != "") { g_gOtherChart = id; return false; }   // chart khac van mo va dang giu
+      GlobalVariableDel(n);                                              // chart cu da dong
+   }
+   if(!GlobalVariableCheck(mine)) GlobalVariableTemp(mine);
+   g_gOtherChart = 0;
+   return true;
+}
+void GuardOwnerRelease() { GlobalVariableDel(GOwnPre() + IntegerToString(ChartID())); }
+
 bool IsManualSelected() { return PositionGetInteger(POSITION_MAGIC) == 0 && PositionGetString(POSITION_SYMBOL) == _Symbol; }
 
 double GuardFloating(const ulong ticket)
@@ -169,6 +190,7 @@ void GuardManual()
    if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
    if(TimeCurrent() - g_gLast < 2) return;
    g_gLast = TimeCurrent();
+   if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
    datetime dayStart = TimeCurrent() - (dt.hour * 3600 + dt.min * 60 + dt.sec);
