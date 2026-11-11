@@ -179,7 +179,7 @@ double GuardOpenRisk(const bool buy)
 void GuardPyramid()
 {
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || (MQLInfoInteger(MQL_TESTER) && !P_GuardBacktest) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || GuardBucketLocked(1) || GuardBucketLocked(2) || g_gOtherChart != 0 || MainStopped()) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || GuardBucketLocked(2) || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!GuardTradeOk()) return;
 
@@ -190,6 +190,8 @@ void GuardPyramid()
    {
       ulong t = PositionGetTicket(i);
       if(t == 0 || !IsManualSelected()) continue;
+      // Kh oa bucket human 1% chi can lệnh do NGUOI mo, khong khoa auto magic0.
+      if(GuardBucketLocked(1) && !GuardPositionAuto()) return;
       int d = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
       if(dir != 0 && d != dir) return;                       // dang giu ca 2 chieu: khong nhoi
       dir = d; cnt++;
@@ -242,12 +244,21 @@ void GuardPyramid()
                              openRisk, newRisk, (openRisk + newRisk) / eq * 100.0, InpGuardMaxRiskPct));
       return;
    }
+   // Giu lock chung BTC/ETH TU KHI xet rui ro cho den khi broker tra ket qua.
+   if(!GroupLock()) return;
+   if(newRisk > GuardAlgoBudgetRemaining() + 1e-8 || !GroupGuardRiskAllowed(newRisk))
+   {
+      GroupUnlock(); return;
+   }
+   GroupReserveGuard(newRisk);
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
    double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(newLot, _Symbol, 0, sl, 0, "TB nhoi tay")
                                          : trade.Sell(newLot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
+   if(!ok) GroupClearGuard();
+   GroupUnlock();
    if(ok) { GuardMarkBotMade(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
@@ -602,12 +613,23 @@ void GuardAutoEntry()
       }
       return;
    }
+   // Auto-entry magic0 phai dung chung mot GroupLock/GroupOpenRisk voi BTC/ETH.
+   // Thu lai ngan sach da cap nhat trong lock (theo d oi chart khac co the vua vao lenh).
+   if(!GroupLock()) return;
+   double newRisk = loss1 * lot;
+   if(newRisk > GuardAlgoBudgetRemaining() + 1e-8 || !GroupGuardRiskAllowed(newRisk))
+   {
+      GroupUnlock(); return;
+   }
+   GroupReserveGuard(newRisk);
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
    double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
+   if(!ok) GroupClearGuard();
+   GroupUnlock();
    if(ok) { GuardMarkAuto(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
