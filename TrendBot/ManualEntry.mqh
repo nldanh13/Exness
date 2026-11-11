@@ -217,7 +217,10 @@ void GuardPyramid()
    string gw = "", nw = "";
    if(!TimeAllowed(gw)) return;
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
-   if(P_AvoidUSNews && USNewsNear(nw)) return;
+   if(P_AvoidUSNews)
+   {
+      if(USNewsNear(nw) || !g_newsDataOk) return;
+   }
    int tc = TrendCount(buy);
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
