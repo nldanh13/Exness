@@ -28,7 +28,14 @@ void BotRiskSave(const bool urgent = false)
    int h = FileOpen(BotRiskFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
    if(h != INVALID_HANDLE)
    {
-      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\r\n" + (GVGet("halt") > 0 ? "1" : "0") + "\r\n");
+      // Snapshot du cac moc can thiet de khong ResetBaseline khi Global Variables bi mat sau crash.
+      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\\r\\n" +
+                      (GVGet("halt") > 0 ? "1" : "0") + "\\r\\n" +
+                      DoubleToString(GVGet("base"), 8) + "\\r\\n" +
+                      DoubleToString(GVGet("epoch"), 0) + "\\r\\n" +
+                      DoubleToString(GVGet("dayId", -1), 0) + "\\r\\n" +
+                      DoubleToString(GVGet("dayEq"), 8) + "\\r\\n" +
+                      DoubleToString(GVGet("dayLock", -1), 0) + "\\r\\n");
       FileClose(h);
    }
    GlobalVariablesFlush();
@@ -42,7 +49,17 @@ void BotRiskLoad()
    if(h == INVALID_HANDLE) return;
    double savedPeak = StringToDouble(FileReadString(h));
    bool savedHalt = StringToInteger(FileReadString(h)) != 0;
+   double savedBase = StringToDouble(FileReadString(h));
+   double savedEpoch = StringToDouble(FileReadString(h));
+   double savedDayId = StringToDouble(FileReadString(h));
+   double savedDayEq = StringToDouble(FileReadString(h));
+   double savedDayLock = StringToDouble(FileReadString(h));
    FileClose(h);
+   if(savedBase > 0 && !GlobalVariableCheck(GVName("base"))) GlobalVariableSet(GVName("base"), savedBase);
+   if(savedEpoch > 0 && !GlobalVariableCheck(GVName("epoch"))) GlobalVariableSet(GVName("epoch"), savedEpoch);
+   if(savedDayId > 0 && !GlobalVariableCheck(GVName("dayId"))) GlobalVariableSet(GVName("dayId"), savedDayId);
+   if(savedDayEq > 0 && !GlobalVariableCheck(GVName("dayEq"))) GlobalVariableSet(GVName("dayEq"), savedDayEq);
+   if(savedDayLock > 0 && !GlobalVariableCheck(GVName("dayLock"))) GlobalVariableSet(GVName("dayLock"), savedDayLock);
    if(savedPeak > GVGet("peak")) GlobalVariableSet(GVName("peak"), savedPeak);
    if(savedHalt && GVGet("halt") <= 0) GlobalVariableSet(GVName("halt"), 1.0);
 }
