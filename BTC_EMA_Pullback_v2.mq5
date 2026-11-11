@@ -585,6 +585,13 @@ int OnInit()
 {
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
    LoadParams();
+   if(MQLInfoInteger(MQL_TESTER) && P_GuardBacktest)
+   {
+      // Moi optimization pass khong duoc thua huong bien global cua pass truoc.
+      GlobalVariablesDeleteAll(GKey(""));
+      GlobalVariableDel(GAcctKey("peak"));
+      GlobalVariableDel(GAcctKey("halt"));
+   }
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;   // het cau hinh: bo qua lan nay
    // Moi chien luoc / khung co Magic rieng, de nhieu bot tren CUNG ma khong quan ly nham lenh cua nhau.
    // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
@@ -669,6 +676,7 @@ bool TryInitState()
       g_status = "Cho dang nhap tai khoan...";
       return false;
    }
+   GuardRiskLoad(); // khoi phuc moc peak/halt tu file phu; tester khong doc/ghi dia
    // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
    // bi hieu nham la sut giam 66% va bot dung han.
    bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != P_Capital;
@@ -825,9 +833,10 @@ void SafetyStep()
 {
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+   if((IsHalted() || GuardHalted()) && P_CloseOnHalt && HasOwnPosition()) CloseAll(); // ca khi thi truong khong co tick
    // Ghi Global Variable xuong dia moi 30 giay (v5.10.18): MT5 chi tu ghi khi tat binh thuong; mat dien / treo may thi
    // moc von, R ban dau, bo dem lenh, khoa ngay... khong bi mat qua 30 giay gan nhat.
-   if(GetTickCount64() - g_gvFlush >= 30000) { g_gvFlush = GetTickCount64(); GlobalVariablesFlush(); }
+   if(!MQLInfoInteger(MQL_TESTER) && GetTickCount64() - g_gvFlush >= 30000) { g_gvFlush = GetTickCount64(); GlobalVariablesFlush(); }
 }
 
 void OnTimer()
