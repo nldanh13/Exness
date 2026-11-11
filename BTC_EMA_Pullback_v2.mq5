@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.12"
-#property version   "5.1011"
+#define  BOT_VERSION "5.10.13"
+#property version   "5.1013"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -139,6 +139,7 @@ input double          InpGuardMaxRiskPct  = 3.0;        // Rủi ro tối đa m�
 input bool            InpGuardNoAverage   = true;       // Đóng ngay lệnh nhồi vào lệnh cùng chiều đang lỗ
 input int             InpGuardMaxHoldH    = 24;         // Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)
 input double          InpGuardDayLossPct  = 5.0;        // Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)
+input double          InpGuardMaxDDPct    = 15.0;       // Dừng hẳn khi vốn tài khoản sụt từ đỉnh (%, 0 = tắt)
 input bool            InpGuardOldTrades   = false;      // Áp dụng cả cho lệnh đã mở trước khi bật
 input bool            InpGuardPending     = true;       // Sửa cả lệnh chờ (Limit / Stop) trước khi khớp
 input double          InpGuardBreakevenR  = 1.0;        // Lệnh tay lời bằng x lần rủi ro (R) thì dời SL về hòa vốn (0 = tắt)
@@ -614,6 +615,8 @@ int OnInit()
    trade.SetDeviationInPoints(100);
 
    TryInitState();          // neu chua dang nhap, se thu lai o cac tick sau
+   // Timer 500 ms (v5.10.13): kiem tra an toan lenh tay / chot loi ca khi khong co tick moi (thi truong im, tick bi gop)
+   if(!MQLInfoInteger(MQL_TESTER) && InpGuardManual) EventSetMillisecondTimer(500);
    return INIT_SUCCEEDED;
 }
 
@@ -644,6 +647,7 @@ bool TryInitState()
    if(P_ResetHalt || capitalChanged || !GlobalVariableCheck(GVName("base")))
    {
       ResetBaseline(P_ResetHalt);
+      if(P_ResetHalt && !MQLInfoInteger(MQL_TESTER)) GuardResetHalt();   // mo ca dung han lenh tay / tu vao (InpGuardMaxDDPct)
       if(P_ResetHalt)   Print("Da mo khoa bot va dat lai moc von. Nho doi InpResetHalt ve false.");
       if(capitalChanged) Print("InpCapital da thay doi, tu dat lai moc von va dinh von.");
       if(capitalChanged && !P_ResetHalt && (IsHalted() || GlobalVariableCheck(GVName("dayLock"))))
@@ -689,6 +693,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 
 void OnDeinit(const int reason)
 {
+   EventKillTimer();
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
@@ -782,16 +787,36 @@ bool FundingOk(const bool buy)
    }
    return true;
 }
+void OnTickBody();
+// An toan truoc (bao ve lenh tay, chot loi), hien thi / bao cao sau. Goi tu OnTick va OnTimer (v5.10.13).
+void SafetyStep()
+{
+   GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
+   GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+}
+
+void OnTimer()
+{
+   if(!g_stateReady && !TryInitState()) return;
+   ulong t0 = GetMicrosecondCount();
+   SafetyStep();
+   TickTimeRecord(GetMicrosecondCount() - t0);
+}
+
 void OnTick()
 {
+   ulong t0 = GetMicrosecondCount();
+   OnTickBody();
+   TickTimeRecord(GetMicrosecondCount() - t0);
+}
+
+void OnTickBody()
+{
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
-   GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
+   SafetyStep();
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
-   GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
-   GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
-   GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);
@@ -805,6 +830,10 @@ void OnTick()
    // Da dung han ma van con lenh (vd. dong that bai lan truoc) thi thu dong lai moi tick
    if(IsHalted() && P_CloseOnHalt && HasOwnPosition()) CloseAll();
    if(ready) CheckDailyLoss();
+   // Tu nhoi / tu vao chay SAU khi da cap nhat lo ngay va sut giam cua chien luoc chinh (v5.10.13), va tu bo qua
+   // khi chien luoc chinh dang dung han hoac cham lo ngay (MainStopped trong ManualEntry.mqh).
+   GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
+   GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    ManagePositions();
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
@@ -996,6 +1025,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
 {
    if(trans.type != TRADE_TRANSACTION_DEAL_ADD || !g_stateReady) return;
    if(!HistoryDealSelect(trans.deal)) return;
+   LogStopSlippage(trans.deal);                     // truot gia khi cham SL / TP (moi magic tren ma nay, v5.10.13)
    if(HistoryDealGetInteger(trans.deal, DEAL_MAGIC) != (long)P_Magic ||
       HistoryDealGetString(trans.deal, DEAL_SYMBOL) != _Symbol) return;
    g_plDirty = true;                                // tinh lai lai/lo cua bot o tick sau

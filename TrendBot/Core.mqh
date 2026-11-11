@@ -153,6 +153,47 @@ void LogSlippage(const bool isBuy, const double fill)
    g_reqPrice = 0;
 }
 
+// Truot gia luc cham SL / TP (v5.10.13): lenh dung khong bao dam khop dung gia dat khi thi truong chay manh.
+// Ghi vao cung file TrendBot_truotgia.csv, cot Chieu = "SL Buy" / "TP Sell"... GiaYeuCau = muc SL / TP, GiaKhop = gia dong that.
+void LogStopSlippage(const ulong deal)
+{
+   if(MQLInfoInteger(MQL_TESTER) || HistoryDealGetString(deal, DEAL_SYMBOL) != _Symbol) return;
+   if(HistoryDealGetInteger(deal, DEAL_ENTRY) != DEAL_ENTRY_OUT) return;
+   long reason = HistoryDealGetInteger(deal, DEAL_REASON);
+   if(reason != DEAL_REASON_SL && reason != DEAL_REASON_TP) return;
+   double lvl = HistoryDealGetDouble(deal, reason == DEAL_REASON_SL ? DEAL_SL : DEAL_TP);
+   double px  = HistoryDealGetDouble(deal, DEAL_PRICE);
+   if(lvl <= 0 || px <= 0) return;
+   bool closeBySell = HistoryDealGetInteger(deal, DEAL_TYPE) == DEAL_TYPE_SELL;   // dong lenh Buy = deal Sell
+   double slip = (closeBySell ? lvl - px : px - lvl) / _Point;                   // duong = khop xau hon muc dat
+   string f = "TrendBot_truotgia.csv";
+   bool isNew = !FileIsExist(f, FILE_COMMON);
+   int h = FileOpen(f, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ, ',');
+   if(h == INVALID_HANDLE) return;
+   if(isNew) FileWrite(h, "ThoiGian", "Ma", "Magic", "Chieu", "GiaYeuCau", "GiaKhop", "Truot_diem_batLoi", "Spread_diem_luocGui");
+   FileSeek(h, 0, SEEK_END);
+   FileWrite(h, TimeToString((datetime)HistoryDealGetInteger(deal, DEAL_TIME), TIME_DATE | TIME_SECONDS), _Symbol,
+             HistoryDealGetInteger(deal, DEAL_MAGIC), (reason == DEAL_REASON_SL ? "SL " : "TP ") + (closeBySell ? "Buy" : "Sell"),
+             DoubleToString(lvl, _Digits), DoubleToString(px, _Digits), DoubleToString(slip, 0), (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD));
+   FileClose(h);
+}
+
+// Thoi gian xu ly moi lan OnTick / OnTimer (v5.10.13), de xem bot co xu ly cham lam lo tick khong
+ulong  g_tkMaxUs = 0, g_tkSumUs = 0;
+long   g_tkCount = 0, g_tkSlow = 0;      // so lan > 100 ms
+void TickTimeRecord(const ulong us)
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   g_tkCount++; g_tkSumUs += us;
+   if(us > g_tkMaxUs) g_tkMaxUs = us;
+   if(us > 100000) g_tkSlow++;
+}
+string TickTimeText()
+{
+   if(g_tkCount <= 0) return "chua do";
+   return StringFormat("TB %.1f ms, lon nhat %.0f ms, %I64d lan > 100 ms / %I64d", g_tkSumUs / 1000.0 / g_tkCount, g_tkMaxUs / 1000.0, g_tkSlow, g_tkCount);
+}
+
 bool IsOwnSelected()
 {
    return PositionGetString(POSITION_SYMBOL) == _Symbol &&

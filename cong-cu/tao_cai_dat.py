@@ -41,14 +41,14 @@ PRESETS = [
         "Trạng thái: CHƯA BACKTEST. Chỉ chạy demo để xem kết quả trên số liệu hiện tại.",
         "Như bộ 04 (SL 0,25%, rủi ro tối đa 6%, khóa lỗ ngày 10%, nhồi tối đa 3 lớp),",
         "thêm: bot tự vào 0,01 lot khi ≥ 6/9 khung cùng chiều (bắt buộc có H1 và H4) và nến M5 vừa hồi về EMA20 rồi bật lại.",
-        "Chế độ nhanh: không giới hạn số lệnh, không nghỉ sau lệnh thua. Chỉ dừng khi lỗ 10% trong ngày.",
+        "Tối đa 10 lệnh tự vào mỗi ngày, nghỉ 15 phút sau lệnh thua. Khóa khi lỗ 10% trong ngày, dừng hẳn khi tài khoản sụt 15%.",
         "Spread ~6 USD mỗi lệnh so với SL ~180 USD: càng nhiều lệnh, phí spread càng ăn vào lãi.",
         "Chốt lời theo khung vào lệnh (M5): hòa vốn ở 1R, kéo SL 2 × ATR M5, TP cố định 2R,",
         "lệnh chưa tới hòa vốn sau 12 nến M5 (1 giờ) thì đóng, không ôm lệnh.",
     ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
         "InpGuardSLPct": "0.25", "InpGuardMaxRiskPct": "6.0", "InpGuardDayLossPct": "10.0", "InpGuardPyramidMax": "3",
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "5",
-        "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0",
+        "InpGuardAutoMaxDay": "10", "InpGuardAutoCooldownMin": "15",
         "InpGuardTrailTFmin": "0", "InpGuardTPR": "2.0", "InpGuardMaxBars": "12"}),
     ("06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM.set", [
         "06. THỬ NGHIỆM: như bộ 05 nhưng nhồi sớm hơn và chốt gộp mọi lớp một lượt",
@@ -64,7 +64,7 @@ PRESETS = [
         "InpGuardBreakevenR": "0.5", "InpGuardPyramidStepR": "0.5", "InpGuardBasketR": "2.0",
         "InpGuardRunTrend": "7", "InpGuardRevExit": "true", "InpGuardRevMinR": "0.5", "InpGuardSpikeATR": "1.0",
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "5",
-        "InpGuardAutoMaxDay": "0", "InpGuardAutoCooldownMin": "0",
+        "InpGuardAutoMaxDay": "10", "InpGuardAutoCooldownMin": "15",
         "InpGuardTrailTFmin": "0", "InpGuardTPR": "0.0", "InpGuardMaxBars": "12"}),
 ]
 

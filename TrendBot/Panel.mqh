@@ -118,7 +118,7 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
    color  cTxt = C'205,210,220', cDim = C'130,138,152', cOk = C'90,200,120', cBad = C'235,95,85', cWarn = C'240,180,60';
 
-   string txt[20]; color col[20]; int n = 0;
+   string txt[24]; color col[24]; int n = 0;
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
@@ -137,8 +137,9 @@ void UpdatePanel()
       for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) pend++;
       bool locked = GuardDayLocked();
       bool algo = (bool)TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && (bool)MQLInfoInteger(MQL_TRADE_ALLOWED);
-      txt[n] = algo ? (locked ? "ĐÃ KHÓA lệnh tay tới hết ngày" : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
+      txt[n] = algo ? (locked ? (GuardHalted() ? StringFormat("DỪNG HẲN: vốn tài khoản sụt ≥ %.0f%% từ đỉnh. Bật Đặt lại mốc vốn 1 lần để chạy lại", InpGuardMaxDDPct) : "ĐÃ KHÓA lệnh tay tới hết ngày") : InpGuardAutoEntry ? "Đang canh lệnh + chờ điểm tự vào" : "Đang canh lệnh tay") : "Algo Trading đang TẮT: bot không sửa được lệnh";
       col[n++] = algo ? (locked ? cBad : cOk) : cBad;
+      if(InpGuardAutoEntry && MainStopped()) { txt[n] = IsHalted() ? "Chiến lược chính DỪNG HẲN (sụt giảm): không tự vào / nhồi" : "Chiến lược chính chạm lỗ ngày: không tự vào / nhồi tới mai"; col[n++] = cBad; }
       if(g_gOtherChart != 0) { txt[n] = "CHART KHÁC đang bảo vệ " + _Symbol + ": chart này KHÔNG làm gì. Gỡ bot khỏi 1 trong 2 chart."; col[n++] = cBad; }
       if(InpGuardAutoEntry) { txt[n] = "TỰ GIAO DỊCH ĐANG BẬT: bot tự mở lệnh, không cần bạn bấm BUY/SELL"; col[n++] = cBad; }
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
@@ -146,6 +147,13 @@ void UpdatePanel()
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;
       txt[n] = StringFormat("Khóa lệnh tay khi lỗ ngày tới -%.0f%% = %s", InpGuardDayLossPct, PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
       col[n++] = cDim;
+      if(InpGuardMaxDDPct > 0)
+      {
+         double pk = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
+         double ddNow = pk > 0 ? MathMax(0, (pk - AccountInfoDouble(ACCOUNT_EQUITY)) / pk * 100.0) : 0;
+         txt[n] = StringFormat("Sụt giảm tài khoản: %.1f%% / dừng hẳn ở %.0f%%", ddNow, InpGuardMaxDDPct);
+         col[n++] = ddNow > InpGuardMaxDDPct * 0.6 ? cWarn : cDim;
+      }
       txt[n] = StringFormat("Lệnh tay đang mở: %d   ·   Lệnh chờ: %d", pos, pend);  col[n++] = cTxt;
       double slMoney = PNMinLotMoney(SymbolInfoDouble(_Symbol, SYMBOL_BID) * InpGuardSLPct / 100.0);
       txt[n] = StringFormat("Luật: SL tự đặt %.2f%% (1R ≈ %s với %.2f lot)", InpGuardSLPct, PNMoney(slMoney, cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));
@@ -191,11 +199,12 @@ void UpdatePanel()
    }
    txt[n] = StringFormat("Spread: %d point ≈ %s mỗi %.2f lot", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
                          PNMoney(PNMinLotMoney(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point), cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));  col[n++] = cDim;
+   if(InpGuardManual) { txt[n] = "Xử lý: " + TickTimeText(); col[n++] = g_tkSlow > 0 ? cWarn : cDim; }
 
    int x = 8, y = 22, lh = 17;
    PNBox("bg", x, y, PN_W, 34 + n * lh);
    PNText("h", x + 10, y + 6, head, C'120,170,255', 9, "Segoe UI Semibold");
-   for(int i = 0; i < 20; i++)
+   for(int i = 0; i < 24; i++)
    {
       if(i < n) PNText("l" + IntegerToString(i), x + 10, y + 26 + i * lh, txt[i], col[i], 9);
       else ObjectDelete(0, PN_PFX + "l" + IntegerToString(i));

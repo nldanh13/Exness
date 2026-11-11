@@ -10,12 +10,39 @@
 //+------------------------------------------------------------------+
 ulong    g_gSeen[];            // lenh tay da xem (de chi xu ly "lenh moi" 1 lan)
 bool     g_gInit      = false;
-datetime g_gLast      = 0;
+ulong    g_gLast      = 0;      // GetTickCount64 (ms): chay duoc ca tu OnTimer khi khong co tick (TimeCurrent dung yen)
 
 // Trang thai luu qua lan khoi dong lai (Global Variables cua terminal)
 string GKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_" + k; }
 int    GDayKey(const datetime t) { MqlDateTime d; TimeToStruct(t, d); return d.year * 10000 + d.mon * 100 + d.day; }
-bool   GuardDayLocked() { string n = GKey("lock"); return GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent()); }
+// Dung han theo sut giam CA TAI KHOAN (v5.10.13, InpGuardMaxDDPct): lenh tay / tu vao dung magic 0 nen KHONG nam trong moc
+// lo ngay 3% / sut giam 15% cua chien luoc chinh (chi tinh P_Magic). Moc nay tinh equity ca tai khoan so voi dinh, chung moi ma.
+// Cham thi dong lenh tay, khong tu vao, khong nhoi, toi khi dat InpResetHalt = true mot lan.
+string GAcctKey(const string k) { return "TBG_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + k; }
+bool   GuardHalted() { return GlobalVariableCheck(GAcctKey("halt")); }
+void   GuardResetHalt()
+{
+   GlobalVariableDel(GAcctKey("halt"));
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   if(eq > 0) GlobalVariableSet(GAcctKey("peak"), eq);
+}
+// true = vua cham hoac dang dung han
+bool GuardCheckAcctDD(const double eq)
+{
+   if(GuardHalted()) return true;
+   if(InpGuardMaxDDPct <= 0 || eq <= 0) return false;
+   string pk = GAcctKey("peak");
+   double peak = GlobalVariableCheck(pk) ? GlobalVariableGet(pk) : 0;
+   if(eq > peak) { GlobalVariableSet(pk, eq); return false; }
+   double dd = (peak - eq) / peak * 100.0;
+   if(dd < InpGuardMaxDDPct) return false;
+   GlobalVariableSet(GAcctKey("halt"), (double)TimeCurrent());
+   Notify(StringFormat("[%s] DUNG HAN: von tai khoan sut %.1f%% tu dinh %.0f (gioi han %.1f%%). Dong lenh tay, ngung tu vao va nhoi. "
+                       "Muon chay lai: dat InpResetHalt = true mot lan roi doi ve false.", _Symbol, dd, peak, InpGuardMaxDDPct));
+   return true;
+}
+
+bool   GuardDayLocked() { string n = GKey("lock"); return GuardHalted() || (GlobalVariableCheck(n) && (int)GlobalVariableGet(n) == GDayKey(TimeCurrent())); }
 void   GuardSetDayLock() { GlobalVariableSet(GKey("lock"), GDayKey(TimeCurrent())); }
 // Lenh mo truoc luc bat bao ve lan dau = "lenh cu": chi canh bao, khong sua / dong (tru khi InpGuardOldTrades)
 datetime GuardSince()
@@ -188,8 +215,8 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
 void GuardManual()
 {
    if(!InpGuardManual || MQLInfoInteger(MQL_TESTER)) return;
-   if(TimeCurrent() - g_gLast < 2) return;
-   g_gLast = TimeCurrent();
+   if(GetTickCount64() - g_gLast < 1000) return;              // moi giay (truoc v5.10.13: 2 giay)
+   g_gLast = GetTickCount64();
    if(!GuardOwner()) return;                                  // chart khac cung ma dang bao ve
 
    MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
@@ -208,6 +235,8 @@ void GuardManual()
    }
 
    double eq = AccountInfoDouble(ACCOUNT_EQUITY);
+   // 0) Sut giam ca tai khoan tu dinh (InpGuardMaxDDPct): dung han, coi nhu khoa (dong lenh tay, khong tu vao / nhoi)
+   GuardCheckAcctDD(eq);
    // 1) Lo trong ngay cua lenh tay vuot gioi han: dong het, khoa toi het ngay
    bool locked = GuardDayLocked();
    if(InpGuardDayLossPct > 0 && !locked)
@@ -246,7 +275,7 @@ void GuardManual()
                                 _Symbol, t, sl == 0 ? " chua co SL" : " dang trong ngay da cham gioi han lo"));
          continue;
       }
-      if(locked) { GuardClose(t, "da cham gioi han lo ngay cua lenh tay"); continue; }
+      if(locked) { GuardClose(t, GuardHalted() ? "dung han vi von tai khoan sut giam qua gioi han" : "da cham gioi han lo ngay cua lenh tay"); continue; }
 
       // 2) Nhoi them khi lenh cung chieu dang lo: dong lenh moi
       if(isNew && InpGuardNoAverage)

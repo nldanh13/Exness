@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.12
+# Hướng dẫn bot BTC (MT5) v5.10.13
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -646,3 +646,38 @@ Nếu lot nhỏ nhất quá lớn so với vốn, bot mở lệnh rồi đóng n
     (`git filter-repo --path ket-qua/thuc-te --invert-paths`) rồi force push, hoặc dùng một repo riêng chỉ để chứa nhật ký và xoá repo đó khi xong.
   - Khuyến nghị: sau khi Claude đối chiếu xong, xoá thư mục `ket-qua/thuc-te/` khỏi repo; giữ bản gốc trên máy (Common\Files của MT5).
   - `ket-qua/thuc-te/` đã có trong `.gitignore` để không bị đưa lên nhầm bằng `git add .`; chỉ nút 4 mới đẩy (sau khi hỏi).
+
+## Dừng hẳn theo sụt giảm cả tài khoản cho lệnh tay / tự vào (v5.10.13)
+Chiến lược chính dùng magic của bot (`InpMagic`) và tự dừng ở lỗ 3%/ngày, sụt 15%. Lệnh tay và lệnh tự vào của bộ 04/05/06
+dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng chỉ có khóa lỗ ngày riêng (`InpGuardDayLossPct`, bộ 05/06 là 10%).
+- `InpGuardMaxDDPct` (mới, mặc định 15): equity CẢ TÀI KHOẢN sụt từ đỉnh quá mức này thì bot đóng lệnh tay trên mã của chart,
+  ngừng tự vào và tự nhồi, và giữ trạng thái dừng qua khởi động lại. Mọi chart bảo vệ trên cùng tài khoản đều thấy trạng thái này.
+- Mở lại: đặt `InpResetHalt = true` một lần (đặt lại đỉnh bằng equity hiện tại), rồi đổi về `false`.
+- Rút tiền làm equity giảm và có thể bị tính là sụt giảm: sau khi rút, bật `InpResetHalt` một lần.
+- Bảng trên chart có dòng "Sụt giảm tài khoản: x% / dừng hẳn ở 15%".- Chiến lược chính đang dừng hẳn (sụt giảm `InpMaxDrawdownPct`) hoặc chạm lỗ ngày (`InpMaxDailyLossPct`) thì bot cũng KHÔNG tự vào,
+  không tự nhồi. Hai bước này nay chạy sau khi đã cập nhật lỗ ngày / sụt giảm của tick đó (trước đây chạy trước và không kiểm tra).
+
+**Rà soát thêm (cùng bản 5.10.13):**
+- Tự vào lệnh nay dùng chung bộ lọc giờ nghỉ / cuối tuần / tin và spread tối đa (`InpMaxSpreadPoints`) với chiến lược chính,
+  và bỏ tín hiệu khi spread lớn hơn 20% khoảng cách SL (như luật nhồi). Giới hạn số lệnh/ngày và nghỉ sau thua của chiến lược chính
+  không áp dụng; tự vào có giới hạn riêng (`InpGuardAutoMaxDay`, `InpGuardAutoCooldownMin`).
+- Bộ 05/06: tối đa 10 lệnh tự vào mỗi ngày, nghỉ 15 phút sau lệnh thua (trước là không giới hạn, không nghỉ).
+- Nhồi lệnh: trước khi gửi, cộng rủi ro tiền còn mở của các lớp (lớp đã hòa vốn tính 0) với lớp mới; vượt `InpGuardMaxRiskPct` thì không nhồi.
+- Nhận diện lệnh bot mở: ngoài ghi chú `TB ...`, bot lưu ticket vào Global Variable lúc mở, nên sàn đổi ghi chú vẫn nhận ra.
+- Chốt gộp tính lãi THẬT: trừ ước 2 lần phí (commission + fee) lúc vào. Tài khoản Standard của Exness không có phí nên không đổi.
+- Vẫn còn (không sửa trong code):
+  - Bảo vệ lệnh tay (`InpGuardManual`) cố ý sửa SL / đóng cả lệnh bạn tự đặt trên mã đó: đó là chức năng của bộ 04. Không muốn thì
+    đừng vào lệnh tay trên mã đang chạy bộ 05/06, hoặc vào lệnh tay trên mã khác.
+  - Khóa "một chart mỗi mã" và trạng thái dừng hẳn dùng Global Variable, chỉ có hiệu lực trong CÙNG một MT5. Không chạy bot cho
+    cùng tài khoản trên hai máy / hai VPS cùng lúc.
+
+**Tốc độ phản ứng (cùng bản 5.10.13):**
+- Thêm timer 500 ms: bảo vệ lệnh tay và chốt lời linh hoạt chạy cả khi không có tick mới, không chỉ trong `OnTick()`.
+  Các bước an toàn chạy trước, hiển thị / nhật ký chạy sau. Bộ đếm dùng đồng hồ máy (`GetTickCount64`) thay vì giờ server
+  (giờ server đứng yên khi không có tick). Bảo vệ lệnh tay kiểm tra mỗi 1 giây (trước 2 giây), chốt linh hoạt 4 lần / giây.
+- Giá tốt nhất kể từ khi khớp (cho chốt khi giật ngược) đọc MỌI tick bằng `CopyTicksRange`, không bỏ sót đỉnh / đáy giữa hai lần kiểm tra.
+- Đo thời gian xử lý: bảng trên chart và file trạng thái (`xuly=`) ghi thời gian trung bình, lớn nhất và số lần > 100 ms.
+- Trượt giá khi chạm SL / TP: ghi thêm vào `TrendBot_truotgia.csv` (cột Chiều = "SL Buy", "TP Sell"..., cả lệnh magic 0),
+  GiaYeuCau = mức SL / TP, GiaKhop = giá đóng thật. Bấm "Gửi nhật ký" sau vài tuần demo để đo.
+- Giới hạn không sửa được: EA chỉ chạy khi MT5 mở và có mạng. SL / TP nằm trên máy chủ nên vẫn hoạt động, còn chốt gộp,
+  chốt khi đảo chiều, kéo SL, tự vào thì dừng. Dùng VPS để chạy liên tục. SL không bảo đảm khớp đúng giá khi thị trường chạy mạnh.

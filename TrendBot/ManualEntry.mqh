@@ -142,10 +142,33 @@ int TrendCount(const bool up)
    return c;
 }
 
+// Chien luoc chinh (magic P_Magic) dang dung han vi sut giam hoac da cham lo ngay: khong mo them lenh nao,
+// ke ca tu nhoi / tu vao (magic 0). Hai co che nay truoc v5.10.13 doc lap voi nhau.
+bool MainStopped() { return IsHalted() || DailyLossHit(); }
+
+// Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable theo ticket (v5.10.13). Truoc chi dua vao ghi chu "TB ...",
+// ma san co the doi / cat ghi chu. Trong MT5 ticket vi the = ticket lenh da mo no (trade.ResultOrder()).
+void GuardMarkBotMade(const ulong ticket) { if(ticket > 0) GlobalVariableSet(GKey("bm" + IntegerToString((long)ticket)), 1); }
+
+// Rui ro tien te cua cac lenh tay dang mo cung chieu tren ma nay neu tat ca cham SL (lop da hoa von tinh 0)
+double GuardOpenRisk(const bool buy)
+{
+   double sum = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) == 0 || !IsManualSelected()) continue;
+      if((PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) != buy) continue;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL), v = PositionGetDouble(POSITION_VOLUME), pr = 0;
+      if(sl <= 0) return -1;                                   // co lop khong SL: khong tinh duoc -> khong nhoi
+      if(OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, v, op, sl, pr) && pr < 0) sum += -pr;
+   }
+   return sum;
+}
+
 void GuardPyramid()
 {
    if(!InpGuardManual || InpGuardPyramidMax <= 1 || MQLInfoInteger(MQL_TESTER) || !IsHedging()) return;
-   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0) return;
+   if(TimeCurrent() - g_gpLast < 5 || GuardDayLocked() || g_gOtherChart != 0 || MainStopped()) return;
    g_gpLast = TimeCurrent();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
@@ -181,10 +204,24 @@ void GuardPyramid()
    if(InpGuardPyramidTrend > 0 && tc < InpGuardPyramidTrend) return;
 
    double sl = NormalizeDouble(buy ? px - lastR : px + lastR, _Digits);
+   // Tong rui ro TRUOC khi gui (v5.10.13): rui ro con mo cua cac lop (sau hoa von ~0) + lop moi khong vuot InpGuardMaxRiskPct
+   double eq = AccountInfoDouble(ACCOUNT_EQUITY), newRisk = 0;
+   double openRisk = GuardOpenRisk(buy);
+   if(openRisk < 0 || eq <= 0) return;
+   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, lot, px, sl, newRisk)) return;
+   newRisk = MathAbs(newRisk);
+   if(InpGuardMaxRiskPct > 0 && openRisk + newRisk > eq * InpGuardMaxRiskPct / 100.0)
+   {
+      if(ShouldNotify("pyrRisk", 3600))
+         Notify(StringFormat("[%s] KHONG NHOI: rui ro mo %.0f + lop moi %.0f = %.1f%% von, vuot gioi han %.1f%%.", _Symbol,
+                             openRisk, newRisk, (openRisk + newRisk) / eq * 100.0, InpGuardMaxRiskPct));
+      return;
+   }
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB nhoi tay")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
+   if(ok) GuardMarkBotMade(trade.ResultOrder());
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] NHOI THEO XU HUONG: them lop %d/%d %s %.2f lot, SL %.2f. Cac lop truoc da hoa von; %d/9 khung cung chieu.",
@@ -203,7 +240,7 @@ void GuardPyramid()
 // Lenh mo truoc khi bat bao ve (lenh cu) khong tinh, tru khi InpGuardOldTrades. Dang giu ca 2 chieu: khong lam gi.
 // Nhom lenh (v5.10.11, InpGuardExitScope): 0 = chi lenh bot mo (ghi chu "TB tu vao" / "TB nhoi tay"), lenh ban tu dat khong bi
 // cong lai hay dong theo; 1 = moi lenh tay cung ma (nhu v5.10.9).
-datetime g_gbLast = 0;
+ulong    g_gbLast = 0;         // GetTickCount64 (ms)
 int      g_grEMA = INVALID_HANDLE, g_grATR = INVALID_HANDLE;
 
 void GuardExitRelease()
@@ -234,7 +271,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
    if(candles && barAfter && against1 && with2 && body1 >= body2 && body1 >= 0.5 * atr)
    { why = StringFormat("nen %s nhan chim %s", m, buy ? "giam" : "tang"); return true; }
    // Giat nguoc (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh). Bat ngay, khong
-   // cho nen dong. ext = gia tot nhat GHI NHAN SAU KHI lop dau khop (v5.10.11, GuardExit cap nhat moi giay) - khong dung dinh / day
+   // cho nen dong. ext = gia tot nhat SAU KHI lop dau khop, tinh tu moi tick (v5.10.13, GuardExit doc CopyTicksRange) - khong dung dinh / day
    // cua nen da co tu truoc luc vao lenh.
    if(InpGuardSpikeATR > 0)
    {
@@ -250,13 +287,17 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 }
 
 // Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
-bool GuardBotMade() { return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0; }
+bool GuardBotMade()
+{
+   if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_TICKET))))) return true;
+   return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0;   // lenh mo truoc v5.10.13
+}
 
 void GuardExit()
 {
    if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
-   if(TimeCurrent() - g_gbLast < 1 || g_gOtherChart != 0) return;
-   g_gbLast = TimeCurrent();
+   if(GetTickCount64() - g_gbLast < 250 || g_gOtherChart != 0) return;   // 4 lan / giay
+   g_gbLast = GetTickCount64();
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
 
    datetime since = GuardSince();
@@ -264,6 +305,7 @@ void GuardExit()
    double pl = 0, firstOpen = 0, firstVol = 0;
    ulong firstT = 0;
    ulong tickets[];
+   long  posIds[];
    datetime firstTime = 0;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -277,6 +319,7 @@ void GuardExit()
       dir = d;
       pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
       ArrayResize(tickets, cnt + 1); tickets[cnt++] = t;
+      ArrayResize(posIds, cnt); posIds[cnt - 1] = PositionGetInteger(POSITION_IDENTIFIER);
       if(firstT == 0 || ot < firstTime)
       {
          firstT = t; firstTime = ot;
@@ -285,6 +328,16 @@ void GuardExit()
    }
    if(cnt == 0) return;
    bool buy = dir > 0;
+   // Phi (commission) cua chuoi (v5.10.13): phi luc vao da tru vao so du nhung khong nam trong POSITION_PROFIT; luc dong thuong
+   // tinh them bang ay. Tru uoc 2 lan phi vao de quyet dinh chot theo lai THAT. Tai khoan Standard cua Exness: phi = 0.
+   for(int i = 0; i < cnt; i++)
+      if(HistorySelectByPosition(posIds[i]))
+         for(int k = HistoryDealsTotal() - 1; k >= 0; k--)
+         {
+            ulong dl = HistoryDealGetTicket(k);
+            if(dl != 0 && HistoryDealGetInteger(dl, DEAL_ENTRY) == DEAL_ENTRY_IN)
+               pl += 2.0 * (HistoryDealGetDouble(dl, DEAL_COMMISSION) + HistoryDealGetDouble(dl, DEAL_FEE));
+         }
 
    // R cua lop dau: chi dung khi da luu luc lenh con SL ban dau; neu chua luu ma SL da ve hoa von thi bo qua (tranh R ~ 0)
    string key = GKey("r" + IntegerToString((long)firstT));
@@ -305,11 +358,23 @@ void GuardExit()
 
    string why = "", rev = "";
    // Gia tot nhat tu luc lop dau khop (cho chot khi giat nguoc): bat dau tu gia vao, cap nhat moi giay
-   string extKey = GKey("ext" + IntegerToString((long)firstT));
-   double pxNow = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   // Doc MOI tick tu lan kiem tra truoc (CopyTicksRange), khong chi gia luc kiem tra, nen khong bo sot dinh / day giua hai lan.
+   string extKey = GKey("ext" + IntegerToString((long)firstT)), extMsKey = GKey("extms" + IntegerToString((long)firstT));
    double ext = GlobalVariableCheck(extKey) ? GlobalVariableGet(extKey) : firstOpen;
+   ulong  fromMs = GlobalVariableCheck(extMsKey) ? (ulong)GlobalVariableGet(extMsKey) : (ulong)firstTime * 1000;
+   MqlTick tk[];
+   int nt = CopyTicksRange(_Symbol, tk, COPY_TICKS_INFO, fromMs, 0);
+   ulong lastMs = fromMs;
+   for(int i = 0; i < nt; i++)
+   {
+      double p = buy ? tk[i].bid : tk[i].ask;
+      if(p > 0 && (buy ? p > ext : p < ext)) ext = p;
+      if((ulong)tk[i].time_msc > lastMs) lastMs = (ulong)tk[i].time_msc;
+   }
+   double pxNow = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    if(pxNow > 0 && (buy ? pxNow > ext : pxNow < ext)) ext = pxNow;
    GlobalVariableSet(extKey, ext);
+   GlobalVariableSet(extMsKey, (double)lastMs);
    string runKey = GKey("run" + IntegerToString((long)firstT));      // da qua muc chot gop, dang de loi chay
    bool running = GlobalVariableCheck(runKey);
    if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, ext, rev))
@@ -337,7 +402,7 @@ void GuardExit()
    int closed = 0;
    for(int i = 0; i < cnt; i++)
       if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) closed++;
-   if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); }
+   if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); GlobalVariableDel(extMsKey); }
    Notify(StringFormat("[%s] CHOT LOI: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR). Ly do: %s.", _Symbol, closed, cnt,
                        buy ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), rNow, why));
 }
@@ -381,7 +446,11 @@ void GuardAutoEntry()
    ENUM_TIMEFRAMES tf = g_tbTF[ti];
    datetime bar = iTime(_Symbol, tf, 0);
    if(bar == 0 || bar == g_aeLastBar) return;                 // moi nen xet 1 lan
-   if(GuardDayLocked()) return;
+   if(GuardDayLocked() || MainStopped()) return;
+   // Bo loc chung voi chien luoc chinh (v5.10.13): khung gio nghi / cuoi tuan / tin (InpSkipWeekend, InpBlock*...) va spread toi da
+   string gateWhy = "";
+   if(!TimeAllowed(gateWhy)) return;
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
    for(int i = PositionsTotal() - 1; i >= 0; i--) if(PositionGetTicket(i) != 0 && IsManualSelected()) return;
    for(int i = OrdersTotal() - 1; i >= 0; i--) if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
@@ -408,6 +477,7 @@ void GuardAutoEntry()
    double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double slp = InpGuardSLPct > 0 ? InpGuardSLPct : 0.25;
    double sl  = NormalizeDouble(buy ? px * (1 - slp / 100.0) : px * (1 + slp / 100.0), _Digits);
+   if(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point > MathAbs(px - sl) * 0.2) return;   // spread > 20% R: nhu luat nhoi
    // Khoi luong tinh TRUOC khi vao (v5.10.10): lo khi cham SL khong vuot ngan sach. Truoc day luon vao lot nho nhat roi de
    // bo bao ve (buoc 4 trong GuardManual) dong / giam lot SAU khi da khop - mat spread va truot gia vo ich.
    //  - InpGuardAutoRiskPct > 0: lot = von x % / lo cua 1 lot tai SL, lam tron xuong theo buoc lot.
@@ -445,6 +515,7 @@ void GuardAutoEntry()
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
+   if(ok) GuardMarkBotMade(trade.ResultOrder());
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f (rui ro %.1f%% von). %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",
