@@ -4,7 +4,7 @@ Chạy trên tài khoản **demo** Exness, chart BTCUSDm M5, bộ cài đặt 05
 dòng trong tab **Experts** (Ctrl+T → Experts), và file liên quan. Các file nằm ở `File → Open Data Folder → ..\Common\Files`.
 
 Mẹo chung:
-- **F3** mở cửa sổ Global Variables: xem trạng thái bot lưu lại (khóa ngày, mốc vốn, R, bộ đếm...). Tên bắt đầu `TBG_` / `TBA_` / `TBO_`.
+- **F3** mở cửa sổ Global Variables: xem trạng thái bot lưu lại (khóa ngày, mốc vốn, R, bộ đếm...). Tên của bảo vệ lệnh tay bắt đầu bằng `TBG_`, khóa chart bằng `TBO_`.
 - Để bài thử diễn ra nhanh, **tạm hạ** ngưỡng (ví dụ sụt giảm 1% thay vì 15%), thử xong đặt lại như cũ.
 
 | # | Bài thử | Cách làm trên demo | Đạt khi |
