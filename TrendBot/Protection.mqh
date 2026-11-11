@@ -29,13 +29,13 @@ void BotRiskSave(const bool urgent = false)
    if(h != INVALID_HANDLE)
    {
       // Snapshot du cac moc can thiet de khong ResetBaseline khi Global Variables bi mat sau crash.
-      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\\r\\n" +
-                      (GVGet("halt") > 0 ? "1" : "0") + "\\r\\n" +
-                      DoubleToString(GVGet("base"), 8) + "\\r\\n" +
-                      DoubleToString(GVGet("epoch"), 0) + "\\r\\n" +
-                      DoubleToString(GVGet("dayId", -1), 0) + "\\r\\n" +
-                      DoubleToString(GVGet("dayEq"), 8) + "\\r\\n" +
-                      DoubleToString(GVGet("dayLock", -1), 0) + "\\r\\n");
+      FileWriteString(h, DoubleToString(GVGet("peak"), 8) + "\r\n" +
+                      (GVGet("halt") > 0 ? "1" : "0") + "\r\n" +
+                      DoubleToString(GVGet("base"), 8) + "\r\n" +
+                      DoubleToString(GVGet("epoch"), 0) + "\r\n" +
+                      DoubleToString(GVGet("dayId", -1), 0) + "\r\n" +
+                      DoubleToString(GVGet("dayEq"), 8) + "\r\n" +
+                      DoubleToString(GVGet("dayLock", -1), 0) + "\r\n");
       FileClose(h);
    }
    GlobalVariablesFlush();
