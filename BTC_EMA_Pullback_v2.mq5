@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.8"
-#property version   "5.108"
+#define  BOT_VERSION "5.10.9"
+#property version   "5.109"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -149,6 +149,11 @@ input int             InpGuardMaxBars     = 0;          // Đóng lệnh chưa t
 input int             InpGuardPyramidMax  = 1;          // Tự nhồi lệnh tay: tổng số lớp tối đa (1 = tắt)
 input double          InpGuardPyramidStepR = 1.0;       // Nhồi thêm khi giá đi tiếp (× R của lớp mới nhất)
 input int             InpGuardPyramidTrend = 5;         // Chỉ nhồi khi ít nhất x / 9 khung cùng chiều (0 = bỏ qua)
+input double          InpGuardBasketR     = 0.0;        // Chốt tất cả các lớp khi tổng lời đạt x R (0 = tắt)
+input int             InpGuardRunTrend    = 0;          // Đạt mức chốt gộp mà còn ≥ x/9 khung cùng chiều thì để lời chạy tiếp (0 = tắt)
+input bool            InpGuardRevExit     = false;      // Chốt sớm khi nến báo đảo chiều (đang lời)
+input double          InpGuardRevMinR     = 0.5;        // Chỉ chốt đảo chiều khi tổng lời ít nhất x R
+input double          InpGuardSpikeATR    = 0.0;        // Chốt ngay khi giá giật ngược x × ATR trong nến đang chạy (0 = tắt)
 input bool            InpGuardAutoEntry   = false;      // TỰ GIAO DỊCH: bot tự mở lệnh, không cần bạn bấm (thử nghiệm)
 input int             InpGuardAutoTrend   = 8;          // Tự vào khi ít nhất x / 9 khung cùng chiều
 input bool            InpGuardAutoNeedHTF = true;       // Tự vào chỉ khi H1 và H4 cũng cùng chiều
@@ -782,6 +787,7 @@ void OnTick()
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
+   GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
    GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
    GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du

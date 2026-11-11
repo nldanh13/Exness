@@ -191,6 +191,146 @@ void GuardPyramid()
                           _Symbol, cnt + 1, InpGuardPyramidMax, buy ? "BUY" : "SELL", lot, sl, tc));
 }
 
+//--- Chot loi linh hoat cho chuoi lenh tay cung chieu tren ma nay (v5.10.9). R = so tien lop DAU TIEN mat neu cham SL ban dau
+// (GuardInitialR); cac lop nhoi cung lot nen 1R cua chuoi = 1R cua lop dau. Tong lai = lai + swap moi lop dang mo.
+//  a) Chot gop (InpGuardBasketR > 0): tong lai dat x R thi dong het mot luot. Bat thi khong dat TP tung lop.
+//     De loi chay (InpGuardRunTrend > 0): dat muc chot ma van con >= x/9 khung cung chieu thi giu tiep; dong khi xu huong yeu di
+//     (duoi x/9 khung), khi co dau hieu dao chieu, hoac khi tong lai rut ve duoi muc chot (chot gan dung muc, khong tra lai them).
+//  b) Chot khi dao chieu (InpGuardRevExit): nen vua dong cua khung keo SL (mac dinh khung vao lenh) bao dao chieu va tong lai
+//     >= InpGuardRevMinR x R thi dong het. Dau hieu: dong cua vuot lai EMA20 nguoc chieu lenh, nen nhan chim nguoc chieu
+//     (than >= than nen truoc va >= 0,5 ATR), hoac rau nen dai ve phia lenh (>= 2 lan than va >= 0,6 ATR: gia bi tu choi).
+//     Chi xet nen dong SAU khi lop dau da vao. Them: gia dang giat nguoc >= InpGuardSpikeATR x ATR trong nen dang chay (khong cho nen dong).
+// Lenh mo truoc khi bat bao ve (lenh cu) khong tinh, tru khi InpGuardOldTrades. Dang giu ca 2 chieu: khong lam gi.
+datetime g_gbLast = 0;
+int      g_grEMA = INVALID_HANDLE, g_grATR = INVALID_HANDLE;
+
+void GuardExitRelease()
+{
+   if(g_grEMA != INVALID_HANDLE) IndicatorRelease(g_grEMA);
+   if(g_grATR != INVALID_HANDLE) IndicatorRelease(g_grATR);
+   g_grEMA = INVALID_HANDLE; g_grATR = INVALID_HANDLE;
+}
+
+// Nen vua dong (shift 1) bao dao chieu NGUOC voi lenh dang giu (buy = dang giu Buy)
+bool GuardReversal(const bool buy, const datetime firstTime, string &why)
+{
+   ENUM_TIMEFRAMES tf = TFFromMin(GuardTFmin());
+   bool barAfter = iTime(_Symbol, tf, 0) > firstTime;                  // nen 1 dong sau khi vao lenh
+   bool candles  = InpGuardRevExit;                                     // 3 mau nen; giat nguoc xet rieng theo InpGuardSpikeATR
+   if(g_grEMA == INVALID_HANDLE) g_grEMA = iMA(_Symbol, tf, 20, 0, MODE_EMA, PRICE_CLOSE);
+   if(g_grATR == INVALID_HANDLE) g_grATR = iATR(_Symbol, tf, 14);
+   double ema, atr;
+   if(!GetValue(g_grEMA, 0, 1, ema) || !GetValue(g_grATR, 0, 1, atr) || atr <= 0) return false;
+   double o1 = iOpen(_Symbol, tf, 1), c1 = iClose(_Symbol, tf, 1), h1 = iHigh(_Symbol, tf, 1), l1 = iLow(_Symbol, tf, 1);
+   double o2 = iOpen(_Symbol, tf, 2), c2 = iClose(_Symbol, tf, 2);
+   if(o1 <= 0 || o2 <= 0) return false;
+   double body1 = MathAbs(c1 - o1), body2 = MathAbs(c2 - o2);
+   string m = "M" + IntegerToString(GuardTFmin());
+   if(!barAfter) { h1 = buy ? 0 : DBL_MAX; l1 = buy ? 0 : DBL_MAX; }   // nen 1 truoc khi vao: chi dung nen dang chay cho giat nguoc
+   if(candles && barAfter && (buy ? c1 < ema : c1 > ema))
+   { why = StringFormat("nen %s dong cua %s EMA20", m, buy ? "duoi" : "tren"); return true; }
+   bool against1 = buy ? c1 < o1 : c1 > o1, with2 = buy ? c2 > o2 : c2 < o2;
+   if(candles && barAfter && against1 && with2 && body1 >= body2 && body1 >= 0.5 * atr)
+   { why = StringFormat("nen %s nhan chim %s", m, buy ? "giam" : "tang"); return true; }
+   // Giat nguoc trong nen DANG CHAY (InpGuardSpikeATR): gia vua chay ve phia lenh roi bat nguoc >= x ATR (rau nen dang hinh thanh),
+   // tinh tu dinh / day cua nen hien tai va nen truoc. Bat ngay, khong cho nen dong.
+   if(InpGuardSpikeATR > 0)
+   {
+      double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double ext = buy ? MathMax(iHigh(_Symbol, tf, 0), h1) : MathMin(iLow(_Symbol, tf, 0), l1);
+      double back = buy ? ext - px : px - ext;
+      if(ext > 0 && back >= InpGuardSpikeATR * atr)
+      { why = StringFormat("gia giat %s %.1f ATR %s tu %s", buy ? "xuong" : "len", back / atr, m, buy ? "dinh" : "day"); return true; }
+   }
+   double wick = buy ? h1 - MathMax(o1, c1) : MathMin(o1, c1) - l1;
+   if(candles && barAfter && wick >= 2.0 * body1 && wick >= 0.6 * atr)
+   { why = StringFormat("nen %s co rau %s dai (gia bi tu choi)", m, buy ? "tren" : "duoi"); return true; }
+   return false;
+}
+
+void GuardExit()
+{
+   if(!InpGuardManual || (InpGuardBasketR <= 0 && !InpGuardRevExit && InpGuardSpikeATR <= 0) || MQLInfoInteger(MQL_TESTER)) return;
+   if(TimeCurrent() - g_gbLast < 1) return;
+   g_gbLast = TimeCurrent();
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+
+   datetime since = GuardSince();
+   int cnt = 0, dir = 0;
+   double pl = 0, firstOpen = 0, firstVol = 0;
+   ulong firstT = 0;
+   ulong tickets[];
+   datetime firstTime = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsManualSelected()) continue;
+      datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
+      if(ot < since && !InpGuardOldTrades) continue;
+      int d = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
+      if(dir != 0 && d != dir) return;
+      dir = d;
+      pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      ArrayResize(tickets, cnt + 1); tickets[cnt++] = t;
+      if(firstT == 0 || ot < firstTime)
+      {
+         firstT = t; firstTime = ot;
+         firstOpen = PositionGetDouble(POSITION_PRICE_OPEN); firstVol = PositionGetDouble(POSITION_VOLUME);
+      }
+   }
+   if(cnt == 0) return;
+   bool buy = dir > 0;
+
+   // R cua lop dau: chi dung khi da luu luc lenh con SL ban dau; neu chua luu ma SL da ve hoa von thi bo qua (tranh R ~ 0)
+   string key = GKey("r" + IntegerToString((long)firstT));
+   double r = 0;
+   if(GlobalVariableCheck(key)) r = GlobalVariableGet(key);
+   else if(PositionSelectByTicket(firstT))
+   {
+      double sl = PositionGetDouble(POSITION_SL);
+      if(sl > 0 && (buy ? sl < firstOpen : sl > firstOpen)) r = GuardInitialR(firstT, firstOpen, sl);
+   }
+   if(r <= 0) return;
+   double rMoney = 0;
+   if(!OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, firstVol, firstOpen,
+                       buy ? firstOpen - r : firstOpen + r, rMoney)) return;
+   rMoney = MathAbs(rMoney);
+   if(rMoney <= 0) return;
+   double rNow = pl / rMoney;
+
+   string why = "", rev = "";
+   string runKey = GKey("run" + IntegerToString((long)firstT));      // da qua muc chot gop, dang de loi chay
+   bool running = GlobalVariableCheck(runKey);
+   if((InpGuardRevExit || InpGuardSpikeATR > 0) && rNow >= InpGuardRevMinR && GuardReversal(buy, firstTime, rev))
+      why = "dau hieu dao chieu: " + rev;
+   else if(InpGuardBasketR > 0 && rNow >= InpGuardBasketR)
+   {
+      int tc = InpGuardRunTrend > 0 ? TrendCount(buy) : 0;
+      if(InpGuardRunTrend > 0 && tc >= InpGuardRunTrend)
+      {
+         if(!running)
+         {
+            GlobalVariableSet(runKey, 1);
+            Notify(StringFormat("[%s] DE LOI CHAY: %d lop %s da loi %.1fR (muc chot %.1fR) nhung %d/9 khung con cung chieu. "
+                                "Bot giu tiep, chot khi xu huong yeu, co dau hieu dao chieu hoac loi rut ve %.1fR.",
+                                _Symbol, cnt, buy ? "BUY" : "SELL", rNow, InpGuardBasketR, tc, InpGuardBasketR));
+         }
+         return;
+      }
+      why = running ? StringFormat("xu huong yeu di (con %d/9 khung cung chieu)", tc) : StringFormat("dat muc chot gop %.1fR", InpGuardBasketR);
+   }
+   else if(running && InpGuardBasketR > 0 && rNow < InpGuardBasketR)
+      why = StringFormat("loi rut ve duoi muc chot %.1fR", InpGuardBasketR);
+   if(why == "") return;
+
+   int closed = 0;
+   for(int i = 0; i < cnt; i++)
+      if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) closed++;
+   if(closed == cnt && running) GlobalVariableDel(runKey);
+   Notify(StringFormat("[%s] CHOT LOI: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR). Ly do: %s.", _Symbol, closed, cnt,
+                       buy ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), rNow, why));
+}
+
 //--- Bot tu vao lenh dau tien o che do bao ve lenh tay (v5.10.5, InpGuardAutoEntry, THU NGHIEM - chua backtest)
 // Vao 1 lenh (magic 0, ghi chu "TB tu vao", lot nho nhat, SL cach InpGuardSLPct %) khi:
 //  - khong co lenh tay / lenh cho nao tren ma nay, chua khoa lo ngay, Algo Trading bat

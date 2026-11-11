@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.8
+# Hướng dẫn bot BTC (MT5) v5.10.9
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -585,3 +585,24 @@ Vào lệnh ở khung nhỏ thì giá đảo chiều nhanh, để lâu dễ ôm 
 - `InpGuardMaxBars`: lệnh chưa tới hòa vốn sau x nến của khung vào lệnh thì đóng, không ôm.
 
 Bộ 05: điểm vào chuyển từ M1 sang M5 (M1 bị quét liên tục trong ngày giằng co 10/11), kéo SL 2 × ATR M5, TP 2R, đóng lệnh chưa hòa vốn sau 12 nến M5 (1 giờ). Bộ 04 giữ như cũ (M15, không TP, không đóng theo nến), vì lệnh bạn tự vào thường theo khung lớn hơn.
+
+## Nhồi lệnh và chốt gộp (v5.10.9)
+Trước đây mỗi lớp nhồi có TP riêng: lớp đầu chốt ở 2R trong khi lớp sau còn cách TP xa, nên cả chuỗi chốt chậm và rời rạc.
+- `InpGuardBasketR` (nhóm 11, mặc định 0 = tắt): cộng lãi đang chạy (lãi + swap) của mọi lệnh tay cùng chiều trên mã của chart.
+  Khi tổng đạt x R thì đóng hết một lượt. R = số tiền lớp đầu mất nếu chạm SL ban đầu (các lớp nhồi cùng lot nên 1R chuỗi = 1R lớp đầu).
+- Bật chốt gộp thì bot không đặt TP từng lớp (`InpGuardTPR` bị bỏ qua). TP đã đặt từ trước vẫn còn trên lệnh, xóa tay nếu muốn.
+- Chốt gộp do bot kiểm tra mỗi giây, nên chỉ chạy khi MT5 đang mở (khác TP nằm trên máy chủ). SL từng lớp vẫn nằm trên máy chủ.
+- Lệnh mở trước khi bật bảo vệ không được tính, trừ khi `InpGuardOldTrades = true`. Đang giữ cả Buy và Sell thì không chốt gộp.
+
+Bộ `06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM.set` (CHƯA BACKTEST, chỉ demo): như bộ 05 nhưng SL 0,15%, hòa vốn và nhồi ở 0,5R,
+chốt gộp 2R, không TP từng lớp. Đủ 3 lớp thì chốt khi giá đi khoảng 1,2R từ lớp đầu; chỉ 1 lớp thì chốt ở 2R.
+SL gần hơn nên dễ bị quét hơn, spread chiếm khoảng 6% của R.
+
+**Chốt lời linh hoạt** (cùng bản, mặc định tắt cả, tính trên tổng lời của chuỗi lớp):
+- `InpGuardRunTrend`: đạt mức chốt gộp mà còn ≥ x/9 khung cùng chiều thì để lời chạy tiếp. Chốt khi xu hướng yếu đi (dưới x/9),
+  khi có dấu hiệu đảo chiều, hoặc khi tổng lời rút về dưới mức chốt gộp (nên không trả lại phần đã đạt).
+- `InpGuardRevExit` + `InpGuardRevMinR`: đang lời ≥ x R mà nến vừa đóng (khung kéo SL, mặc định khung vào lệnh) báo đảo chiều thì chốt hết:
+  đóng cửa vượt lại EMA20 ngược chiều lệnh, nến nhấn chìm ngược chiều, hoặc râu nến dài về phía lệnh.
+- `InpGuardSpikeATR`: không chờ nến đóng. Giá vừa chạy về phía lệnh rồi giật ngược x × ATR (râu nến đang hình thành) thì chốt ngay.
+  Dùng cùng ngưỡng lời tối thiểu `InpGuardRevMinR`.
+- Bộ 06 bật: để lời chạy khi ≥ 7/9 khung, chốt đảo chiều khi lời ≥ 0,5R, chốt khi giật ngược 1 ATR M5.

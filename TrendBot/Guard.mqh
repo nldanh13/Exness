@@ -117,7 +117,8 @@ double GuardInitialR(const ulong t, const double open, const double sl)
 // Khung (phut) cho keo SL va dem nen: InpGuardTrailTFmin, 0 = theo khung tu vao lenh (v5.10.8)
 int GuardTFmin() { return InpGuardTrailTFmin > 0 ? InpGuardTrailTFmin : InpGuardAutoEntry ? InpGuardAutoTFmin : 15; }
 
-void GuardRelease() { if(g_gATR != INVALID_HANDLE) IndicatorRelease(g_gATR); g_gATR = INVALID_HANDLE; }
+void GuardExitRelease();
+void GuardRelease() { if(g_gATR != INVALID_HANDLE) IndicatorRelease(g_gATR); g_gATR = INVALID_HANDLE; GuardExitRelease(); }
 
 void GuardProfitLock(const ulong t, const bool buy, const double open, const double sl, const double tp)
 {
@@ -132,8 +133,8 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
    bool   beDone = buy ? sl >= open : sl <= open;
    double nsl  = sl;
    double ntp  = tp;
-   // TP co dinh theo R (v5.10.8): chi dat cho lenh chua co TP
-   if(InpGuardTPR > 0 && tp <= 0) ntp = NormalizeDouble(buy ? open + InpGuardTPR * r : open - InpGuardTPR * r, _Digits);
+   // TP co dinh theo R (v5.10.8): chi dat cho lenh chua co TP. Bat chot gop (InpGuardBasketR, v5.10.9) thi khong dat TP tung lop.
+   if(InpGuardTPR > 0 && InpGuardBasketR <= 0 && tp <= 0) ntp = NormalizeDouble(buy ? open + InpGuardTPR * r : open - InpGuardTPR * r, _Digits);
 
    if(InpGuardBreakevenR > 0 && rNow >= InpGuardBreakevenR && !beDone) nsl = be;
    // trailing chi bat dau sau khi da hoa von (hoac khi tat hoa von: tu luc co lai 1R)
