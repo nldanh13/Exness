@@ -389,6 +389,16 @@ main { gap: 14px; padding-block: 14px 40px; }
 </div>
 
 <script>
+// Mã truy cập API (GiaoDien.ps1 v5.10.12): GiaoDien.cmd mở trang với địa chỉ ...#k=<mã>. Lấy mã ra, giữ trong tab này
+// (sessionStorage) rồi xoá khỏi thanh địa chỉ để không lộ khi chụp màn hình / chia sẻ link. Mọi lệnh gọi /api và /ket-qua gửi kèm mã.
+(function () {
+  var k = '', m = /[#&]k=([0-9a-f]{16,128})/i.exec(location.hash || '');
+  if (m) { k = m[1]; try { sessionStorage.setItem('tb-khoa', k); } catch (e) {} try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+  else { try { k = sessionStorage.getItem('tb-khoa') || ''; } catch (e) {} }
+  window.tbHeaders = function (h) { h = h || {}; if (k) h['X-TrendBot-Khoa'] = k; return h; };
+})();
+</script>
+<script>
 (function () {
 'use strict';
 var NHUNG = window.__DU_LIEU_NHUNG__ || null;   // bản xem trước: dữ liệu được nhúng sẵn, không có server
@@ -440,7 +450,7 @@ function dn(n) { return String(n || '').replace(/-ETH$/, '-B').replace(/Donchian
 var NEED_MT5_CLOSED = { 'sosanh': 1, 'sosanh-chinhxac': 1, 'backtest': 1 };
 
 function api(path, body) {
-  var o = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  var o = body === undefined ? { headers: tbHeaders() } : { method: 'POST', headers: tbHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) };
   return fetch(path, o).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.Loi || ('Lỗi ' + r.status)); return j; }); });
 }
 function selViec() { var r = document.querySelector('input[name="viec"]:checked'); return r ? r.value : 'sosanh'; }
@@ -475,7 +485,7 @@ function renderOptions() {
   } else w.hidden = true;
 }
 
-var API_VER = 2;   // khớp $ApiVer trong GiaoDien.ps1
+var API_VER = 3;   // khớp $ApiVer trong GiaoDien.ps1
 function renderStatus(d) {
   S.last = d;
   $('reopen-note').hidden = !(d.CanMoLai || (d.ApiVer || 1) < API_VER);
@@ -495,7 +505,9 @@ function renderStatus(d) {
   if (b.length) {
     $('acct').innerHTML = b.map(function (x) {
       var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
-      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span><span><b class="num">' + esc(x.lenhbot) + '</b> mục mở</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span>' +
+      return '<div class="acct-row"><span class="tag ' + cls + '">' + acctName(x) + '</span><span><b class="num">' + esc(x.lenhbot) + '</b> mục mở' +
+        (+x.lenhtuvao > 0 ? ' <span class="muted">(' + esc(x.lenhtuvao) + ' tự vào)</span>' : '') +
+        (+x.lenhtay > 0 ? ' <span class="muted">· ' + esc(x.lenhtay) + ' lệnh tay</span>' : '') + '</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span>' +
         (x.choGD === '0' ? '<span style="color:var(--loss)">· tự động đang tắt</span>' : '') + '</div>';
     }).join('');
   } else {
@@ -602,8 +614,11 @@ function poll() {
     var n = (d.KetQua || []).length + ':' + ((d.KetQua || [])[0] || {}).Ten;
     if (n !== lastResCount) { lastResCount = n; loadVerdict(); }
     pollTimer = setTimeout(poll, d.Viec && d.Viec.Running ? 1500 : 5000);
-  }).catch(function () {
-    $('now-text').hidden = false; $('now-text').innerHTML = '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
+  }).catch(function (e) {
+    $('now-text').hidden = false;
+    $('now-text').innerHTML = /truy cap/.test(e && e.message || '')
+      ? '<b>Tab này chưa có mã truy cập (hoặc mã cũ).</b> Đóng tab, bấm đúp GiaoDien.cmd để mở lại đúng địa chỉ.'
+      : '<b>Mất kết nối với giao diện.</b> Cửa sổ đen của GiaoDien.cmd đã bị đóng? Bấm đúp GiaoDien.cmd để mở lại.';
     pollTimer = setTimeout(poll, 5000);
   });
 }
@@ -695,7 +710,7 @@ function fileLabel(f) {
 }
 function getText(name) {
   if (NHUNG) return Promise.resolve(NHUNG.csv[name] || '');
-  return fetch('/ket-qua/' + encodeURIComponent(name)).then(function (r) { if (!r.ok) throw new Error('Không đọc được ' + name); return r.text(); });
+  return fetch('/ket-qua/' + encodeURIComponent(name), { headers: tbHeaders() }).then(function (r) { if (!r.ok) throw new Error('Không đọc được ' + name); return r.text(); });
 }
 function ensureResults() {
   if (RES.loaded) return;
@@ -1058,7 +1073,7 @@ var $ = function (id) { return document.getElementById(id); };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 function api(path, body) {
-  var o = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  var o = body === undefined ? { headers: tbHeaders() } : { method: 'POST', headers: tbHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) };
   return fetch(path, o).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.Loi || ('Lỗi ' + r.status)); return j; }); });
 }
 
