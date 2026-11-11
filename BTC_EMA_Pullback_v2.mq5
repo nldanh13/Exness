@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.21"
-#property version   "5.1021"
+#define  BOT_VERSION "5.10.22"
+#property version   "5.1022"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -601,6 +601,14 @@ int OnInit()
    // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
    if(!(P_Strategy == STRAT_DONCHIAN && P_TF == PERIOD_H4))
       P_Magic += (ulong)P_Strategy * 10000 + (ulong)(PeriodSeconds(P_TF) / 60 % 10000);
+   // Netting/Exchange hop nhat cac lenh cung symbol, khong bao ton quyen so huu theo Magic.
+   // Tu choi thay vi canh bao roi de bot tu vao / dong nham vi the cua nguoi dung.
+   if(AccountInfoInteger(ACCOUNT_LOGIN) > 0 &&
+      (MQLInfoInteger(MQL_TESTER) || TerminalInfoInteger(TERMINAL_CONNECTED)) && !IsHedging())
+   {
+      Print("KHONG KHOI DONG TrendBot: tai khoan NETTING/EXCHANGE khong ho tro vi the Hedging rieng.");
+      return INIT_FAILED;
+   }
    if(!MQLInfoInteger(MQL_TESTER) && !ClaimMagic()) return INIT_FAILED;
    if(P_UseFunding) LoadFunding();
    if(P_AvoidUSNews && MQLInfoInteger(MQL_TESTER)) LoadNews();
@@ -682,6 +690,14 @@ bool TryInitState()
       g_status = "Cho dang nhap tai khoan...";
       return false;
    }
+   // Truong hop OnInit khi VPS chua ket noi: kiem tra lai truoc BAT KY giao dich nao.
+   if(!IsHedging())
+   {
+      g_status = "DUNG: yeu cau tai khoan HEDGING, khong giao dich tren NETTING/EXCHANGE";
+      Print(g_status);
+      ExpertRemove();
+      return false;
+   }
    BotRiskLoad();  // khoi phuc peak/halt cua P_Magic
    GuardRiskLoad(); // khoi phuc moc peak/halt toan tai khoan; tester khong doc/ghi dia
    // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
@@ -701,8 +717,7 @@ bool TryInitState()
    g_plDirty = true;
    RefreshClosedPL();
    UpdateDay();
-   if(!IsHedging())
-      Print("CANH BAO: tai khoan NETTING. Bot duoc thiet ke cho tai khoan HEDGING; chot mot phan se dong theo symbol.");
+   // Tai khoan khong phai Hedging da bi tu choi o OnInit/TryInitState.
    if(!MQLInfoInteger(MQL_TESTER) && InGroup() && (P_CorrRiskScale < 1 || P_MaxGroupRiskPct > 0))
       Print("Luu y: tran rui ro chung BTC/ETH chi dong bo giua cac bot chay tren CUNG terminal MT5 nay. ",
             "Bot o terminal / VPS khac khong biet phan rui ro da giu cho.");
@@ -826,7 +841,13 @@ bool FundingOk(const bool buy, const bool breakout = false)
    // Donchian can giu cac dot bung no; chi loc funding neu nguoi dung chu dong bat.
    if(!P_UseFunding || (breakout && !P_BreakoutUseSentiment)) return true;
    double f = FundingNow();
-   if(f != EMPTY_VALUE && ((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax)))
+   if(f == EMPTY_VALUE)
+   {
+      g_status = "DUNG TIN HIEU: da bat funding nhung du lieu thieu / qua han";
+      if(ShouldNotify("fundingMissing", 3600)) Print(g_status);
+      return false;
+   }
+   if((buy && f > P_FundingMax) || (!buy && f < -P_FundingMax))
    {
       g_fundBlocked++;
       g_status = StringFormat("Bo tin hieu vi funding %.3f%%", f);

@@ -36,7 +36,10 @@ void GuardRiskSave(const bool urgent = false)
    if(h != INVALID_HANDLE)
    {
       double peak = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
-      FileWriteString(h, DoubleToString(peak, 8) + "\r\n" + (GuardHalted() ? "1" : "0") + "\r\n");
+      FileWriteString(h, DoubleToString(peak, 8) + "\r\n" +
+                      (GuardHalted() ? "1" : "0") + "\r\n" +
+                      DoubleToString(GlobalVariableCheck(GAcctKey("cashScan")) ? GlobalVariableGet(GAcctKey("cashScan")) : 0, 0) + "\r\n" +
+                      DoubleToString(GlobalVariableCheck(GAcctKey("cashTicket")) ? GlobalVariableGet(GAcctKey("cashTicket")) : 0, 0) + "\r\n");
       FileClose(h);
    }
    GlobalVariablesFlush();
@@ -50,7 +53,13 @@ void GuardRiskLoad()
    if(h == INVALID_HANDLE) return;
    double savedPeak = StringToDouble(FileReadString(h));
    bool savedHalt = StringToInteger(FileReadString(h)) != 0;
+   double savedScan = StringToDouble(FileReadString(h));  // file cu 2 dong: mac dinh 0
+   double savedTicket = StringToDouble(FileReadString(h));
    FileClose(h);
+   if(savedScan > 0 && !GlobalVariableCheck(GAcctKey("cashScan")))
+      GlobalVariableSet(GAcctKey("cashScan"), savedScan);
+   if(savedTicket > 0 && !GlobalVariableCheck(GAcctKey("cashTicket")))
+      GlobalVariableSet(GAcctKey("cashTicket"), savedTicket);
    double peak = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
    if(savedPeak > peak) GlobalVariableSet(GAcctKey("peak"), savedPeak);
    if(savedHalt && !GuardHalted()) GlobalVariableSet(GAcctKey("halt"), (double)TimeCurrent());
@@ -63,9 +72,82 @@ void   GuardResetHalt()
    if(eq > 0) GlobalVariableSet(GAcctKey("peak"), eq);
    GuardRiskSave(true);
 }
+// Peak equity tinh theo dong tien NAP/RUT, khong coi rut von la thua lo giao dich.
+// Chi DEAL_TYPE_BALANCE duoc xem la cashflow; commission/correction KHONG duoc
+// tu dong bo qua. Hai chart cung account chi mot chart xu ly khi lay duoc mutex CAS.
+// Khi file cu chua co watermark, khoi tao tu deal hien co: KHONG sua peak qua khu.
+bool GuardCashAdjust()
+{
+   if(MQLInfoInteger(MQL_TESTER)) return true;
+   string mutex = GAcctKey("cashMutex");
+   if(!GlobalVariableCheck(mutex)) GlobalVariableTemp(mutex);
+   double old = GlobalVariableGet(mutex);
+   double mine = (double)TimeLocal() + (double)(ChartID() & 0xFFF) / 10000.0;
+   if(old > 0 && (double)TimeLocal() - old < 120) return false;
+   if(!GlobalVariableSetOnCondition(mutex, mine, old)) return false;
+
+   string scanKey = GAcctKey("cashScan"), ticketKey = GAcctKey("cashTicket");
+   datetime now = TimeCurrent();
+   bool ok = true;
+   if(!GlobalVariableCheck(scanKey))
+   {
+      // Vua gan EA / nang cap tu ban cu: peak da bao gom dong tien hien co.
+      // Lay ticket cashflow lon nhat trong lich su lam diem bat dau khong tinh lai.
+      if(HistorySelect(0, now + 60))
+      {
+         double lastTicket = 0;
+         for(int i = 0; i < HistoryDealsTotal(); i++)
+         {
+            ulong d = HistoryDealGetTicket(i);
+            if(d != 0 && HistoryDealGetInteger(d, DEAL_TYPE) == DEAL_TYPE_BALANCE &&
+               (double)d > lastTicket) lastTicket = (double)d;
+         }
+         GlobalVariableSet(scanKey, (double)now);
+         GlobalVariableSet(ticketKey, lastTicket);
+         GuardRiskSave(true);
+      }
+      else ok = false;
+   }
+   else if(now > (datetime)GlobalVariableGet(scanKey))
+   {
+      datetime lastScan = (datetime)GlobalVariableGet(scanKey);
+      if(HistorySelect(MathMax(0, (long)lastScan - 2), now + 60))
+      {
+         double seenTicket = GlobalVariableCheck(ticketKey) ? GlobalVariableGet(ticketKey) : 0;
+         double newestTicket = seenTicket;
+         double netCash = 0;
+         for(int i = 0; i < HistoryDealsTotal(); i++)
+         {
+            ulong d = HistoryDealGetTicket(i);
+            if(d == 0 || HistoryDealGetInteger(d, DEAL_TYPE) != DEAL_TYPE_BALANCE ||
+               (double)d <= seenTicket) continue;
+            netCash += HistoryDealGetDouble(d, DEAL_PROFIT);
+            if((double)d > newestTicket) newestTicket = (double)d;
+         }
+         if(netCash != 0)
+         {
+            double peak = GlobalVariableCheck(GAcctKey("peak")) ? GlobalVariableGet(GAcctKey("peak")) : 0;
+            double adjusted = MathMax(0.0, peak + netCash);
+            if(peak > 0) GlobalVariableSet(GAcctKey("peak"), adjusted);
+            PrintFormat("[%s] NAP/RUT balance %.2f %s: dieu chinh dinh equity tu %.2f thanh %.2f; khong tu mo khoa halt.",
+                        _Symbol, netCash, AccountInfoString(ACCOUNT_CURRENCY), peak, adjusted);
+         }
+         GlobalVariableSet(ticketKey, newestTicket);
+         GlobalVariableSet(scanKey, (double)now);
+         if(netCash != 0) GuardRiskSave(true);
+      }
+      else ok = false;
+   }
+   GlobalVariableSetOnCondition(mutex, 0, mine);
+   return ok;
+}
+
 // true = vua cham hoac dang dung han
 bool GuardCheckAcctDD(const double eq)
 {
+   // Neu chart khac dang doi soat dong tien, hoan tinh DD 1 chu ky de tranh
+   // bao dung nham khi vua rut tien; khong cho phep cashflow xoa halt da co.
+   if(!GuardCashAdjust()) return GuardHalted();
    if(GuardHalted()) return true;
    if(InpGuardMaxDDPct <= 0 || eq <= 0) return false;
    string pk = GAcctKey("peak");

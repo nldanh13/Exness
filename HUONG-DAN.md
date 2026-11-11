@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.21
+# Hướng dẫn bot BTC (MT5) v5.10.22
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -792,3 +792,7 @@ Ba phương án định trước từ báo cáo nghiên cứu, so với cấu h�
 | Trailing siết theo bậc (2 ATR sau khi lãi 4R) | 126 | +36,6 | 0,237 | +4,2 | 3/15 |
 
 Kết luận: không phương án nào tốt hơn gốc khi so ở cùng mức rủi ro, nên **không thêm vào bot**. Khối lượng theo ATR có tổng R cao hơn chỉ vì đánh lớn hơn ở trung bình. Trailing theo bậc cắt mất lệnh thắng lớn (R bỏ top 5 giảm một nửa). Gộp nhiều chu kỳ ít phụ thuộc vào vài lệnh lớn hơn hẳn (+22,8R khi bỏ top 5), đổi lại Sharpe thấp hơn một chút và gấp 4 lần số lệnh: đáng xem lại nếu sau này ưu tiên độ bền hơn lợi nhuận.
+
+## Rà soát an toàn v5.10.22
+
+Xem [tài liệu kiểm tra riêng v5.10.22](RA-SOAT-RUI-RO-5.10.22.md). Bản mới tách R thực tế của `P_Magic` và `magic 0`; không đếm partial close thành vị thế đã đóng; không cho chạy trên Netting; khóa nhóm BTC/ETH bao gồm lệnh tự vào/nhồi; bucket human/algo tách quyền nhồi, và nhận biết dữ liệu bộ lọc bị thiếu. Mốc DD tài khoản được điều chỉnh theo deal Balance nạp/rút và lưu watermark; khi sàn dùng Balance cho điều chỉnh khác, cần xem History. Chưa có xác nhận compile MQL5 hoặc kết quả demo ở thời điểm cập nhật.
