@@ -118,7 +118,8 @@ void UpdatePanel()
    string cur   = AccountInfoString(ACCOUNT_CURRENCY);
    color  cTxt = C'205,210,220', cDim = C'130,138,152', cOk = C'90,200,120', cBad = C'235,95,85', cWarn = C'240,180,60';
 
-   string txt[24]; color col[24]; int n = 0;
+   string txt[28]; color col[28]; int n = 0;
+   bool haveLiveR = UpdateLiveR();  // chi tinh lai moi 5 phut; gom ca lenh magic0 do EA mo
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
@@ -195,12 +196,17 @@ void UpdatePanel()
       col[n++] = DailyLocked() ? cBad : dayPL < 0 ? cBad : cTxt;
       txt[n] = StringFormat("Đã đóng hôm nay: %s  ·  Lệnh: %d", PNMoney(g_closedToday, cur), TradesToday());  col[n++] = cTxt;
       txt[n] = StringFormat("Sụt giảm từ đỉnh: %.2f%% / giới hạn %.1f%%", dd, P_MaxDrawdownPct);  col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
-      if(UpdateLiveR() && g_lrN > 0)
+      if(haveLiveR && g_lrN > 0)
       {
          txt[n] = StringFormat("Tổng R thật: %+.1fR / %d lệnh  ·  ngưỡng xem lại %+.1fR", g_lrSum, g_lrN, g_lrLimit);
          col[n++] = g_lrN >= 10 && g_lrSum < g_lrLimit ? cBad : g_lrSum < InpLiveExpR * g_lrN ? cDim : cOk;
       }
       if(P_UseFunding) { txt[n] = "Funding: " + (g_fundState == "" ? "chưa kiểm tra" : g_fundState); col[n++] = cDim; }
+   }
+   if(haveLiveR && g_lrAutoN > 0)
+   {
+      txt[n] = StringFormat("R tu vao/nh oi magic0 DA DONG: %+.1fR / %d vi the (chua co benchmark)", g_lrAutoSum, g_lrAutoN);
+      col[n++] = cDim;
    }
    txt[n] = StringFormat("Spread: %d point ≈ %s mỗi %.2f lot", (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD),
                          PNMoney(PNMinLotMoney(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point), cur), SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN));  col[n++] = cDim;
