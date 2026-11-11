@@ -196,7 +196,9 @@ double CalcLots(const double slDistance)
 
    // Rui ro tinh tren "von cua bot" (cung moc voi gioi han lo), khong phai equity ca tai khoan.
    // Sau khi nap/rut tien, dat InpResetHalt = true 1 lan de cap nhat moc.
-   double riskBase   = BotEquity();
+   // InpCapital la von AO cua bot; khong duoc co rui ro lon hon equity that.
+   // Tren Cent, OrderCalcProfit va equity cung tinh theo USC (100 USC = 1 USD).
+   double riskBase = MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY));
    if(riskBase <= 0 || P_RiskPercent <= 0) return 0;
    double riskMoney  = riskBase * P_RiskPercent / 100.0;
    // Giam co theo sut giam tu dinh von cua bot: < 5% giu nguyen, 5-10% con 50%, > 10% con 25%.
