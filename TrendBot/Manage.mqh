@@ -347,6 +347,16 @@ void PyramidStep(const bool addOnly = false)
    double lots = CalcLots(slDist);
    MqlTick tick;
    if(lots <= 0 || !SymbolInfoTick(_Symbol, tick)) { GroupUnlock(); return; }
+   // Geometric pyramiding: lớp 2 <= factor, lớp 3 <= factor^2; KHONG lam tron len min lot.
+   if(P_PyramidLotFactor <= 0 || P_PyramidLotFactor > 1) { GroupUnlock(); return; }
+   double scaled = NormalizeVolume(lots * MathPow(P_PyramidLotFactor, cnt));
+   if(scaled < SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN) - 1e-9)
+   {
+      if(ShouldNotify("pyrMinLot", 3600)) PrintFormat("Bo nhoi: %.2f lot x %.3f^%d < minlot, can von lon hon de nhoi giam khoi luong.", lots, P_PyramidLotFactor, cnt);
+      GroupUnlock(); return;
+   }
+   g_lastRisk *= scaled / lots;
+   lots = scaled;
    GroupReserve(g_lastRisk);
    double price = buy ? tick.ask : tick.bid;
    g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
