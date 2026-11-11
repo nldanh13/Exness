@@ -539,7 +539,7 @@ void GuardAutoEntry()
    // Bo loc thi truong cua chien luoc chinh (v5.10.16): tin My (InpAvoidUSNews), funding, Fear & Greed, su chu y, Nasdaq.
    // Cac ham nay ghi g_status cua chien luoc chinh, nen giu lai trang thai cu.
    string keepStatus = g_status;
-   bool mktOk = FundingOk(dir > 0) && MarketFiltersOk(dir > 0);
+   bool mktOk = FundingOk(dir > 0, false) && MarketFiltersOk(dir > 0, false);
    g_status = keepStatus;
    if(!mktOk) return;
 
@@ -596,8 +596,9 @@ void GuardAutoEntry()
       {
          g_aeSkipDay = dayKey;
          Notify(StringFormat("[%s] BO TIN HIEU TU VAO: %.2f lot (nho nhat) voi SL %.2f%% se lo %.0f %s = %.1f%% von, vuot gioi han %.1f%%. "
-                             "Can von lon hon, SL gan hon hoac noi gioi han. Bao 1 lan / ngay.", _Symbol, vmin, slp, riskMin,
-                             AccountInfoString(ACCOUNT_CURRENCY), riskMin / eq * 100.0, limPct));
+                             "Can von >= %.0f (1%%) hoac %.0f (2%%) %s, khong noi rui ro de ep lot. Bao 1 lan/ngay.", _Symbol, vmin, slp, riskMin,
+                             AccountInfoString(ACCOUNT_CURRENCY), riskMin / eq * 100.0, limPct,
+                             riskMin / 0.01, riskMin / 0.02, AccountInfoString(ACCOUNT_CURRENCY)));
       }
       return;
    }
