@@ -664,6 +664,8 @@ bool g_stateReady = false;
 void ResetRuntimeState()
 {
    g_stateReady   = false;
+   g_botRiskLoaded = false;
+   g_guardRiskLoaded = false;
    currentDay     = -1;
    dayStartEquity = 0;
    g_plDirty      = true;
@@ -676,7 +678,8 @@ bool TryInitState()
       g_status = "Cho dang nhap tai khoan...";
       return false;
    }
-   GuardRiskLoad(); // khoi phuc moc peak/halt tu file phu; tester khong doc/ghi dia
+   BotRiskLoad();  // khoi phuc peak/halt cua P_Magic
+   GuardRiskLoad(); // khoi phuc moc peak/halt toan tai khoan; tester khong doc/ghi dia
    // Doi InpCapital so voi lan truoc thi tu dat lai moc, tranh dinh cu (vd. 3000) so voi von moi (1000)
    // bi hieu nham la sut giam 66% va bot dung han.
    bool capitalChanged = GlobalVariableCheck(GVName("capital")) && GVGet("capital") != P_Capital;
@@ -834,6 +837,7 @@ void SafetyStep()
 {
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
+   BotRiskSave();                   // sao luu peak/halt chien luoc chinh toi da 30s (tester skip)
    if((IsHalted() || GuardHalted()) && P_CloseOnHalt && HasOwnPosition()) CloseAll(); // ca khi thi truong khong co tick
    // Ghi Global Variable xuong dia moi 30 giay (v5.10.18): MT5 chi tu ghi khi tat binh thuong; mat dien / treo may thi
    // moc von, R ban dau, bo dem lenh, khoa ngay... khong bi mat qua 30 giay gan nhat.
