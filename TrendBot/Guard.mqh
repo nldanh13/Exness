@@ -63,22 +63,45 @@ void GuardMark(const ulong t) { int n = ArraySize(g_gSeen); ArrayResize(g_gSeen,
 // dat SL, cung nhoi, cung tu vao, cung chot gop - lenh bi xu ly 2 lan. Chart bat truoc giu quyen; chart sau chi hien canh bao.
 string GOwnPre() { return "TBO_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + "_" + _Symbol + "_"; }
 long   g_gOtherChart = 0;          // chart khac dang giu quyen (0 = chart nay giu)
+// Mot khoa DUY NHAT cho moi tai khoan + ma (v5.10.17). Gia tri = ma chart dang giu (rut gon < 2^44 de double giu chinh xac).
+// Chiem quyen bang GlobalVariableSetOnCondition (nguyen tu trong terminal): hai chart khoi dong cung luc thi chi MOT chart thang.
+// Truoc day moi chart tao bien rieng roi quet, hai chart cung luc co the thay nhau la chu va ca hai cung dung bao ve.
+double GOwnTok(const long id) { return (double)(id & 0xFFFFFFFFFFF) + 1.0; }
+long   GOwnChartOf(const double tok)                        // chart dang mo co ma tok, 0 = khong con
+{
+   for(long c = ChartFirst(); c >= 0; c = ChartNext(c))
+      if(GOwnTok(c) == tok) return c;
+   return 0;
+}
 bool GuardOwner()
 {
-   string pre = GOwnPre(), mine = pre + IntegerToString(ChartID());
-   for(int i = GlobalVariablesTotal() - 1; i >= 0; i--)
+   string n = GOwnPre() + "lock";
+   double mine = GOwnTok(ChartID());
+   if(!GlobalVariableCheck(n)) GlobalVariableTemp(n);       // tao voi gia tri 0 neu chua co (mat khi tat terminal)
+   for(int k = 0; k < 2; k++)
    {
-      string n = GlobalVariableName(i);
-      if(StringFind(n, pre) != 0 || n == mine) continue;
-      long id = StringToInteger(StringSubstr(n, StringLen(pre)));
-      if(ChartSymbol(id) != "") { g_gOtherChart = id; return false; }   // chart khac van mo va dang giu
-      GlobalVariableDel(n);                                              // chart cu da dong
+      double cur = GlobalVariableGet(n);
+      if(cur == mine) { g_gOtherChart = 0; return true; }
+      if(cur != 0)
+      {
+         long other = GOwnChartOf(cur);
+         if(other != 0) { g_gOtherChart = other; return false; }        // chart khac van mo va dang giu
+      }
+      // trong hoac chu cu da dong chart: chiem quyen NGUYEN TU, chi thanh cong neu gia tri van la cur
+      if(GlobalVariableSetOnCondition(n, mine, cur)) { g_gOtherChart = 0; return true; }
    }
-   if(!GlobalVariableCheck(mine)) GlobalVariableTemp(mine);
-   g_gOtherChart = 0;
-   return true;
+   g_gOtherChart = -1;                                      // chart khac vua chiem, xet lai lan sau
+   return false;
 }
-void GuardOwnerRelease() { GlobalVariableDel(GOwnPre() + IntegerToString(ChartID())); }
+void GuardOwnerRelease() { GlobalVariableSetOnCondition(GOwnPre() + "lock", 0, GOwnTok(ChartID())); }
+
+// Vi the (theo POSITION_IDENTIFIER, ben vung hon ticket) con mo khong - dung sau lenh dong de bat truong hop khop mot phan
+bool GuardPosLeft(const long posId)
+{
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+      if(PositionGetTicket(i) != 0 && PositionGetInteger(POSITION_IDENTIFIER) == posId) return true;
+   return false;
+}
 
 bool IsManualSelected() { return PositionGetInteger(POSITION_MAGIC) == 0 && PositionGetString(POSITION_SYMBOL) == _Symbol; }
 
@@ -90,7 +113,11 @@ double GuardFloating(const ulong ticket)
 
 void GuardClose(const ulong ticket, const string reason)
 {
-   if(PrepSend() && TradeDone(trade.PositionClose(ticket), "Dong lenh tay", reason))
+   long posId = PositionSelectByTicket(ticket) ? PositionGetInteger(POSITION_IDENTIFIER) : (long)ticket;
+   if(!(PrepSend() && TradeDone(trade.PositionClose(ticket), "Dong lenh tay", reason))) return;
+   if(GuardPosLeft(posId))                                  // khop mot phan: phan con lai se dong o lan kiem tra sau
+      Print(StringFormat("[%s] Lenh #%I64u moi dong mot phan, se dong tiep. Ly do: %s", _Symbol, ticket, reason));
+   else
       Notify(StringFormat("[%s] BAO VE LENH TAY: da dong lenh #%I64u. Ly do: %s", _Symbol, ticket, reason));
 }
 

@@ -146,8 +146,9 @@ int TrendCount(const bool up)
 // ke ca tu nhoi / tu vao (magic 0). Hai co che nay truoc v5.10.13 doc lap voi nhau.
 bool MainStopped() { return IsHalted() || DailyLossHit(); }
 
-// Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable theo ticket (v5.10.13). Truoc chi dua vao ghi chu "TB ...",
-// ma san co the doi / cat ghi chu. Trong MT5 ticket vi the = ticket lenh da mo no (trade.ResultOrder()).
+// Danh dau vi the do chinh bot mo (tu vao / nhoi) bang Global Variable (v5.10.13). Truoc chi dua vao ghi chu "TB ...",
+// ma san co the doi / cat ghi chu. Khoa = ticket lenh da mo vi the (trade.ResultOrder()) = POSITION_IDENTIFIER cua vi the do;
+// identifier khong doi suot doi vi the, con POSITION_TICKET co the doi sau thao tac cua may chu (v5.10.17 tra theo identifier).
 void GuardMarkBotMade(const ulong ticket) { if(ticket > 0) GlobalVariableSet(GKey("bm" + IntegerToString((long)ticket)), 1); }
 // Lenh TU VAO (khong tinh nhoi) - danh dau rieng de dem so lenh/ngay khong phu thuoc ghi chu (v5.10.14)
 void GuardMarkAuto(const ulong ticket)
@@ -229,9 +230,11 @@ void GuardPyramid()
    }
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // lop moi van la lenh tay: moi luat bao ve ap dung
+   double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB nhoi tay")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB nhoi tay"), "Nhoi lenh tay");
-   if(ok) GuardMarkBotMade(trade.ResultOrder());
+   if(ok) { GuardMarkBotMade(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] NHOI THEO XU HUONG: them lop %d/%d %s %.2f lot, SL %.2f. Cac lop truoc da hoa von; %d/9 khung cung chieu.",
@@ -299,6 +302,7 @@ bool GuardReversal(const bool buy, const datetime firstTime, const double ext, s
 // Lenh tay do chinh bot mo: tu vao ("TB tu vao") hoac nhoi ("TB nhoi tay"). Vi the dang duoc chon.
 bool GuardBotMade()
 {
+   if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_IDENTIFIER))))) return true;
    if(GlobalVariableCheck(GKey("bm" + IntegerToString(PositionGetInteger(POSITION_TICKET))))) return true;
    return StringFind(PositionGetString(POSITION_COMMENT), "TB ") == 0;   // lenh mo truoc v5.10.13
 }
@@ -336,8 +340,18 @@ void GuardExit()
          firstOpen = PositionGetDouble(POSITION_PRICE_OPEN); firstVol = PositionGetDouble(POSITION_VOLUME);
       }
    }
-   if(cnt == 0) return;
+   string clsKey = GKey("closing");                         // dang chot ma con khoi luong (khop mot phan), v5.10.17
+   if(cnt == 0) { GlobalVariableDel(clsKey); return; }
    bool buy = dir > 0;
+   if(GlobalVariableCheck(clsKey))
+   {
+      // Lan truoc da quyet dinh chot nhung lenh dong chi khop mot phan: dong not phan con lai, khong xet lai dieu kien
+      for(int i = 0; i < cnt; i++) if(PrepSend()) TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", "dong not phan con lai");
+      int left = 0;
+      for(int i = 0; i < cnt; i++) if(GuardPosLeft(posIds[i])) left++;
+      if(left == 0) { GlobalVariableDel(clsKey); Notify(StringFormat("[%s] CHOT LOI: da dong not phan con lai (%d lop).", _Symbol, cnt)); }
+      return;
+   }
    // Phi (commission) cua chuoi (v5.10.13): phi luc vao da tru vao so du nhung khong nam trong POSITION_PROFIT; luc dong thuong
    // tinh them bang ay. Tru uoc 2 lan phi vao de quyet dinh chot theo lai THAT. Tai khoan Standard cua Exness: phi = 0.
    for(int i = 0; i < cnt; i++)
@@ -372,8 +386,11 @@ void GuardExit()
    string extKey = GKey("ext" + IntegerToString((long)firstT)), extMsKey = GKey("extms" + IntegerToString((long)firstT));
    double ext = GlobalVariableCheck(extKey) ? GlobalVariableGet(extKey) : firstOpen;
    ulong  fromMs = GlobalVariableCheck(extMsKey) ? (ulong)GlobalVariableGet(extMsKey) : (ulong)firstTime * 1000;
+   // Toi da 5000 tick moi lan (v5.10.17): lenh mo lau thi doc dan qua nhieu chu ky, khong doc mot luc ca ngay tick.
+   // Doc loi (lich su tick chua tai xong, tra -1): giu nguyen moc, lan sau doc lai; bao log toi da 1 lan / phut.
    MqlTick tk[];
-   int nt = CopyTicksRange(_Symbol, tk, COPY_TICKS_INFO, fromMs, 0);
+   int nt = CopyTicks(_Symbol, tk, COPY_TICKS_INFO, fromMs, 5000);
+   if(nt < 0 && ShouldNotify("tickErr", 60)) Print(StringFormat("[%s] Chua doc duoc tick (loi %d), dung gia hien tai", _Symbol, GetLastError()));
    ulong lastMs = fromMs;
    for(int i = 0; i < nt; i++)
    {
@@ -409,10 +426,14 @@ void GuardExit()
       why = StringFormat("loi rut ve duoi muc chot %.1fR", InpGuardBasketR);
    if(why == "") return;
 
-   int closed = 0;
    for(int i = 0; i < cnt; i++)
-      if(PrepSend() && TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why)) closed++;
+      if(PrepSend()) TradeDone(trade.PositionClose(tickets[i]), "Chot loi lenh tay", why);
+   // Chi tinh la DA DONG khi vi the that su khong con (v5.10.17): khop mot phan (DONE_PARTIAL) van con khoi luong,
+   // giu trang thai chot gop de chu ky sau (250 ms) dong tiep phan con lai.
+   int closed = 0;
+   for(int i = 0; i < cnt; i++) if(!GuardPosLeft(posIds[i])) closed++;
    if(closed == cnt) { if(running) GlobalVariableDel(runKey); GlobalVariableDel(extKey); GlobalVariableDel(extMsKey); }
+   else GlobalVariableSet(clsKey, dir);                    // con khoi luong: chu ky sau dong tiep
    Notify(StringFormat("[%s] CHOT LOI: da dong %d/%d lop %s, tong lai khoang %.0f %s (%.1fR). Ly do: %s.", _Symbol, closed, cnt,
                        buy ? "BUY" : "SELL", pl, AccountInfoString(ACCOUNT_CURRENCY), rNow, why));
 }
@@ -535,9 +556,11 @@ void GuardAutoEntry()
    }
    ulong magic = P_Magic;
    trade.SetExpertMagicNumber(0);                          // xu ly nhu lenh tay
+   double reqPx = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   long   reqSp = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool ok = PrepSend() && TradeDone(buy ? trade.Buy(lot, _Symbol, 0, sl, 0, "TB tu vao")
                                          : trade.Sell(lot, _Symbol, 0, sl, 0, "TB tu vao"), "Tu vao lenh");
-   if(ok) GuardMarkAuto(trade.ResultOrder());
+   if(ok) { GuardMarkAuto(trade.ResultOrder()); LogSlippageAt(buy, reqPx, reqSp, trade.ResultPrice(), 0); }
    trade.SetExpertMagicNumber(magic);
    if(ok)
       Notify(StringFormat("[%s] BOT TU VAO LENH (thu nghiem): %s %.2f lot, SL %.2f (rui ro %.1f%% von). %d/9 khung cung chieu, nen %s hoi ve EMA20 roi bat lai. Lenh thu %d hom nay.",

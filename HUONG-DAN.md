@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.16
+# Hướng dẫn bot BTC (MT5) v5.10.17
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -719,3 +719,14 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   Chỉ chạy bộ 05 / 06 thì mức thật sự chặn bot tự vào là 6% / ngày, không phải 3%. Bảng điều khiển ghi rõ "Khóa tay + tự vào khi lỗ ngày".
 - Chế độ tự vào lệnh nay dùng cùng bộ lọc thị trường với chiến lược chính: tin kinh tế Mỹ (`InpAvoidUSNews`), funding, Fear & Greed,
   sự chú ý (Wikipedia), Nasdaq. Bộ lọc nào đang tắt thì không xét. Bộ 05 / 06 nay BẬT tránh tin Mỹ.
+
+## Khớp một phần, khóa chart, nhận diện lệnh, trượt giá lệnh tự vào (v5.10.17)
+- **Khớp một phần khi đóng:** sau mỗi lệnh đóng, bot kiểm tra vị thế còn hay không thay vì tin vào mã trả về. Chốt gộp mà còn khối lượng
+  thì bot nhớ trạng thái "đang chốt" và đóng nốt ở lần kiểm tra sau (khoảng 0,25 giây), không xét lại điều kiện chốt.
+  Báo "đã đóng" chỉ gửi khi vị thế thật sự hết.
+- **Một chart bảo vệ mỗi mã:** dùng một khóa duy nhất cho mỗi tài khoản + mã, chiếm quyền bằng thao tác nguyên tử của MT5.
+  Hai chart khởi động cùng lúc thì chỉ một chart thắng; chart kia hiện "CHART KHÁC". Chart chủ đóng thì chart kia tự nhận quyền.
+- **Nhận diện lệnh bot mở:** tra theo mã định danh vị thế (không đổi suốt đời vị thế), ticket và ghi chú chỉ là dự phòng.
+- **Trượt giá vào lệnh của bộ 05 / 06:** lệnh tự vào và lệnh nhồi (magic 0) nay cũng ghi vào `TrendBot_truotgia.csv`, cột Magic = 0.
+- **Đọc tick:** tối đa 5000 tick mỗi lần; lỗi đọc thì giữ mốc cũ, đọc lại lần sau, ghi log tối đa 1 lần / phút.
+- **Trạng thái trên trình duyệt:** hiện rõ "DỪNG HẲN: vốn tài khoản sụt quá giới hạn" và khi đang khóa lệnh tay + tự vào tới hết ngày.
