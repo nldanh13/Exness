@@ -779,3 +779,16 @@ Kết quả CPCV lần đầu (mô phỏng Python, 11/11/2026):
 - Nghĩa là lợi thế nằm ở cả họ chiến lược (phá kênh theo xu hướng), không nằm ở con số 20 hay 2,5. Đừng dò thêm tham số; nếu muốn cải thiện thì gộp nhiều chu kỳ thay vì tìm chu kỳ tốt nhất.
 
 Chưa compile trên MetaEditor. Cần compile và chạy một lần backtest để kiểm tra các cột mới trước khi dùng.
+
+### Thử 3 ý tưởng nâng cấp bằng mô phỏng (11/11/2026, `cpcv.py --bien-the`)
+
+Ba phương án định trước từ báo cáo nghiên cứu, so với cấu hình gốc C (Donchian 20, SL 2,5 ATR, trailing 3 ATR), 11/2020–11/2026:
+
+| Phương án | Lệnh | Tổng R | Sharpe/tháng | R khi bỏ 5 lệnh lớn nhất | Hơn gốc ở cùng mức rủi ro (15 cách chia) |
+|---|---|---|---|---|---|
+| Gốc | 120 | +41,7 | 0,256 | +8,1 | — |
+| Gộp Donchian 10/20/40/80, mỗi kênh 1/4 rủi ro | 472 | +36,1 | 0,232 | +22,8 | 4/15 |
+| Khối lượng theo ATR (×1,25 khi ATR thấp, ×0,75 khi cao) | 120 | +46,2 | 0,250 | +8,7 | 7/15 |
+| Trailing siết theo bậc (2 ATR sau khi lãi 4R) | 126 | +36,6 | 0,237 | +4,2 | 3/15 |
+
+Kết luận: không phương án nào tốt hơn gốc khi so ở cùng mức rủi ro, nên **không thêm vào bot**. Khối lượng theo ATR có tổng R cao hơn chỉ vì đánh lớn hơn ở trung bình. Trailing theo bậc cắt mất lệnh thắng lớn (R bỏ top 5 giảm một nửa). Gộp nhiều chu kỳ ít phụ thuộc vào vài lệnh lớn hơn hẳn (+22,8R khi bỏ top 5), đổi lại Sharpe thấp hơn một chút và gấp 4 lần số lệnh: đáng xem lại nếu sau này ưu tiên độ bền hơn lợi nhuận.

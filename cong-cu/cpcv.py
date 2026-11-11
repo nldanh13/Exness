@@ -10,6 +10,7 @@ Day la mo phong Python gan dung (gia M10 gom thanh H4, chi phi 0,06%/vong, khong
 
 Chay:  python cong-cu/cpcv.py ket-qua/gia-BTCUSDm_M10.zip            (doc thang file .zip hoac .csv)
        python cong-cu/cpcv.py ket-qua/gia-BTCUSDm_M10.zip --khoi 6 --kiemtra 2 --tu 2020-11-01
+       python cong-cu/cpcv.py ket-qua/gia-BTCUSDm_M10.zip --bien-the    (so sanh 4 phuong an dinh truoc voi cau hinh goc)
 """
 import argparse, io, itertools, zipfile
 from datetime import datetime, timezone
@@ -93,6 +94,100 @@ def run(dc, slm, T, O, H, L, C, ATR, E200, ADX, D1E, D1C):
     return trades
 
 
+def run_v(dc, slm, T, O, H, L, C, ATR, E200, ADX, D1E, D1C, size=None, step=None):
+    """Nhu run() nhung co them: size(i) = he so rui ro luc vao (mac dinh 1), step = (MFE_R, ATR_trailing_moi):
+    khi lai lon nhat dat MFE_R thi trailing chuyen tu TRAIL_ATR sang ATR_trailing_moi. Tra ve (gio vao, gio ra, R, he so)."""
+    N = len(C); trades = []; pos = None
+    for i in range(N - 1):
+        if pos:
+            d, ent, sl, risk, t0, w, mfe = pos; ex = None
+            if d == 1 and L[i] <= sl: ex = min(sl, O[i])
+            if d == -1 and H[i] >= sl: ex = max(sl, O[i])
+            if ex is not None:
+                trades.append((t0, T[i] + 14400, d * (ex - ent) / risk - COST * ent / risk, w)); pos = None
+            else:
+                mfe = max(mfe, d * ((H[i] if d == 1 else L[i]) - ent) / risk)
+                k = step[1] if step and mfe >= step[0] else TRAIL_ATR
+                sl = max(sl, C[i] - k * ATR[i]) if d == 1 else min(sl, C[i] + k * ATR[i])
+                pos = (d, ent, sl, risk, t0, w, mfe)
+        if pos is None and i >= 250 and ADX[i] >= ADX_MIN and not np.isnan(D1E[i]):
+            d = 0
+            if C[i] > H[i - dc:i].max() and C[i] > E200[i] and D1C[i] > D1E[i]: d = 1
+            elif C[i] < L[i - dc:i].min() and C[i] < E200[i] and D1C[i] < D1E[i]: d = -1
+            if d:
+                sl = C[i] - d * slm * ATR[i]
+                pos = (d, C[i], sl, abs(C[i] - sl), T[i] + 14400, size(i) if size else 1.0, 0.0)
+    return trades
+
+
+def variants(T, O, H, L, C, ATR, E200, ADX, D1E, D1C):
+    """4 phuong an DINH TRUOC (lay tu bao cao nghien cuu 11/11/2026), khong do tham so:
+    goc      = Donchian 20, SL 2,5 ATR, trailing 3 ATR (cau hinh C)
+    gop      = 4 kenh Donchian 10/20/40/80 chay song song, moi kenh 1/4 rui ro
+    kl_atr   = goc, rui ro x1,25 khi ATR luc vao o phan vi < 33 cua 90 ngay truoc, x0,75 khi > 67
+    trail_bac= goc, trailing 3 ATR cho toi khi lai lon nhat dat 4R, sau do 2 ATR"""
+    a = (T, O, H, L, C, ATR, E200, ADX, D1E, D1C)
+    def atr_pct(i, n=540):
+        w = ATR[max(0, i - n):i]
+        return (w < ATR[i]).mean() if len(w) >= 100 else 0.5
+    size = lambda i: 1.25 if atr_pct(i) < 1 / 3 else 0.75 if atr_pct(i) > 2 / 3 else 1.0
+    out = {"goc": run_v(20, 2.5, *a)}
+    out["gop"] = [(t0, t1, r, 0.25) for dc in (10, 20, 40, 80) for t0, t1, r, _ in run_v(dc, 2.5, *a)]
+    out["kl_atr"] = run_v(20, 2.5, *a, size=size)
+    out["trail_bac"] = run_v(20, 2.5, *a, step=(4.0, 2.0))
+    return out
+
+
+def monthly(tr, t_start, t_end):
+    """Tong R (da nhan he so) theo thang, tinh vao thang dong lenh: so sanh cong bang giua phuong an nhieu / it lenh."""
+    m0 = datetime.fromtimestamp(int(t_start), timezone.utc); m1 = datetime.fromtimestamp(int(t_end), timezone.utc)
+    nm = (m1.year - m0.year) * 12 + m1.month - m0.month + 1
+    v = np.zeros(nm)
+    for t0, t1, r, w in tr:
+        if t0 < t_start: continue
+        d = datetime.fromtimestamp(int(t1), timezone.utc)
+        k = (d.year - m0.year) * 12 + d.month - m0.month
+        if 0 <= k < nm: v[k] += r * w
+    return v
+
+
+def compare(args, T, O, H, L, C, ATR, E200, ADX, D1E, D1C, t_start, t_end, edges):
+    res = variants(T, O, H, L, C, ATR, E200, ADX, D1E, D1C)
+    m0 = datetime.fromtimestamp(int(t_start), timezone.utc)
+    years = sorted({datetime.fromtimestamp(int(t1), timezone.utc).year for _, t1, _, _ in res["goc"] if t1 >= t_start})
+    print("\nSo sanh 4 phuong an dinh truoc (R da nhan he so rui ro, tinh theo thang dong lenh):")
+    print("%-10s %6s %8s %8s %6s %7s %9s  %s" % ("", "lenh", "tongR", "SR/thang", "t", "DD_R", "R bo top5", "R theo nam " + " ".join(str(y) for y in years)))
+    mon = {}
+    for k, tr in res.items():
+        tr = [x for x in tr if x[0] >= t_start]
+        v = monthly(tr, t_start, t_end); mon[k] = v
+        sr = v.mean() / v.std(ddof=1) if v.std(ddof=1) > 0 else 0
+        eq = np.cumsum(v); dd = (np.maximum.accumulate(np.r_[0, eq]) - np.r_[0, eq]).max()
+        rw = sorted(r * w for _, _, r, w in tr)
+        ny = [sum(r * w for _, t1, r, w in tr if datetime.fromtimestamp(int(t1), timezone.utc).year == y) for y in years]
+        print("%-10s %6d %+8.1f %8.3f %6.2f %7.1f %+9.1f  %s" % (k, len(tr), v.sum(), sr, sr * np.sqrt(len(v)), dd,
+              sum(rw[:-5]) if len(rw) > 5 else 0, " ".join("%+5.1f" % x for x in ny)))
+    # Tung cach chon khoi kiem tra (CPCV): phuong an co hon goc tren khoi kiem tra khong (theo tong R thang)
+    def month_of(t): d = datetime.fromtimestamp(int(t), timezone.utc); return (d.year - m0.year) * 12 + d.month - m0.month
+    combos = list(itertools.combinations(range(args.khoi), args.kiemtra))
+    # Chuan hoa cung muc rui ro: nhan moi phuong an de do lech chuan R theo thang bang cua goc.
+    # Khong chuan hoa thi phuong an nao dung rui ro cao hon (vd kl_atr nhan 1,25) se "hon goc" chi vi danh lon hon.
+    sd0 = mon["goc"].std(ddof=1)
+    for k in mon:
+        if mon[k].std(ddof=1) > 0: mon[k] = mon[k] * sd0 / mon[k].std(ddof=1)
+    print("\nTren %d cach chon %d khoi kiem tra, CUNG muc rui ro voi goc: so lan hon goc (tong R) / chenh lech trung vi:" % (len(combos), args.kiemtra))
+    for k in res:
+        if k == "goc": continue
+        diffs = []
+        for test in combos:
+            idx = [m for g in test for m in range(month_of(edges[g]), month_of(edges[g + 1] - 1) + 1)]
+            idx = [m for m in sorted(set(idx)) if 0 <= m < len(mon[k])]
+            diffs.append(mon[k][idx].sum() - mon["goc"][idx].sum())
+        diffs = np.array(diffs)
+        print("  %-10s %2d/%d  %+.1fR" % (k, int((diffs > 0).sum()), len(diffs), np.median(diffs)))
+    print("Doc ket qua: phuong an chi dang them vao bot khi hon goc o hau het cac cach chia VA khong lam giam R bo top 5.")
+
+
 def sharpe(rs):
     rs = np.asarray(rs)
     if len(rs) < 5 or rs.std(ddof=1) == 0: return np.nan
@@ -105,6 +200,7 @@ def main():
     ap.add_argument("--khoi", type=int, default=6, help="so khoi thoi gian (mac dinh 6)")
     ap.add_argument("--kiemtra", type=int, default=2, help="so khoi kiem tra moi lan (mac dinh 2)")
     ap.add_argument("--tu", default="2020-11-01", help="ngay bat dau tinh (YYYY-MM-DD), truoc do chi de khoi dong chi bao")
+    ap.add_argument("--bien-the", action="store_true", help="so sanh 4 phuong an dinh truoc (goc, gop nhieu chu ky, khoi luong theo ATR, trailing theo bac)")
     args = ap.parse_args()
 
     a = load(args.gia)
@@ -116,6 +212,10 @@ def main():
     fmt = lambda t: datetime.fromtimestamp(int(t), timezone.utc).strftime("%Y-%m-%d")
     print("Du lieu H4: %s -> %s, %d khoi:" % (fmt(t_start), fmt(t_end), args.khoi))
     for g in range(args.khoi): print("  khoi %d: %s -> %s" % (g + 1, fmt(edges[g]), fmt(edges[g + 1])))
+
+    if args.bien_the:
+        compare(args, T, O, H, L, C, ATR, E200, ADX, D1E, D1C, t_start, t_end, edges)
+        return
 
     res = {}
     for cfg in GRID:
