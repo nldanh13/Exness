@@ -164,7 +164,7 @@ void LoadDaily(const string file, datetime &t[], double &v[])
 {
    ArrayResize(t, 0); ArrayResize(v, 0);
    int h = OpenCommonRead(file, FILE_CSV | FILE_ANSI, ',');
-   if(h == INVALID_HANDLE) { Print("Chua co file ", file, ": bo loc dung file nay se khong chan lenh nao."); return; }
+   if(h == INVALID_HANDLE) { Print("Chua co file ", file, ": khi bo loc duoc BAT, bot se KHONG vao lenh cho toi khi co du lieu."); return; }
    while(!FileIsEnding(h))
    {
       long   ts = StringToInteger(FileReadString(h));
@@ -262,6 +262,7 @@ void RefreshDailyLive()
 // Tin vi mo My quan trong trong khoang +-InpNewsHours (chi chay that; lich kinh te khong co trong backtest)
 // Backtest: lich FOMC + CPI (gio UTC) tu file tin_my.csv (script chep tu du-lieu/ vao Common\Files).
 datetime g_newsT[]; string g_newsN[];
+bool g_newsDataOk = true;
 void LoadNews()
 {
    ArrayResize(g_newsT, 0); ArrayResize(g_newsN, 0);
@@ -294,10 +295,15 @@ double HoursToNews(const datetime t, string &name)
 bool USNewsNear(string &name)
 {
    if(MQLInfoInteger(MQL_TESTER))
-      return MathAbs(HoursToNews(TimeCurrent(), name)) <= P_NewsHours;   // server Exness = GMT+0
+   {
+      g_newsDataOk = ArraySize(g_newsT) > 0;
+      return g_newsDataOk && MathAbs(HoursToNews(TimeCurrent(), name)) <= P_NewsHours;
+   }
    MqlCalendarValue vals[];
    datetime now = TimeTradeServer();
-   if(CalendarValueHistory(vals, now - P_NewsHours * 3600, now + P_NewsHours * 3600, "US") <= 0) return false;
+   int n = CalendarValueHistory(vals, now - P_NewsHours * 3600, now + P_NewsHours * 3600, "US");
+   g_newsDataOk = n >= 0;  // 0 su kien la hop le, -1 la loi / khong co lich
+   if(!g_newsDataOk) return false;
    for(int i = 0; i < ArraySize(vals); i++)
    {
       MqlCalendarEvent ev;
@@ -316,7 +322,13 @@ bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
    if(P_UseFearGreed && (!breakout || P_BreakoutUseSentiment))
    {
       double f = DailyAvg(g_fngT, g_fngV, yday, 1);
-      if(f != EMPTY_VALUE && ((isBuy && f >= P_FngGreedMax) || (!isBuy && f <= P_FngFearMin)))
+      if(f == EMPTY_VALUE)
+      {
+         g_status = "DUNG TIN HIEU: Fear & Greed bat nhung thieu du lieu hom qua";
+         if(ShouldNotify("fngMissing", 3600)) Print(g_status);
+         return false;
+      }
+      if((isBuy && f >= P_FngGreedMax) || (!isBuy && f <= P_FngFearMin))
       {
          g_fngBlocked++;
          g_status = StringFormat("Bo tin hieu vi Fear & Greed = %.0f", f);
@@ -326,17 +338,33 @@ bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
    if(P_UseAttention)
    {
       double a7 = DailyAvg(g_wikT, g_wikV, yday, 7), a30 = DailyAvg(g_wikT, g_wikV, yday, 30);
-      if(a7 != EMPTY_VALUE && a30 != EMPTY_VALUE && a7 <= a30)
+      if(a7 == EMPTY_VALUE || a30 == EMPTY_VALUE)
+      {
+         g_status = "DUNG TIN HIEU: Wikipedia bat nhung thieu du lieu 7/30 ngay";
+         if(ShouldNotify("wikiMissing", 3600)) Print(g_status);
+         return false;
+      }
+      if(a7 <= a30)
       {
          g_attBlocked++;
          g_status = "Bo tin hieu vi su chu y dang giam (Wikipedia)";
          return false;
       }
    }
-   if(hMkt != INVALID_HANDLE)
+   if(P_UseMarketFilter)
    {
+      if(hMkt == INVALID_HANDLE || g_mktSym == "")
+      {
+         g_status = "DUNG TIN HIEU: Nasdaq duoc bat nhung khong co symbol / indicator";
+         return false;
+      }
       double ema, cl = iClose(g_mktSym, PERIOD_D1, 1);
-      if(cl > 0 && GetValue(hMkt, 0, 1, ema) && ((isBuy && cl < ema) || (!isBuy && cl > ema)))
+      if(cl <= 0 || !GetValue(hMkt, 0, 1, ema) || ema <= 0)
+      {
+         g_status = "DUNG TIN HIEU: Nasdaq khong du du lieu D1";
+         return false;
+      }
+      if((isBuy && cl < ema) || (!isBuy && cl > ema))
       {
          g_mktBlocked++;
          g_status = "Bo tin hieu vi Nasdaq nguoc chieu";
@@ -344,11 +372,21 @@ bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
       }
    }
    string news;
-   if(P_AvoidUSNews && USNewsNear(news))
+   if(P_AvoidUSNews)
    {
-      g_newsBlocked++;
-      g_status = "Gan tin My: " + news;
-      return false;
+      bool nearNews = USNewsNear(news);
+      if(!g_newsDataOk)
+      {
+         g_status = "DUNG TIN HIEU: khong truy cap duoc lich tin My";
+         if(ShouldNotify("newsMissing", 3600)) Print(g_status);
+         return false;
+      }
+      if(nearNews)
+      {
+         g_newsBlocked++;
+         g_status = "Gan tin My: " + news;
+         return false;
+      }
    }
    return true;
 }
