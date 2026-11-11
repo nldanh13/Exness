@@ -1077,6 +1077,8 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price + slDist * P_RR : 0.0);
       if(tp > 0 && tp <= price + minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
+      if(!EntryMarginOk(true, lots, price, price - slDist, tp))
+      { g_status = "OrderCheck / du tru ky quy chua dat"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Buy(lots, _Symbol, price,
                      NormalizeDouble(price - slDist, _Digits),
                      tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot BUY");
@@ -1087,6 +1089,8 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
       g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
       double tp = g_sigTP > 0 ? g_sigTP : (P_RR > 0 ? price - slDist * P_RR : 0.0);
       if(tp > 0 && tp >= price - minStops) { g_status = "TP qua gan gia, bo qua"; GroupClear(); GroupUnlock(); return -1; }
+      if(!EntryMarginOk(false, lots, price, price + slDist, tp))
+      { g_status = "OrderCheck / du tru ky quy chua dat"; GroupClear(); GroupUnlock(); return -1; }
       ok = PrepSend() && trade.Sell(lots, _Symbol, price,
                       NormalizeDouble(price + slDist, _Digits),
                       tp > 0 ? NormalizeDouble(tp, _Digits) : 0.0, "BTC bot SELL");
