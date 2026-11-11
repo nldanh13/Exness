@@ -483,6 +483,12 @@ void GuardAutoEntry()
    if(dir == 0) return;
    // Khung lon phai cung chieu: tranh truong hop 6/9 khung nho (M1..M30) quay len trong khi H1/H4 van giam
    if(InpGuardAutoNeedHTF && (TrendOf(6) != dir || TrendOf(7) != dir)) return;   // g_tbTF[6] = H1, [7] = H4
+   // Bo loc thi truong cua chien luoc chinh (v5.10.16): tin My (InpAvoidUSNews), funding, Fear & Greed, su chu y, Nasdaq.
+   // Cac ham nay ghi g_status cua chien luoc chinh, nen giu lai trang thai cu.
+   string keepStatus = g_status;
+   bool mktOk = FundingOk(dir > 0) && MarketFiltersOk(dir > 0);
+   g_status = keepStatus;
+   if(!mktOk) return;
 
    datetime lastLoss;
    int n = GuardAutoCountToday(lastLoss);
@@ -607,7 +613,7 @@ void ManualUIDelete()
 // Bam BUY / SELL: kiem tra gioi han, roi gui lenh nhu bot tu vao (lot theo rui ro, SL x ATR)
 void ManualFire(const bool buy)
 {
-   if(IsHalted())   { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh."); return; }
+   if(IsHalted() || GuardHalted()) { Notify("[" + _Symbol + "] Bot dang DUNG HAN (sut giam toi da): khong vao lenh, ke ca nhoi."); return; }
    int dir = OwnDirection();
    if(dir != 0)
    {

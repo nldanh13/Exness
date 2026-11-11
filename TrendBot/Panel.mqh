@@ -145,7 +145,7 @@ void UpdatePanel()
       txt[n] = "Số dư: " + PNMoney(AccountInfoDouble(ACCOUNT_BALANCE), cur);  col[n++] = cTxt;
       txt[n] = StringFormat("Lãi/lỗ tay hôm nay: %s (%+.1f%%)", PNMoney(mpl, cur), pct);
       col[n++] = mpl < 0 ? (pct <= -InpGuardDayLossPct * 0.6 ? cBad : cWarn) : cOk;
-      txt[n] = StringFormat("Khóa lệnh tay khi lỗ ngày tới -%.0f%% = %s", InpGuardDayLossPct, PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
+      txt[n] = StringFormat((InpGuardAutoEntry ? "Khóa tay + tự vào khi lỗ ngày -%.0f%% = %s" : "Khóa lệnh tay khi lỗ ngày tới -%.0f%% = %s"), InpGuardDayLossPct, PNMoney(-base * InpGuardDayLossPct / 100.0, cur));
       col[n++] = cDim;
       if(InpGuardMaxDDPct > 0)
       {

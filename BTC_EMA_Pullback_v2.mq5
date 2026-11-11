@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.15"
-#property version   "5.1015"
+#define  BOT_VERSION "5.10.16"
+#property version   "5.1016"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -753,6 +753,8 @@ void CheckPendingEntry()
 bool EntryGatesOk()
 {
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
+   // Khoa sut giam ca tai khoan cua bo bao ve (InpGuardMaxDDPct) chan ca chien luoc chinh (v5.10.16)
+   if(GuardHalted())    { g_status = "DUNG HAN: von tai khoan sut qua gioi han"; return false; }
    string why = "";
    if(!TimeAllowed(why)) { g_status = "Tam nghi: " + why; return false; }
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints)

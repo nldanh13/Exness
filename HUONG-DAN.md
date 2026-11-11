@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.15
+# Hướng dẫn bot BTC (MT5) v5.10.16
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -703,3 +703,19 @@ dùng magic 0 nên KHÔNG nằm trong hai mốc đó; trước bản này chúng
   3. Đóng tay một nửa lot của lệnh tự vào (khớp một phần): lệnh còn lại vẫn được chốt gộp / kéo SL.
   4. Gắn bot lên 2 chart BTC cùng lúc: chart thứ hai hiện dòng đỏ "CHART KHÁC đang bảo vệ".
   5. Đặt `InpGuardDayLossPct` rất nhỏ (ví dụ 0,5): khi chạm, mọi lệnh tay trên mã bị đóng và bot ngừng tự vào tới hết ngày.
+
+## Các khóa chặn mọi đường vào lệnh, giới hạn lỗ ngày của lệnh tự vào (v5.10.16)
+- Dừng hẳn vì cả tài khoản sụt quá `InpGuardMaxDDPct` (15%) nay chặn luôn chiến lược chính (vào lệnh mới, vào khi giá hồi, vào lại),
+  nhồi lớp của chiến lược chính và nút BUY / SELL trên chart. Trước đây chỉ chặn lệnh tay, tự vào và nhồi lệnh tay.
+  Lệnh đang mở của chiến lược chính vẫn giữ SL / TP của nó, không bị đóng.
+- Có HAI mức khóa lỗ ngày, mỗi mức cho một nhóm lệnh:
+
+  | Mức | Áp dụng cho | Bộ 05 / 06 |
+  |---|---|---|
+  | `InpMaxDailyLossPct` | chỉ lệnh của chiến lược chính | 3% |
+  | `InpGuardDayLossPct` | lệnh tay, lệnh tự vào, lệnh nhồi | 6% (trước: 10%) |
+  | `InpGuardMaxDDPct` | cả tài khoản, tính từ đỉnh | 15% |
+
+  Chỉ chạy bộ 05 / 06 thì mức thật sự chặn bot tự vào là 6% / ngày, không phải 3%. Bảng điều khiển ghi rõ "Khóa tay + tự vào khi lỗ ngày".
+- Chế độ tự vào lệnh nay dùng cùng bộ lọc thị trường với chiến lược chính: tin kinh tế Mỹ (`InpAvoidUSNews`), funding, Fear & Greed,
+  sự chú ý (Wikipedia), Nasdaq. Bộ lọc nào đang tắt thì không xét. Bộ 05 / 06 nay BẬT tránh tin Mỹ.

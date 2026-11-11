@@ -68,7 +68,7 @@ GROUPS = [
         ("InpWikiArticle",     "Bài Wikipedia tiếng Anh (trống = tự nhận)", "BTC → Bitcoin, ETH → Ethereum."),
         ("InpUseMarketFilter", "Theo xu hướng Nasdaq (EMA200 khung ngày)", "Chỉ mua khi Nasdaq trên EMA200, chỉ bán khi dưới."),
         ("InpMarketSymbol",    "Mã Nasdaq trên sàn", "Bot tự thử thêm đuôi \"m\" nếu không tìm thấy."),
-        ("InpAvoidUSNews",     "Tránh tin kinh tế Mỹ quan trọng", "Dùng lịch kinh tế của MT5, chỉ có tác dụng khi chạy thật hoặc demo."),
+        ("InpAvoidUSNews",     "Tránh tin kinh tế Mỹ quan trọng", "Dùng lịch kinh tế của MT5, chỉ có tác dụng khi chạy thật hoặc demo. Áp dụng cho cả chế độ tự vào lệnh."),
         ("InpNewsHours",       "Khoảng tránh tin (giờ trước và sau)", ""),
     ]),
     ("6. Cách vào lệnh", [
@@ -118,7 +118,7 @@ GROUPS = [
         ("InpBlock2End",       "Khung nghỉ 2: đến giờ", ""),
     ]),
     ("10. Bảo vệ tài khoản", [
-        ("InpMaxDailyLossPct",  "Khóa lỗ trong ngày (% vốn bot, 0 = tắt)", "Chạm mức này thì ngừng vào lệnh tới hết ngày."),
+        ("InpMaxDailyLossPct",  "Khóa lỗ trong ngày (% vốn bot, 0 = tắt)", "Chạm mức này thì chiến lược chính ngừng vào lệnh tới hết ngày. Chỉ tính lệnh của chiến lược chính; lệnh tự vào, nhồi và lệnh tay dùng mức Lỗ lệnh tay tối đa trong ngày."),
         ("InpCloseOnDailyLoss", "Đóng lệnh đang mở khi chạm khóa lỗ ngày", ""),
         ("InpMaxDrawdownPct",   "Dừng hẳn khi sụt từ đỉnh (% vốn bot, 0 = tắt)", "Chỉ tính lãi đã chốt và lỗ đang chạy, không tính phần lãi đang chạy bị trả lại."),
         ("InpCloseOnHalt",      "Đóng hết lệnh khi dừng hẳn", ""),
@@ -131,7 +131,7 @@ GROUPS = [
         ("InpGuardMaxRiskPct", "Rủi ro tối đa mỗi lệnh tay (% vốn, 0 = tắt)", "Vượt mức thì giảm lot hoặc đóng lệnh."),
         ("InpGuardNoAverage",  "Đóng ngay lệnh nhồi vào lệnh cùng chiều đang lỗ", ""),
         ("InpGuardMaxHoldH",   "Đóng lệnh tay đang lỗ sau (giờ, 0 = tắt)", ""),
-        ("InpGuardDayLossPct", "Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)", "Vượt mức thì đóng hết và khóa lệnh tay tới hết ngày."),
+        ("InpGuardDayLossPct", "Lỗ lệnh tay tối đa trong ngày (%, 0 = tắt)", "Tính cả lệnh tự vào và lệnh nhồi. Vượt mức thì đóng hết, khóa lệnh tay và ngừng tự vào tới hết ngày."),
         ("InpGuardMaxDDPct",   "Dừng hẳn khi vốn tài khoản sụt từ đỉnh (%, 0 = tắt)", "Lệnh tay và lệnh tự vào dùng magic 0 nên không nằm trong mốc lỗ ngày / sụt giảm của chiến lược chính. Mốc này tính equity CẢ TÀI KHOẢN so với đỉnh: chạm thì đóng lệnh tay, ngừng tự vào và nhồi tới khi bật Đặt lại mốc vốn một lần. Sau khi rút tiền cũng cần bật Đặt lại mốc vốn."),
         ("InpGuardOldTrades",  "Áp dụng cả cho lệnh đã mở trước khi bật", "Tắt: bot không tự đặt SL, dời hòa vốn, kéo SL cho các lệnh này. Khóa lỗ ngày và dừng hẳn vẫn đóng chúng."),
         ("InpGuardPending",    "Sửa cả lệnh chờ (Limit / Stop) trước khi khớp", "Lệnh chờ chưa có SL: tự đặt SL. Lot quá lớn: hủy và đặt lại với lot nhỏ hơn. Lệnh chờ nhồi vào lệnh cùng chiều đang lỗ ở giá tệ hơn: hủy. Ngày đã khóa lỗ: hủy mọi lệnh chờ."),
