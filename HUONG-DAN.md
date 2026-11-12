@@ -601,6 +601,11 @@ Bộ `06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM.set` (CHƯA BACKTEST, chỉ demo):
 chốt gộp 2R, không TP từng lớp. Đủ 3 lớp thì chốt khi giá đi khoảng 1,2R từ lớp đầu; chỉ 1 lớp thì chốt ở 2R.
 SL gần hơn nên dễ bị quét hơn, spread chiếm khoảng 6% của R.
 
+Bộ `07-Nhoi-nhanh-von-1-trieu-THU-NGHIEM.set` (CHƯA BACKTEST, nên chạy demo trước): như bộ 06 nhưng vào nhanh hơn và nhồi được với 0,01 lot.
+Tìm điểm hồi EMA20 trên M3, chỉ cần ≥ 5/9 khung cùng chiều (vẫn bắt buộc H1 và H4), tối đa 20 lệnh tự vào/ngày, nhồi cùng lot (hệ số 1,0).
+Rủi ro tự vào, bucket thuật toán và trần nhóm BTC/ETH cùng 4%: với vốn ~800 nghìn VND, 0,01 lot SL 0,15% ≈ 3,5% vốn, nên bộ 06 (2%) bỏ mọi tín hiệu.
+Thua 1 lệnh là gần hết bucket 4%, bot ngừng tự vào tới hôm sau. Các đợt backtest khung nhỏ / nhiều lệnh trước đây đều lỗ vì spread.
+
 **Chốt lời linh hoạt** (cùng bản, mặc định tắt cả, tính trên tổng lời của chuỗi lớp):
 - `InpGuardRunTrend`: đạt mức chốt gộp mà còn ≥ x/9 khung cùng chiều thì để lời chạy tiếp. Chốt khi xu hướng yếu đi (dưới x/9),
   khi có dấu hiệu đảo chiều, hoặc khi tổng lời rút về dưới mức chốt gộp (nên không trả lại phần đã đạt).

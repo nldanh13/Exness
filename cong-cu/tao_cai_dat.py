@@ -75,6 +75,25 @@ PRESETS = [
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "6", "InpGuardAutoTFmin": "5",
         "InpGuardAutoMaxDay": "10", "InpGuardAutoCooldownMin": "15",
         "InpGuardTrailTFmin": "0", "InpGuardTPR": "0.0", "InpGuardMaxBars": "12"}),
+    ("07-Nhoi-nhanh-von-1-trieu-THU-NGHIEM.set", [
+        "07. THỬ NGHIỆM: như bộ 06 nhưng vào lệnh nhanh hơn và nhồi được với lot 0,01",
+        "CHẾ ĐỘ TỰ GIAO DỊCH BẬT; CHƯA BACKTEST. Nên chạy demo trước. Các đợt backtest khung nhỏ / nhiều lệnh trước đây đều lỗ vì spread.",
+        "Khác bộ 06: tìm điểm hồi EMA20 trên M3 (thay M5); chỉ cần ≥ 5/9 khung cùng chiều (vẫn bắt buộc có H1 và H4); tối đa 20 lệnh tự vào/ngày.",
+        "Nhồi cùng lot với lớp trước (hệ số 1,0), nên 0,01 lot vẫn nhồi được: tối đa 3 lớp, mỗi lớp khi giá đi thêm 0,5R và lớp trước đã hòa vốn.",
+        "Rủi ro tự vào 4%: SL 0,15% với 0,01 lot ≈ 3,5% vốn ~800 nghìn VND. Bộ 06 để 2% nên với vốn này bot bỏ mọi tín hiệu.",
+        "Bucket thuật toán 4%/ngày: thua 1 lệnh (~3,5%) là gần hết bucket, bot ngừng tự vào tới hôm sau.",
+        "Trần rủi ro nhóm BTC/ETH 4% (mặc định 1,5% sẽ chặn lệnh 0,01 lot với vốn này).",
+        "Spread ~6 USD ≈ 6% của R mỗi lệnh: vào càng nhiều lệnh, phí càng ăn vào lãi.",
+    ], {"InpTF": "1", "InpAllowBuy": "false", "InpAllowSell": "false", "InpGuardManual": "true",
+        "InpGuardSLPct": "0.15", "InpGuardMaxRiskPct": "4.0", "InpGuardDayLossPct": "6.0", "InpAvoidUSNews": "true", "InpGuardPyramidMax": "3",
+        "InpGuardPyramidLotFactor": "1.0", "InpGuardHumanDayPct": "1.0", "InpGuardAlgoDayPct": "4.0",
+        "InpMaxGroupRiskPct": "4.0",
+        "InpGuardBacktest": "true", "InpGuardAutoRiskPct": "4.0",
+        "InpGuardBreakevenR": "0.5", "InpGuardPyramidStepR": "0.5", "InpGuardBasketR": "2.0",
+        "InpGuardRunTrend": "7", "InpGuardRevExit": "true", "InpGuardRevMinR": "0.5", "InpGuardSpikeATR": "1.0",
+        "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "5", "InpGuardAutoTFmin": "3",
+        "InpGuardAutoMaxDay": "20", "InpGuardAutoCooldownMin": "15",
+        "InpGuardTrailTFmin": "0", "InpGuardTPR": "0.0", "InpGuardMaxBars": "12"}),
 ]
 
 
