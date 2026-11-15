@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.34
+# Hướng dẫn bot BTC (MT5) v5.35
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 25 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 26 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1154,3 +1154,23 @@ Mọi chiến lược vẫn nằm chung một bot (`BTC_EMA_Pullback_v2.mq5` + `
 **MT5 riêng cho mô phỏng** (`mt5-mophong.txt`): cài thêm một bản MT5 vào thư mục khác (vd. `C:\MT5-MoPhong`), mở 1 lần, đăng nhập demo
 Exness, rồi ghi đường dẫn thư mục đó vào `mt5-mophong.txt` (bỏ dấu #). Từ đó mô phỏng / xếp hạng compile và chạy trên bản này, chỉ đóng
 bản này; bản MT5 đang giao dịch không bị đụng tới. Hai bản dùng chung `Common\Files`, nên bot Tự động đọc ngay bảng xếp hạng mới.
+
+## v5.35: Theo tình huống – nhận diện thị trường rồi dùng đúng kiến thức (chiến lược 24, 16/11/2026) – CHƯA KIỂM THỬ
+Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ chiến lược mà các bài học dành cho tình huống đó
+(bộ `32-Theo-tinh-huong-H1-THU-NGHIEM`, xếp hạng `XH-TinhHuong-H1`):
+| Tình huống | Nhận ra bằng | Bộ chiến lược (bài học) |
+|---|---|---|
+| Sắp có tin | lịch tin, `InpSmartNewsMin` phút | đứng ngoài (ngày có tin lớn) |
+| Vừa ra tin | tin < 4 giờ trước | 20 quét rồi mới đi |
+| Vừa sập / tăng dựng đứng | ≥ `InpKnifeDropATR` ATR trong `InpKnifeBars` nến, cực trị trong 10 nến | 14 nhỏ – lớn – giữ |
+| Xu hướng mạnh | thủy triều Dow `InpDowTF` rõ + ADX ≥ `InpSmartTrendADX` | 1 phá vỡ thật, 16 sóng Dow, 5 FVG + nến, 15 order block, 21 premium / discount – chỉ theo xu hướng |
+| Giai đoạn cuối | ≥ `InpDowLateLegs` lần phá | 12 phân phối / tích lũy, 6 spring / upthrust – không đu theo |
+| Đi ngang | ADX < `InpSmartRangeADX` và hộp `InpSmartRangeBars` nến ≤ `InpSmartRangeATR` ATR | 6 spring đủ, 18 Key Volume, 17 VWAP kéo về, 19 ba câu hỏi |
+| Không rõ | còn lại | có thủy triều: 15, 5, 18 theo thủy triều; không: đứng ngoài |
+- Thứ tự xét đúng như bảng (tin trước, rồi cú sập, rồi giai đoạn cuối, xu hướng, đi ngang).
+- Setup trái chiều nhau = đứng ngoài; 1 setup = `InpChainOneRisk` × rủi ro, ≥ `InpChainFullCount` = đủ. Bản an toàn của từng chiến lược
+  (FVG chờ nến, Spring chờ đủ chuỗi, phá vỡ chờ test lại).
+- Giao diện: `Tinh huong: XU HUONG MANH | Dung: ... | MUA: Order block + FVG + nen | rui ro x1.00`; bằng chứng ghi rõ vì sao bot coi là
+  tình huống đó (ADX, chiều cao hộp, Dow D1, biên độ cú sập).
+- Khác Tự động (23): Tự động chọn theo điểm backtest (tuần một lần); Theo tình huống chọn theo trạng thái thị trường ngay lúc đó. Có thể
+  để Tự động chọn chiến lược 24 nếu nó đứng đầu bảng xếp hạng.

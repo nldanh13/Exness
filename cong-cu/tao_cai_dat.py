@@ -291,6 +291,16 @@ PRESETS = [
         "Chỉ lấy thông số tín hiệu / quản lý lệnh của cấu hình đứng đầu; vốn, rủi ro, giới hạn lỗ, giờ nghỉ, tin, spread giữ như bộ này.",
         "Chạy xếp hạng mỗi tuần (tốt nhất trên bản MT5 thứ hai – xem mt5-mophong.txt – để không phải đóng MT5 đang giao dịch).",
     ], {"InpStrategy": "23", "InpAutoSelect": "false", "InpSelectMaxAgeDays": "10"}),
+    ("32-Theo-tinh-huong-H1-THU-NGHIEM.set", [
+        "32. Theo tình huống (chiến lược 24, H1): mỗi nến chẩn đoán thị trường rồi dùng đúng bộ kiến thức. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "Sắp có tin (60 phút) → đứng ngoài. Vừa ra tin → chờ cú quét xong. Vừa sập / tăng dựng đứng ≥ 6 ATR → nhỏ, lớn, giữ.",
+        "Xu hướng mạnh (Dow D1 + ADX ≥ 25) → phá vỡ thật, sóng Dow, FVG + nến, order block, premium/discount theo xu hướng.",
+        "Giai đoạn cuối → chỉ phân phối / spring. Đi ngang (ADX < 20, hộp 40 nến ≤ 6 ATR) → spring, Key Volume, VWAP kéo về, 3 đường kẻ.",
+        "Setup trái chiều = đứng ngoài; 1 setup = 0,5% rủi ro, ≥ 2 = 1%. Quản lý: hòa vốn 1R, chốt 50% ở 1,5R, SL theo đáy mới.",
+    ], {"InpStrategy": "24", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2", "InpDowTF": "16408",
+        "InpDowLateLegs": "4", "InpChainFullCount": "2", "InpChainOneRisk": "0.5", "InpNewsNFP": "true",
+        "InpUseBreakeven": "true", "InpBreakevenR": "1.0", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
+        "InpTrailSwingBars": "10"}),
 ]
 
 

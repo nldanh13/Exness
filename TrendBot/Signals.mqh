@@ -639,6 +639,7 @@ string ChainName(const int m)
       case 0: return "EMA hoi"; case 1: return "Pha vo + test lai"; case 5: return "FVG + nen"; case 6: return "Spring du";
       case 9: return "Fib + VP"; case 12: return "Hop phan phoi"; case 14: return "Dao roi"; case 15: return "Order block";
       case 16: return "Song Dow"; case 17: return "VWAP"; case 18: return "Key Volume"; case 19: return "3 cau hoi"; case 21: return "Premium/discount";
+      case 20: return "Quet tin";
    }
    return "S" + IntegerToString(m);
 }
@@ -708,6 +709,112 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
    g_chainWhy = why + StringFormat(" | B3 %d setup: %s | B5 rui ro x%.2f", agree, names, mult);
    g_status = g_chainWhy;
    Print("CHUOI PHAN TICH: ", g_chainWhy);
+   return true;
+}
+
+// Theo tinh huong (v5.35, chien luoc 24). Bot CHAN DOAN thi truong o nen vua dong roi dung DUNG bo kien thuc cho tinh huong do
+// (moi tinh huong lay tu bai hoc tuong ung), thay vi chay moi chien luoc mot luc hay chon theo diem backtest:
+//  1) Sap co tin lon (InpSmartNewsMin phut toi)        -> dung ngoai (bai "ngay co tin lon").
+//  2) Vua ra tin (trong 4 gio)                           -> cho cu quet thanh khoan xong (chien luoc 20).
+//  3) Vua co cu sap / tang dung dung (>= InpKnifeDropATR ATR trong InpKnifeBars nen, cuc tri trong 10 nen) -> nho, lon, giu (14).
+//  4) Xu huong manh: thuy trieu Dow D1 ro + ADX >= InpSmartTrendADX, chua giai doan cuoi -> chi danh theo xu huong:
+//     pha vo that (1), song Dow (16), FVG + nen (5), order block (15), premium / discount (21).
+//  5) Xu huong giai doan cuoi (>= InpDowLateLegs lan pha) -> khong du theo; chi cho phan phoi / tich luy (12) va spring / upthrust (6).
+//  6) Di ngang: ADX < InpSmartRangeADX va hop InpSmartRangeBars nen cao <= InpSmartRangeATR ATR -> danh trong hop:
+//     Spring du (6), Key Volume (18), VWAP keo ve (17, chi cach 2), 3 cau hoi (19).
+//  7) Con lai (khong ro) -> neu co thuy trieu: chi setup vung manh (15, 5, 18) theo thuy trieu; khong thi dung ngoai.
+// Trong tinh huong: cac chien luoc cua bo cung soi nen vua dong; setup trai chieu nhau = dung ngoai; 1 setup = InpChainOneRisk rui ro,
+// >= InpChainFullCount setup = du rui ro. Moi quyet dinh ghi tinh huong + bang chung (ADX, hop, Dow, bien do cu sap...).
+string SmartSitName(const int s)
+{
+   switch(s)
+   {
+      case 1: return "SAP CO TIN"; case 2: return "VUA RA TIN"; case 3: return "VUA CO CU SAP / TANG DUNG DUNG";
+      case 4: return "XU HUONG MANH"; case 5: return "XU HUONG GIAI DOAN CUOI"; case 6: return "DI NGANG"; case 7: return "KHONG RO";
+   }
+   return "?";
+}
+bool SmartSignals(const double atr, const double trend, const double fast, const double c1, const double h1, const double l1,
+                  bool &buyBase, bool &sellBase)
+{
+   buyBase = false; sellBase = false;
+   string nm = "", list = "", why = "";
+   int dir = 0;                                                     // chieu cho phep: +1 mua, -1 ban, 0 ca hai (theo setup)
+   g_smartSit = 0;
+   DowState t;
+   bool tideOk = DowTide(t);
+   double adx = 0;
+   GetValue(hADX, 0, 1, adx);
+   // Bien do gan day (cu sap / tang dung dung) va hop di ngang
+   int kb = P_KnifeBars < 5 ? 5 : P_KnifeBars;
+   int iH = iHighest(_Symbol, P_TF, MODE_HIGH, kb, 1), iL = iLowest(_Symbol, P_TF, MODE_LOW, kb, 1);
+   int rb = P_SmartRangeBars < 10 ? 10 : P_SmartRangeBars;
+   int rH = iHighest(_Symbol, P_TF, MODE_HIGH, rb, 1), rL = iLowest(_Symbol, P_TF, MODE_LOW, rb, 1);
+   if(iH < 0 || iL < 0 || rH < 0 || rL < 0) return false;
+   double kHi = iHigh(_Symbol, P_TF, iH), kLo = iLow(_Symbol, P_TF, iL), boxH = iHigh(_Symbol, P_TF, rH) - iLow(_Symbol, P_TF, rL);
+   bool crashDn = kHi - kLo >= P_KnifeDropATR * atr && iL <= 10 && iH > iL;
+   bool spikeUp = kHi - kLo >= P_KnifeDropATR * atr && iH <= 10 && iL > iH;
+   if(MinutesToNews(P_SmartNewsMin, nm) >= 0)
+   { g_smartSit = 1; why = "sap ra tin " + nm + " trong " + IntegerToString(P_SmartNewsMin) + " phut"; }
+   else if(LastNewsTime(240, nm) > 0)
+   { g_smartSit = 2; why = "tin " + nm + " vua ra (< 4 gio)"; list = "20"; }
+   else if(crashDn || spikeUp)
+   { g_smartSit = 3; why = StringFormat("%s %.1f ATR trong %d nen", crashDn ? "giam" : "tang", (kHi - kLo) / atr, kb); list = "14"; }
+   else if(tideOk && t.trend != 0 && P_DowLateLegs > 0 && t.legs >= P_DowLateLegs)
+   { g_smartSit = 5; why = StringFormat("Dow %s %s, da pha %d lan", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs); list = "12,6"; }
+   else if(tideOk && t.trend != 0 && adx >= P_SmartTrendADX)
+   { g_smartSit = 4; dir = t.trend; why = StringFormat("Dow %s %s (lan pha %d), ADX %.1f >= %.0f", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs, adx, P_SmartTrendADX); list = "1,16,5,15,21"; }
+   else if(adx < P_SmartRangeADX && boxH <= P_SmartRangeATR * atr)
+   { g_smartSit = 6; why = StringFormat("ADX %.1f < %.0f, hop %d nen cao %.1f ATR", adx, P_SmartRangeADX, rb, boxH / atr); list = "6,18,17,19"; }
+   else
+   {
+      g_smartSit = 7; why = StringFormat("ADX %.1f, hop %d nen cao %.1f ATR, thuy trieu %s", adx, rb, boxH / atr, !tideOk || t.trend == 0 ? "chua ro" : (t.trend > 0 ? "tang" : "giam"));
+      if(tideOk && t.trend != 0) { dir = t.trend; list = "15,5,18"; }
+   }
+   g_smartName = SmartSitName(g_smartSit);
+   string head = "Tinh huong: " + g_smartName;
+   EvAdd("Tinh huong " + g_smartName + ": " + why);
+   if(list == "") { g_status = head + " | " + (g_smartSit == 1 ? "dung ngoai cho tin ra" : "khong co bo chien luoc phu hop, dung ngoai"); return true; }
+   // Soi setup cua bo chien luoc tinh huong nay
+   string ls[];
+   int n = StringSplit(list, ',', ls);
+   ENUM_STRATEGY keep = P_Strategy;
+   bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest; int kVw = P_VwapMode;
+   int nb = 0, ns = 0;
+   double bSL = 0, bTP = 0, bPX = 0, bM = 1, sSL = 0, sTP = 0, sPX = 0, sM = 1;
+   string bN = "", sN = "", useN = "";
+   for(int i = 0; i < n; i++)
+   {
+      int m = (int)StringToInteger(ls[i]);
+      useN += (useN == "" ? "" : ", ") + ChainName(m);
+      P_Strategy = (ENUM_STRATEGY)m;
+      P_FvgCandle = true; P_SpringFull = true; P_BreakRetest = true; P_VwapMode = g_smartSit == 6 ? 2 : 1;
+      bool b = false, s = false;
+      g_inChain = true;
+      bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
+      g_inChain = false;
+      P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw;
+      if(!ok) continue;
+      if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; } nb++; bN += (bN == "" ? "" : " + ") + ChainName(m); }
+      if(s) { if(ns == 0) { sSL = g_sigSL; sTP = g_sigTP; sPX = g_sigPartialPx; sM = g_sigRiskMult; } ns++; sN += (sN == "" ? "" : " + ") + ChainName(m); }
+   }
+   g_sigSL = 0; g_sigTP = 0; g_sigPartialPx = 0; g_sigRiskMult = 1;
+   head += " | Dung: " + useN;
+   if(dir > 0) ns = 0; if(dir < 0) nb = 0;                          // xu huong: bo setup nguoc chieu thuy trieu (khong tinh la trai chieu)
+   if(nb == 0 && ns == 0) { g_status = head + " | chua co setup"; return true; }
+   if(nb > 0 && ns > 0) { g_chainConflicts++; g_status = head + " | setup trai chieu (mua: " + bN + " / ban: " + sN + "), dung ngoai"; return true; }
+   int agree = nb > 0 ? nb : ns;
+   double mult = agree >= P_ChainFullCount ? 1.0 : MathMax(0.1, MathMin(1.0, P_ChainOneRisk));
+   double pM = nb > 0 ? bM : sM;
+   if(pM > 0 && pM < 1) mult *= pM;
+   if(nb > 0) { buyBase = true; g_sigSL = bSL; g_sigTP = bTP; g_sigPartialPx = bPX; }
+   else       { sellBase = true; g_sigSL = sSL; g_sigTP = sTP; g_sigPartialPx = sPX; }
+   g_sigRiskMult = mult;
+   EvAdd(StringFormat("%d setup %s dong y -> rui ro x%.2f", agree, nb > 0 ? "MUA" : "BAN", mult));
+   g_chainHits++;
+   g_chainWhy = head + StringFormat(" | %s: %s | rui ro x%.2f", nb > 0 ? "MUA" : "BAN", nb > 0 ? bN : sN, mult);
+   g_status = g_chainWhy;
+   Print("THEO TINH HUONG: ", g_chainWhy);
    return true;
 }
 
@@ -1312,6 +1419,8 @@ bool BaseSignals(const double atr, const double trend, const double fast,
    }
    else if(P_Strategy == STRAT_CHAIN)
       return ChainSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase);
+   else if(P_Strategy == STRAT_SMART)
+      return SmartSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase);
    else if(P_Strategy == STRAT_PD)
    {
       int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);

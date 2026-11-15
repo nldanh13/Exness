@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.34"
-#property version   "5.3400"
+#define  BOT_VERSION "5.35"
+#property version   "5.3500"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -36,7 +36,8 @@ enum ENUM_STRATEGY
    STRAT_NEWS         = 20,  // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
    STRAT_PD           = 21,  // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
    STRAT_CHAIN        = 22,  // Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung
-   STRAT_AUTO         = 23   // Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng
+   STRAT_AUTO         = 23,  // Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng
+   STRAT_SMART        = 24   // Thử nghiệm: theo tình huống – nhận diện thị trường rồi dùng đúng bộ kiến thức
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -212,6 +213,11 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
+input double          InpSmartTrendADX    = 25;         // Tình huống: xu hướng mạnh khi ADX từ
+input double          InpSmartRangeADX    = 20;         // Tình huống: đi ngang khi ADX dưới
+input int             InpSmartRangeBars   = 40;         // Tình huống: hộp đi ngang (số nến)
+input double          InpSmartRangeATR    = 6.0;        // Tình huống: hộp đi ngang cao tối đa (× ATR)
+input int             InpSmartNewsMin     = 60;         // Tình huống: đứng ngoài trước tin lớn (phút)
 input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
 input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
 input int             InpChainFullCount   = 2;          // Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)
@@ -348,7 +354,8 @@ bool            P_SpringFull;
 int             P_PDDays, P_PDLookback, P_ChainFullCount;
 string          P_ChainList;
 bool            P_ChainPD;
-double          P_ChainOneRisk;
+double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR;
+int             P_SmartRangeBars, P_SmartNewsMin;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
@@ -516,6 +523,8 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
+   P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
    P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
    P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
@@ -641,6 +650,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpSmartTrendADX") { P_SmartTrendADX = StringToDouble(v); return true; }
+   if(k == "InpSmartRangeADX") { P_SmartRangeADX = StringToDouble(v); return true; }
+   if(k == "InpSmartRangeBars") { P_SmartRangeBars = (int)StringToInteger(v); return true; }
+   if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
+   if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
    if(k == "InpChainList") { P_ChainList = v; return true; }
    if(k == "InpChainPD") { P_ChainPD = (v == "true" || v == "1"); return true; }
    if(k == "InpChainFullCount") { P_ChainFullCount = (int)StringToInteger(v); return true; }
@@ -999,7 +1013,7 @@ int OnInit()
    if(!MQLInfoInteger(MQL_TESTER) && !ClaimMagic()) return INIT_FAILED;
    if(P_UseFunding) LoadFunding();
    // Lich tin cho backtest: moi tinh nang dung gio tin (tranh tin, truoc tin, khoa loi truoc tin, chien luoc 20)
-   if(MQLInfoInteger(MQL_TESTER) && (P_AvoidUSNews || P_NewsPreMin > 0 || P_Strategy == STRAT_NEWS ||
+   if(MQLInfoInteger(MQL_TESTER) && (P_AvoidUSNews || P_NewsPreMin > 0 || P_Strategy == STRAT_NEWS || P_Strategy == STRAT_SMART ||
       (P_HedgeLockProfitR > 0 && P_HedgeNews))) LoadNews();
    if(P_UseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
    if(P_UseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
@@ -1173,7 +1187,7 @@ bool AutoKeyOk(const string k)
    for(int i = 0; i < ArraySize(exact); i++) if(k == exact[i]) return true;
    string pre[] = {"InpDonchian", "InpBreak", "InpFvg", "InpRange", "InpSpring", "InpOB", "InpKV", "InpKnife", "InpVwap", "InpDow",
                    "InpPD", "InpChain", "InpSimple", "InpNewsWindow", "InpNewsRange", "InpNewsNFP", "InpDist", "InpBig", "InpDiv",
-                   "InpFib", "InpVP", "InpRsi", "InpOrb", "InpExh", "InpMacd", "InpImom", "InpGrid", "InpFakeout"};
+                   "InpFib", "InpVP", "InpRsi", "InpOrb", "InpExh", "InpMacd", "InpImom", "InpGrid", "InpFakeout", "InpSmart"};
    for(int i = 0; i < ArraySize(pre); i++) if(StringFind(k, pre[i]) == 0) return true;
    return false;
 }

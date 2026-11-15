@@ -482,13 +482,14 @@ bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
    }
    string news;
    // Truoc gio tin InpNewsPreMin phut: khong mo lenh moi (chien luoc 20 danh SAU tin nen khong bi chan)
-   if(P_NewsPreMin > 0 && P_Strategy != STRAT_NEWS && MinutesToNews(P_NewsPreMin, news) >= 0)
+   bool newsPlay = P_Strategy == STRAT_NEWS || (P_Strategy == STRAT_SMART && g_smartSit == 2);   // danh SAU tin: khong chan
+   if(P_NewsPreMin > 0 && !newsPlay && MinutesToNews(P_NewsPreMin, news) >= 0)
    {
       g_newsBlocked++;
       g_status = "Sap ra tin " + news + ": khong mo lenh moi";
       return false;
    }
-   if(P_AvoidUSNews && P_Strategy != STRAT_NEWS)
+   if(P_AvoidUSNews && !newsPlay)
    {
       bool nearNews = USNewsNear(news);
       if(!g_newsDataOk)

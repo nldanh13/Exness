@@ -34,6 +34,7 @@ string StrategyName()
       case STRAT_PD:         return "Premium / discount 2 khung";
       case STRAT_CHAIN:      return "Chuoi phan tich: thuy trieu - vi tri - setup";
       case STRAT_AUTO:       return "Tu dong theo bang xep hang";
+      case STRAT_SMART:      return "Theo tinh huong";
    }
    return "EMA pullback";
 }
