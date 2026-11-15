@@ -63,6 +63,53 @@ int OwnPositionCount()
    return b + a;
 }
 
+// Nhat ky quyet dinh (v5.32): giao dien hien khung "Quyet dinh cua bot" va "Nhat ky qua trinh".
+// Common\Files\TrendBot_quyetdinh_<chart>.txt, moi dong: gio may|loai|noi dung (giu 200 dong gan nhat, ghi lai moi 10 giay).
+// Loai: phan-tich (bot doi quyet dinh / ly do cho), vao-lenh, thoat, quan-ly (sua SL, chot phan...), khoa-lenh, loi.
+string   g_dlog[];
+bool     g_dlogDirty = false, g_dlogLoaded = false;
+string   g_dlogLastStatus = "", g_lastEntryWhy = "";
+datetime g_lastEntryAt = 0;
+string DecisionFile() { return "TrendBot_quyetdinh_" + IntegerToString(ChartID()) + ".txt"; }
+void DecisionLoad()
+{
+   if(g_dlogLoaded) return;
+   g_dlogLoaded = true;
+   int h = FileOpen(DecisionFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
+   if(h == INVALID_HANDLE) return;
+   while(!FileIsEnding(h))
+   {
+      string l = FileReadString(h);
+      if(l == "") continue;
+      int n = ArraySize(g_dlog);
+      ArrayResize(g_dlog, n + 1); g_dlog[n] = l;
+   }
+   FileClose(h);
+   int n = ArraySize(g_dlog);
+   if(n > 200) ArrayRemove(g_dlog, 0, n - 200);
+}
+void DecisionLog(const string kind, const string text)
+{
+   if(MQLInfoInteger(MQL_TESTER) || text == "") return;
+   DecisionLoad();
+   string t = text;
+   StringReplace(t, "\r", " "); StringReplace(t, "\n", " "); StringReplace(t, "|", "/");
+   int n = ArraySize(g_dlog);
+   if(n >= 200) { ArrayRemove(g_dlog, 0, n - 199); n = ArraySize(g_dlog); }
+   ArrayResize(g_dlog, n + 1);
+   g_dlog[n] = TimeToString(TimeLocal(), TIME_DATE | TIME_SECONDS) + "|" + kind + "|" + t;
+   g_dlogDirty = true;
+}
+void DecisionWrite()
+{
+   if(!g_dlogDirty) return;
+   int h = FileOpen(DecisionFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   for(int i = 0; i < ArraySize(g_dlog); i++) FileWriteString(h, g_dlog[i] + "\r\n");
+   FileClose(h);
+   g_dlogDirty = false;
+}
+
 void WriteStatus()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
@@ -92,9 +139,15 @@ void WriteStatus()
    if(GuardHalted()) st = "DUNG HAN: von tai khoan sut qua gioi han (bao ve lenh tay)";
    else if(InpGuardManual && GuardDayLocked()) st += " | Khoa lenh tay + tu vao toi het ngay";
    FileWriteString(h, "trangthai=" + st + "\r\n");
+   // Quyet dinh hien tai (giao dien hien tung buoc khi noi dung co dang "B1 ... | B2 ... | ...") va ly do lenh gan nhat
+   FileWriteString(h, "quyetdinh=" + st + "\r\n");
+   FileWriteString(h, "lydovao=" + g_lastEntryWhy + "\r\n");
+   FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ? TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
+   if(st != g_dlogLastStatus) { DecisionLog("phan-tich", st); g_dlogLastStatus = st; }
    FileWriteString(h, "xuly=" + TickTimeText() + "\r\n");
    FileWriteString(h, "choGD=" + (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED) ? "1" : "0") + "\r\n");
    FileClose(h);
+   DecisionWrite();
 }
 
 void StatusRelease() { FileDelete(StatusFile(), FILE_COMMON); }

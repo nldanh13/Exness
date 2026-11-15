@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.31
+# Hướng dẫn bot BTC (MT5) v5.32
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1116,3 +1116,11 @@ Một chart, một khung (bộ `30-Chuoi-phan-tich-H1-THU-NGHIEM`, xếp hạng 
 - Cột báo cáo `Chuoi_TinHieu_TraiChieu` = số lần vào lệnh / số lần đứng ngoài vì setup trái chiều.
 - Đây là CÁCH LỒNG GHÉP, không phải bằng chứng có lợi thế: từng thành phần đều chưa kiểm thử. Xếp hạng sẽ cho biết chuỗi có hơn
   từng chiến lược riêng lẻ và hơn cấu hình C hay không.
+
+## v5.32: Giao diện – "Quyết định của bot" và "Nhật ký quá trình" (16/11/2026)
+Tab **Điều khiển** có thêm 2 khung (cần mở lại `GiaoDien.cmd` sau khi cập nhật, và bot bản 5.32 trở lên đang chạy thật / demo):
+- **Quyết định của bot**: mỗi chart một thẻ – tài khoản, mã, chiến lược, quyết định hiện tại. Với chuỗi phân tích (chiến lược 22), hiện từng
+  bước ✓ / ✕ (B1 thủy triều → B2 vị trí → B3 setup → B5 rủi ro) để thấy bot dừng ở bước nào. Dưới cùng là lý do của lệnh gần nhất.
+- **Nhật ký quá trình**: các dòng mới nhất trước, lọc theo Vào / thoát lệnh, Phân tích (mỗi lần bot đổi quyết định), Quản lý lệnh
+  (sửa SL, chốt phần, khóa / mở khóa), Lỗi. Giờ theo máy tính chạy MT5.
+- Bot ghi `Common\Files\TrendBot_quyetdinh_<chart>.txt` (200 dòng gần nhất, mỗi 10 giây); giao diện đọc 150 dòng cuối. Backtest không ghi.

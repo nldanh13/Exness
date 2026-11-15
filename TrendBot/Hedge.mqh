@@ -85,6 +85,7 @@ void HedgeRelease(const ulong keep, const double structSL, const string why)
    g_hgUnlocks++;
    string msg = StringFormat("MO KHOA (%s): giu lenh %s #%s, SL %.2f", why, buy ? "MUA" : "BAN", (string)keep, sl);
    Print(msg);
+   DecisionLog("khoa-lenh", msg);
    if(ShouldNotify("hedgeOpen", 60)) Notify(msg);
 }
 
@@ -142,6 +143,7 @@ void HedgeTryLock()
    string msg = StringFormat("KHOA %s: lenh %s #%s %.2f R, vung %.2f - %.2f", kind == 1 ? "LO" : "LOI",
                              buy ? "MUA" : "BAN", (string)t, move, zLo, zHi);
    Print(msg);
+   DecisionLog("khoa-lenh", msg);
    if(ShouldNotify("hedgeLock", 60)) Notify(msg);
 }
 

@@ -93,7 +93,7 @@ bool TradeDone(const bool sent, const string kind, const string detail = "")
    bool ok = sent && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
    // DONE_PARTIAL: chi khop MOT PHAN. Lenh dong phai tu kiem tra vi the con hay khong (GuardPosLeft), khong coi la da dong het.
    if(ok && rc == TRADE_RETCODE_DONE_PARTIAL) Print(StringFormat("[%s] %s %s chi khop mot phan", _Symbol, kind, detail));
-   if(ok) return true;
+   if(ok) { if(kind != "Vao lenh") DecisionLog("quan-ly", kind + " " + detail); return true; }
    string msg;
    if(!sent && rc == 0)
       // Bi tu choi truoc khi gui len server: lay loi kiem tra cua lan nay, khong phai ma cu
@@ -102,6 +102,7 @@ bool TradeDone(const bool sent, const string kind, const string detail = "")
    else
       msg = StringFormat("[%s] %s %s that bai: %u %s", _Symbol, kind, detail, rc, trade.ResultRetcodeDescription());
    Print(msg);
+   DecisionLog("loi", msg);
    // Sua SL chi ghi log; cac loai khac bao ve dien thoai toi da 1 lan / 5 phut moi loai
    if(kind != "Sua SL" && ShouldNotify(kind, 300) && !MQLInfoInteger(MQL_TESTER))
    {

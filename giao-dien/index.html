@@ -145,6 +145,20 @@ svg text { fill: var(--ink3); font: 11px var(--font-num); }
 .tag.real { background: var(--loss-soft); color: var(--loss); }
 .tag.demo { background: var(--gain-soft); color: var(--gain); }
 .tag.other { background: var(--bg); color: var(--ink2); }
+/* Quyết định của bot + nhật ký quá trình (v5.32) */
+.decide { display: grid; gap: 12px; }
+.dcard { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.dcard-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.dmain { font-weight: 600; overflow-wrap: anywhere; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.steps li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
+.steps li .ic { font-weight: 700; } .steps li.ok .ic { color: var(--gain); } .steps li.no .ic { color: var(--loss); } .steps li.wait .ic { color: var(--ink3); }
+.dwhy { font-size: 12px; color: var(--ink2); overflow-wrap: anywhere; }
+.jr { max-height: 440px; overflow: auto; border-top: 1px solid var(--line); }
+.jr-row { display: grid; grid-template-columns: 140px 96px 1fr; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+.jr-row .t { color: var(--ink3); font-size: 12px; }
+.jr-row .x { overflow-wrap: anywhere; }
+@media (max-width: 640px) { .jr-row { grid-template-columns: 1fr; gap: 2px; } }
 .verdict { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .verdict .q { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
 .verdict .a { font-size: 14px; max-width: 75ch; }
@@ -239,6 +253,24 @@ main { gap: 14px; padding-block: 14px 40px; }
       <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
       <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul></div>
     </div>
+  </section>
+
+  <section class="sec" id="sec-decide">
+    <div class="sec-head"><h2>Quyết định của bot</h2><span class="hint">Cập nhật mỗi 10 giây</span></div>
+    <div class="decide" id="decide-list"><span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span></div>
+  </section>
+
+  <section class="sec" id="sec-journal">
+    <div class="sec-head"><h2>Nhật ký quá trình</h2>
+      <div class="chips" id="jr-filter" role="group" aria-label="Lọc nhật ký">
+        <button class="chip" data-f="" aria-pressed="true">Tất cả</button>
+        <button class="chip" data-f="lenh" aria-pressed="false">Vào / thoát lệnh</button>
+        <button class="chip" data-f="phan-tich" aria-pressed="false">Phân tích</button>
+        <button class="chip" data-f="quan-ly" aria-pressed="false">Quản lý lệnh</button>
+        <button class="chip" data-f="loi" aria-pressed="false">Lỗi</button>
+      </div>
+    </div>
+    <div class="jr" id="jr-list"><p class="muted" style="margin:8px 0 0">Chưa có nhật ký (cần bot bản 5.32 trở lên đang chạy).</p></div>
   </section>
 
   <section class="sec" id="sec-run" hidden>
@@ -486,7 +518,7 @@ function renderOptions() {
   } else w.hidden = true;
 }
 
-var API_VER = 3;   // khớp $ApiVer trong GiaoDien.ps1
+var API_VER = 4;   // khớp $ApiVer trong GiaoDien.ps1
 function renderStatus(d) {
   S.last = d;
   $('reopen-note').hidden = !(d.CanMoLai || (d.ApiVer || 1) < API_VER);
@@ -515,6 +547,7 @@ function renderStatus(d) {
     $('acct').innerHTML = '<span class="muted">' + (d.MT5Mo ? 'Chưa thấy phiên nào báo tình trạng (cần bản 5.4 trở lên).' : 'Ứng dụng đang tắt.') + '</span>';
   }
   $('now-text').hidden = true;
+  renderDecide(b);
   $('btn-start').disabled = !!j.Running;
   $('start-msg').textContent = j.Running ? 'Đang có việc chạy. Đợi xong hoặc bấm Dừng.' : '';
   $('btn-stop').hidden = !j.Running; if (!j.Running) $('stop-confirm').hidden = true;
@@ -530,6 +563,63 @@ function trangThai(s) {
   if (/^Tam nghi: |^Gan tin My: /.test(s)) return 'Tạm nghỉ';
   return 'Đang chạy';
 }
+
+// ---- Quyết định của bot + nhật ký quá trình (v5.32) ----
+var JR = { f: '' };
+var JR_KIND = { 'vao-lenh': ['Vào lệnh', 'ok'], 'thoat': ['Thoát lệnh', 'na'], 'phan-tich': ['Phân tích', 'na'],
+  'quan-ly': ['Quản lý', 'zero'], 'khoa-lenh': ['Khóa lệnh', 'zero'], 'loi': ['Lỗi', 'no'] };
+function stepItems(text) {
+  // "B1 ... | B2 ... | B3 ..." → từng bước; bước cuối có "dung ngoai" / "chua" = chưa đạt
+  var parts = String(text || '').split(' | ').filter(Boolean);
+  if (parts.length < 2 && !/^Chuoi B\d/.test(text || '')) return null;
+  return parts.map(function (p, i) {
+    var stop = /dung ngoai|chua co|chua ro|trai chieu|giai doan cuoi|khong o vung/i.test(p);
+    var cls = stop ? 'no' : (i === parts.length - 1 && !/rui ro x/.test(p) ? 'wait' : 'ok');
+    return '<li class="' + cls + '"><span class="ic">' + (cls === 'ok' ? '✓' : cls === 'no' ? '✕' : '…') + '</span><span>' + esc(p.replace(/^Chuoi /, '')) + '</span></li>';
+  }).join('');
+}
+function renderDecide(list) {
+  var box = $('decide-list');
+  if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); return; }
+  box.innerHTML = list.map(function (x) {
+    var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
+    var q = x.quyetdinh || x.trangthai || '';
+    var st = stepItems(q);
+    return '<div class="dcard"><div class="dcard-head"><span class="tag ' + cls + '">' + acctName(x) + '</span><b>' + esc(x.ma || '') + '</b>' +
+      '<span class="muted">' + esc(x.chienluoc || '') + '</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span></div>' +
+      (st ? '<ul class="steps">' + st + '</ul>' : '<div class="dmain">' + esc(q || 'Chưa có quyết định') + '</div>') +
+      (x.lydovao ? '<div class="dwhy">Lệnh gần nhất' + (x.lydovaoluc ? ' (' + esc(x.lydovaoluc) + ')' : '') + ': ' + esc(x.lydovao) + '</div>' : '') +
+      '</div>';
+  }).join('');
+  renderJournal(list);
+}
+function renderJournal(list) {
+  var rows = [];
+  (list || []).forEach(function (x) {
+    (x.NhatKy || []).forEach(function (l) {
+      var a = String(l).split('|');
+      if (a.length < 3) return;
+      rows.push({ t: a[0], k: a[1], x: a.slice(2).join('|'), m: x.ma || '' });
+    });
+  });
+  rows.sort(function (a, b) { return a.t < b.t ? 1 : a.t > b.t ? -1 : 0; });
+  var f = JR.f;
+  rows = rows.filter(function (r) { return !f || (f === 'lenh' ? (r.k === 'vao-lenh' || r.k === 'thoat') : f === 'quan-ly' ? (r.k === 'quan-ly' || r.k === 'khoa-lenh') : r.k === f); });
+  var box = $('jr-list');
+  if (!rows.length) { box.innerHTML = '<p class="muted" style="margin:8px 0 0">' + (list && list.length ? 'Chưa có dòng nào khớp bộ lọc.' : 'Chưa có nhật ký (cần bot bản 5.32 trở lên đang chạy).') + '</p>'; return; }
+  box.innerHTML = rows.slice(0, 200).map(function (r) {
+    var k = JR_KIND[r.k] || [r.k, 'na'];
+    return '<div class="jr-row"><span class="t num">' + esc(r.t) + '</span><span><span class="pill ' + k[1] + '">' + esc(k[0]) + '</span></span>' +
+      '<span class="x">' + (list.length > 1 ? '<b>' + esc(r.m) + '</b> ' : '') + esc(r.x) + '</span></div>';
+  }).join('');
+}
+document.addEventListener('click', function (e) {
+  var c = e.target.closest && e.target.closest('#jr-filter .chip');
+  if (!c) return;
+  JR.f = c.dataset.f || '';
+  Array.prototype.forEach.call(document.querySelectorAll('#jr-filter .chip'), function (b) { b.setAttribute('aria-pressed', b === c ? 'true' : 'false'); });
+  renderJournal(S.last ? bots(S.last) : []);
+});
 
 function classify(line) {
   if (/^\[giao-dien\]/.test(line)) return 'c';

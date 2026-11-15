@@ -626,7 +626,7 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
    DowState t;
    if(!DowTide(t) || t.trend == 0) { g_status = "Chuoi B1: thuy trieu chua ro, dung ngoai"; return true; }
    int dir = t.trend;
-   if(P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) { g_status = "Chuoi B1: thuy trieu giai doan cuoi, dung ngoai"; return true; }
+   if(P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) { g_status = StringFormat("Chuoi B1: thuy trieu %s o giai doan cuoi (lan pha %d), dung ngoai", t.trend > 0 ? "TANG" : "GIAM", t.legs); return true; }
    string why = StringFormat("B1 thuy trieu %s (lan pha %d)", dir > 0 ? "TANG" : "GIAM", t.legs);
    // Buoc 2
    if(P_ChainPD)
@@ -634,7 +634,7 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
       int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
       if(dH < 0 || dL < 0) return false;
       double mid = (iHigh(_Symbol, PERIOD_D1, dH) + iLow(_Symbol, PERIOD_D1, dL)) / 2.0;
-      if(dir > 0 ? c1 >= mid : c1 <= mid) { g_status = "Chuoi B2: gia khong o vung " + (dir > 0 ? "re" : "dat") + ", dung ngoai"; return true; }
+      if(dir > 0 ? c1 >= mid : c1 <= mid) { g_status = why + " | B2 gia khong o vung " + (dir > 0 ? "re" : "dat") + ", dung ngoai"; return true; }
       why += dir > 0 ? " | B2 vung re" : " | B2 vung dat";
    }
    // Buoc 3

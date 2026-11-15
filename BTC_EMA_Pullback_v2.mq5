@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.31"
-#property version   "5.3100"
+#define  BOT_VERSION "5.32"
+#property version   "5.3200"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -1644,6 +1644,15 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
       if(pid > 0) GlobalVariableSet(GVName("PX_" + (string)pid), g_sigPartialPx);
    }
    GroupUnlock();                                    // mo khoa truoc khi gui thong bao (Telegram co the cham)
+   if(filled)
+   {
+      double sl0 = buySignal ? trade.ResultPrice() - slDist : trade.ResultPrice() + slDist;
+      g_lastEntryWhy = StringFormat("%s %.2f lot @ %s, SL %s | %s", buySignal ? "MUA" : "BAN", trade.ResultVolume(),
+                                    DoubleToString(trade.ResultPrice(), _Digits), DoubleToString(sl0, _Digits),
+                                    P_Strategy == STRAT_CHAIN && g_chainWhy != "" ? g_chainWhy : StrategyName() + " " + EnumToString((ENUM_TIMEFRAMES)P_TF));
+      g_lastEntryAt = TimeLocal();
+      DecisionLog("vao-lenh", g_lastEntryWhy);
+   }
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");
    return filled ? 1 : -1;
 }
@@ -1676,6 +1685,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
    else if(entry == DEAL_ENTRY_OUT || entry == DEAL_ENTRY_OUT_BY)
    {
       double pnl = DealNet(trans.deal);
+      DecisionLog("thoat", StringFormat("%.2f lot @ %s | lai/lo %.2f %s", vol, DoubleToString(price, _Digits), pnl, cur));
       Notify(StringFormat("[%s] THOAT %.2f lot @ %s | Lai/lo: %.2f %s | Equity: %.2f",
                           _Symbol, vol, DoubleToString(price, _Digits), pnl, cur,
                           AccountInfoDouble(ACCOUNT_EQUITY)));

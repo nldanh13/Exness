@@ -26,7 +26,7 @@ $MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu 
 # (PowerShell da nap vao bo nho) -> bao nguoi dung dong cua so va mo lai GiaoDien.cmd.
 $SelfFile  = $MyInvocation.MyCommand.Path
 $SelfStamp = (Get-Item $SelfFile).LastWriteTimeUtc.Ticks
-$ApiVer    = 3   # tang khi them API moi; trang web so voi so nay (3: bat buoc ma truy cap)
+$ApiVer    = 4   # tang khi them API moi; trang web so voi so nay (3: bat buoc ma truy cap, 4: nhat ky quyet dinh)
 $ErrFile    = Join-Path $WorkDir "loi.txt"
 $KeyFile    = Join-Path $WorkDir "khoa.txt"
 
@@ -67,6 +67,12 @@ function Get-BotStatus {
             foreach ($line in @(Get-Content $_.FullName -ErrorAction SilentlyContinue)) {
                 $i = $line.IndexOf('=')
                 if ($i -gt 0) { $o[$line.Substring(0, $i)] = $line.Substring($i + 1) }
+            }
+            # Nhat ky quyet dinh cua cung chart (v5.32): gio|loai|noi dung, 150 dong cuoi
+            $dec = Join-Path $dir ($_.Name -replace '^TrendBot_trangthai_', 'TrendBot_quyetdinh_')
+            $o["NhatKy"] = @()
+            if (Test-Path $dec) {
+                $o["NhatKy"] = @((Read-Shared $dec) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 150)
             }
             $o
         })
