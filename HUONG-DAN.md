@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.23
+# Hướng dẫn bot BTC (MT5) v5.24
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 18 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 19 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1023,3 +1023,14 @@ SMC, Wyckoff, BOS, CHOCH đều mọc ra từ lý thuyết Dow (`TrendBot/Dow.mq
 - **Bộ lọc Dow** (`InpDowFilter`, mọi chiến lược): chỉ mua khi thủy triều tăng, chỉ bán khi giảm. Cột báo cáo `ChanDow`.
 - **Chiến lược 16 – Thủy triều + con sóng** (bộ `22-Dow-thuy-trieu-con-song-H4-THU-NGHIEM`, xếp hạng `XH-Dow-H4`):
   thủy triều D1 tăng, con sóng H4 đang giảm, nến H4 đóng cửa vượt đỉnh gần nhất của con sóng → Buy; SL dưới đáy con sóng − 0,25 ATR.
+
+## v5.24: VWAP trong ngày + 3 cặp dải (chiến lược 17, 16/11/2026) – CHƯA KIỂM THỬ
+Đường giữa cho biết phe nào đang thắng; các đường bao quanh cho biết giá đã chạy quá xa hay chưa (bộ `23-VWAP-3-cap-dai-M15-THU-NGHIEM`,
+xếp hạng `XH-VWAP-M15`).
+- VWAP = Σ(giá điển hình × khối lượng) / Σ khối lượng từ 0 giờ server (UTC) – giá vốn trung bình của thị trường hôm nay. Khối lượng là
+  số tick Exness. Dải = VWAP ± k × độ lệch chuẩn có trọng số khối lượng (`InpVwapBand1/2/3` = 1 / 2 / 3).
+- Cách 1 – theo xu hướng (`InpVwapMode` 0 hoặc 1): nến trước đóng cửa trên VWAP, nến vừa đóng chạm VWAP (± 0,1 ATR) rồi là nến tăng
+  đóng cửa trên VWAP → Buy, SL dưới nến đó − 0,1 ATR, TP = đường +2. Dưới VWAP: ngược lại.
+- Cách 2 – bắt nhịp kéo về (`InpVwapMode` 0 hoặc 2): nến chạm đường +3, là nến giảm có râu trên ≥ 40% biên độ và đóng cửa lại dưới
+  đường +3 → Sell, SL trên râu, TP = VWAP. Ngày xu hướng mạnh giá bám đường xa rất lâu: không bao giờ bán chỉ vì chạm.
+- Bỏ lệnh nếu lời tới mục tiêu < `InpVwapMinRR` × SL. Cần ≥ 4 nến trong ngày mới tính.

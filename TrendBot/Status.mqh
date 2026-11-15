@@ -27,6 +27,7 @@ string StrategyName()
       case STRAT_KNIFE:      return "Dao roi: nho - lon - giu";
       case STRAT_OB:         return "Order block: phan ung tai vung";
       case STRAT_DOW:        return "Dow: thuy trieu + con song";
+      case STRAT_VWAP:       return "VWAP trong ngay + 3 cap dai";
    }
    return "EMA pullback";
 }

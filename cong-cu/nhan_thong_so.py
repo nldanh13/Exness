@@ -22,6 +22,7 @@ STRATEGY_LABELS = {
     "STRAT_KNIFE":        "Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh",
     "STRAT_OB":           "Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng",
     "STRAT_DOW":          "Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều",
+    "STRAT_VWAP":         "Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về",
 }
 
 GROUPS = [
@@ -173,6 +174,11 @@ GROUPS = [
         ("InpOBMaxATR",       "Order block: vùng rộng tối đa (× ATR)", "Nến OB quá dài thì bỏ (dừng lỗ dưới đáy vùng sẽ quá xa)."),
         ("InpOBStallBars",    "Order block: lình xình trong vùng quá (số nến) thì đứng ngoài", "Kiểu 4: giá nhích lên nhích xuống trong vùng, phe mua do dự. Ở trong vùng càng lâu càng dễ thủng. Kiểu 1 (chạm mép rồi bật mạnh) bot không đuổi, chờ nhịp hồi sau. Kiểu 2 (vào tới giữa rồi bật): mua khi nến tăng đóng cửa trên giữa vùng, SL dưới đáy vùng. Kiểu 3 (quét thủng đáy rồi đóng cửa quay vào): mua, SL dưới đáy râu."),
         ("InpOBBreaker",      "Order block thủng: đánh khi giá hồi lên vùng thành kháng cự", "Kiểu 5: nến đóng cửa thủng hẳn đáy vùng = vùng hỏng, đứng ngoài. Khi giá hồi lên lại và bị từ chối ở đáy vùng (nến giảm đóng cửa dưới) thì bán, SL trên nến đó."),
+        ("InpVwapMode",       "VWAP: 0 = cả hai cách, 1 = theo xu hướng, 2 = bắt nhịp kéo về", "Chiến lược 17. VWAP = giá vốn trung bình của cả thị trường hôm nay theo khối lượng (số tick), tính lại từ 0 giờ server (UTC) = 7 giờ sáng Việt Nam. Cách 1: giá đang trên VWAP, hồi về chạm đường giữa rồi nến tăng bật lên → mua, SL dưới nến đó, chốt ở đường thứ 2 phía trên. Cách 2: giá vọt chạm đường thứ 3 rồi có nến bị từ chối mạnh (râu ≥ 40% biên độ, đóng cửa lại bên trong) → đánh ngược, mục tiêu VWAP."),
+        ("InpVwapBand1",      "VWAP: cặp đường 1 (× độ lệch chuẩn)", "Dây còn chùng: giá qua lại ở đây là bình thường. Chỉ để hiển thị / tham khảo."),
+        ("InpVwapBand2",      "VWAP: cặp đường 2 – chốt lời cách 1 (× độ lệch chuẩn)", "Dây đã căng: giá ở đường trên là đang đắt, chỗ để chốt lời, không phải để mua đuổi."),
+        ("InpVwapBand3",      "VWAP: cặp đường 3 – bắt nhịp kéo về (× độ lệch chuẩn)", "Dây căng hết cỡ: giá rất hiếm khi chạm tới, chạm thường bị kéo ngược về VWAP. Ngày xu hướng rất mạnh giá có thể bám đường xa rất lâu: luôn chờ nến bị từ chối."),
+        ("InpVwapMinRR",      "VWAP: bỏ nếu lời tới mục tiêu nhỏ hơn (× SL)", ""),
         ("InpHedgeLockLossR", "Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)", "THỬ NGHIỆM. Lệnh đang lỗ bấy nhiêu R (nhỏ hơn 1, trước khi chạm SL): mở lệnh ngược chiều cùng khối lượng, bỏ SL / TP lệnh gốc, chờ thị trường lộ hướng. Chỉ khóa khi bot giữ đúng 1 lệnh. Giữ 2 lệnh tốn phí gấp đôi."),
         ("InpHedgeLockProfitR", "Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)", "THỬ NGHIỆM. Lệnh đang lời từ bấy nhiêu R mà sắp có tin Mỹ hoặc sắp cuối tuần: mở lệnh ngược chiều để giữ nguyên phần lời. Chỉ mở khóa sau khi tin / cuối tuần đã qua."),
         ("InpHedgeNews",      "Khóa lời trước tin Mỹ", "Dùng cùng khoảng giờ với bộ lọc tin (InpNewsHours). Backtest cần file tin_my.csv."),

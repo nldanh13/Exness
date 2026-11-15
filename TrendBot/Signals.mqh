@@ -324,6 +324,33 @@ int ZoneCandle(const double &o[], const double &h[], const double &l[], const do
    return 0;
 }
 
+// VWAP trong ngay + 3 cap dai do lech chuan (v5.24). VWAP = gia von trung binh ca thi truong hom nay, tinh theo khoi luong
+// (so tick Exness), tinh lai tu 0 gio server (UTC) moi ngay. Gia tren VWAP: phan lon nguoi mua dang loi, phe mua kiem soat.
+// Dai = VWAP +- k x do lech chuan co trong so khoi luong ("soi day thun" keo gia ve coc).
+// Tinh cho nen 'shift' (gom cac nen tu dau ngay toi nen do). Tra ve false neu ngay moi co qua it nen.
+bool VwapAt(const int shift, double &vwap, double &sd)
+{
+   datetime t = iTime(_Symbol, P_TF, shift);
+   if(t == 0) return false;
+   MqlDateTime d; TimeToStruct(t, d);
+   datetime day = t - (d.hour * 3600 + d.min * 60 + d.sec);
+   double sv = 0, spv = 0, sp2v = 0; int n = 0;
+   for(int q = shift; q < shift + 1500; q++)
+   {
+      datetime tq = iTime(_Symbol, P_TF, q);
+      if(tq == 0 || tq < day) break;
+      double tp = (iHigh(_Symbol, P_TF, q) + iLow(_Symbol, P_TF, q) + iClose(_Symbol, P_TF, q)) / 3.0;
+      double v = (double)iTickVolume(_Symbol, P_TF, q);
+      if(v <= 0) continue;
+      sv += v; spv += tp * v; sp2v += tp * tp * v; n++;
+   }
+   if(n < 4 || sv <= 0) return false;
+   vwap = spv / sv;
+   double var = sp2v / sv - vwap * vwap;
+   sd = var > 0 ? MathSqrt(var) : 0;
+   return sd > 0;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -880,6 +907,35 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             g_sigRiskMult = km == 1 ? MathMin(1.0, P_KnifeProbePct / 100.0) : 1.0;
             if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
+      }
+   }
+   else if(P_Strategy == STRAT_VWAP)
+   {
+      // Cap 1 (+-InpVwapBand1): day con trung, qua lai binh thuong. Cap 2: day da cang - gia o dai tren la dang dat, cho chot loi,
+      // khong mua duoi. Cap 3: cang het co, hiem khi cham, cham thuong bi keo nguoc ve VWAP.
+      // Cach 1 (theo xu huong, InpVwapMode 0/1): gia dang tren VWAP, hoi ve cham duong giua roi nen tang bat len, dong cua tren
+      //   VWAP -> Buy, SL duoi nen do, TP dai 2 phia tren. Duoi VWAP: nguoc lai.
+      // Cach 2 (bat nhip keo ve, InpVwapMode 0/2): gia vot cham dai 3 roi co nen bi tu choi manh (nen giam, rau tren >= 40% bien do,
+      //   dong cua lai duoi dai 3) -> Sell, SL tren rau, TP = VWAP. Ngay xu huong rat manh gia bam dai xa rat lau: luon cho nen tu choi.
+      // Bo qua neu loi toi TP < InpVwapMinRR x SL.
+      double vw, sd, vw2, sd2;
+      if(!VwapAt(1, vw, sd) || !VwapAt(2, vw2, sd2)) return true;
+      double o1 = iOpen(_Symbol, P_TF, 1), c2 = iClose(_Symbol, P_TF, 2), r1 = h1 - l1;
+      double tol = 0.1 * atr, sl = 0, tp = 0;
+      if(P_VwapMode != 2)
+      {
+         if(c2 > vw2 && l1 <= vw + tol && c1 > vw && c1 > o1)
+         { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw + P_VwapBand2 * sd; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         else if(c2 < vw2 && h1 >= vw - tol && c1 < vw && c1 < o1)
+         { sl = MathMax((h1 + 0.1 * atr) - c1, 0.3 * atr); tp = vw - P_VwapBand2 * sd; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
+      }
+      if(P_VwapMode != 1 && !buyBase && !sellBase && r1 > 0)
+      {
+         double up3 = vw + P_VwapBand3 * sd, dn3 = vw - P_VwapBand3 * sd;
+         if(h1 >= up3 && c1 < up3 && c1 < o1 && h1 - MathMax(o1, c1) >= 0.4 * r1)
+         { sl = MathMax((h1 + 0.1 * atr) - c1, 0.3 * atr); tp = vw; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         else if(l1 <= dn3 && c1 > dn3 && c1 > o1 && MathMin(o1, c1) - l1 >= 0.4 * r1)
+         { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
    }
    else if(P_Strategy == STRAT_DOW)

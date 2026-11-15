@@ -215,6 +215,14 @@ PRESETS = [
         "Bộ lọc Dow (InpDowFilter) cũng bật được cho mọi chiến lược khác.",
     ], {"InpStrategy": "16", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2", "InpDowTF": "16408",
         "InpDowPivot": "3", "InpDowLateLegs": "4", "InpDowVolume": "true"}),
+    ("23-VWAP-3-cap-dai-M15-THU-NGHIEM.set", [
+        "23. VWAP trong ngày + 3 cặp dải độ lệch chuẩn (chiến lược 17, M15). CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "VWAP tính lại từ 0 giờ UTC (7 giờ sáng Việt Nam), khối lượng = số tick. Trên VWAP: phe mua kiểm soát; dưới: phe bán.",
+        "Cách 1 theo xu hướng: giá trên VWAP hồi về chạm đường giữa, nến tăng đóng cửa trên → mua, SL dưới nến, TP đường +2.",
+        "Cách 2 bắt nhịp kéo về: giá chạm đường ±3 rồi nến bị từ chối mạnh → đánh ngược, TP = VWAP. Bỏ nếu lời < 1R.",
+        "Khung M15 tốn phí nhiều so với biên độ (Donchian M1–M30 đều lỗ khi backtest vì phí): cần xem kết quả trước khi dùng.",
+    ], {"InpStrategy": "17", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "0",
+        "InpVwapMode": "0", "InpVwapBand2": "2.0", "InpVwapBand3": "3.0", "InpVwapMinRR": "1.0"}),
 ]
 
 
