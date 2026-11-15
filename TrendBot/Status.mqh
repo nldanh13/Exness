@@ -23,6 +23,7 @@ string StrategyName()
       case STRAT_DIVCVD:     return "Phan ky RSI + CVD";
       case STRAT_BIGTRADE:   return "Big Trades";
       case STRAT_DISTRIB:    return "Hop phan phoi / tich luy";
+      case STRAT_GRID:       return "Danh luoi";
    }
    return "EMA pullback";
 }

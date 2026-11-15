@@ -18,6 +18,7 @@ STRATEGY_LABELS = {
     "STRAT_DIVCVD":       "Thử nghiệm: phân kỳ RSI xác nhận bằng CVD",
     "STRAT_BIGTRADE":     "Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng",
     "STRAT_DISTRIB":      "Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại",
+    "STRAT_GRID":         "Thử nghiệm: đánh lưới trong vùng đi ngang",
 }
 
 GROUPS = [
@@ -72,6 +73,13 @@ GROUPS = [
         ("InpDistBoxMin",     "Phân phối: hộp đi ngang tối thiểu (số nến)", "Nến sập (dài ≥ 1 ATR, khối lượng ≥ 1,2 × trung bình) chỉ tính sau bấy nhiêu nến đi ngang. Mẫu hình đủ 5 nhịp rất hiếm: kiểm tra nhanh trên dữ liệu 6 năm chỉ khoảng 2 lần trên H1 và trên M30."),
         ("InpDistBoxMaxATR",  "Phân phối: hộp cao tối đa (× ATR)", ""),
         ("InpDistNeedUT",     "Phân phối: bắt buộc có cú phá đỉnh giả", "Vọt qua nắp hộp rồi đóng lại trong hộp: cú dụ cuối cùng. Tắt = có hay không đều được."),
+        ("InpGridBars",       "Lưới: tìm vùng đi ngang trong (số nến)", "Lưới chỉ bắt được cá khi cá còn bơi trong ao: chỉ giăng khi giá thật sự đi ngang, đã chạm đỉnh và đáy vùng mỗi phía ít nhất 2 lần. Sau khi tắt lưới, nghỉ nửa khoảng này rồi mới tìm vùng mới."),
+        ("InpGridMinATR",     "Lưới: vùng cao tối thiểu (× ATR)", ""),
+        ("InpGridMaxATR",     "Lưới: vùng cao tối đa (× ATR)", "Vùng quá rộng thường là đang có xu hướng."),
+        ("InpGridMaxADX",     "Lưới: chỉ giăng khi ADX dưới", "ADX cao = thị trường có xu hướng mạnh: không dùng lưới."),
+        ("InpGridLevels",     "Lưới: số nấc tối đa", "Mỗi lệnh mua ở một nấc có chốt lời ở nấc ngay trên. Bot tự giảm số nấc nếu mắt lưới quá dày so với phí."),
+        ("InpGridMinStepCost","Lưới: mỗi mắt lưới ≥ (× spread)", "Lưới quá dày thì lời bao nhiêu cũng bị phí ăn hết."),
+        ("InpGridStopATR",    "Lưới: điểm dừng dưới đáy vùng (× ATR)", "Mọi lệnh có SL đặt sẵn ở đây. Nến đóng cửa thủng đáy vùng: tắt lưới, đóng hết, cắt lỗ. Khối lượng mỗi nấc tính sao cho nếu MỌI nấc khớp rồi chạm SL thì tổng lỗ = Rủi ro mỗi lệnh (% vốn). Tạm hủy lệnh chờ trước tin lớn, khi chạm lỗ ngày, ngoài giờ, spread rộng."),
     ]),
     ("4. Bộ lọc xu hướng", [
         ("InpUseHTF",    "Chỉ giao dịch theo xu hướng khung lớn", "Chỉ mua khi giá khung lớn trên EMA, chỉ bán khi dưới."),

@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.15
+# Hướng dẫn bot BTC (MT5) v5.16
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 13 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 14 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -893,3 +893,19 @@ Bộ `11-Hop-phan-phoi-H1-THU-NGHIEM.set` (`InpStrategy = 12`, H1). Dùng khối
 Kiểm tra nhanh bằng Python trên nến M10 6 năm (chỉ đếm tín hiệu, không đo lãi lỗ): mẫu hình đủ 5 nhịp chỉ xuất hiện khoảng 2 lần
 trên H1 và 2 lần trên M30. Các ngưỡng đã nới so với bản đầu (ban đầu 0 lần). Đây là mẫu hình hiếm; đã thêm vào xếp hạng (`XH-PhanPhoi-H1`),
 nhiều khả năng không đủ 20 đợt để đủ điều kiện.
+
+## v5.16: chiến lược 13 – đánh lưới trong vùng đi ngang (16/11/2026) – CHƯA KIỂM THỬ
+Kiến thức: giăng lưới trong ao, giá lên xuống trong một vùng, rơi xuống một nấc thì mua, lên lại nấc trên thì bán, ăn phần chênh lệch.
+Rủi ro là cá bơi ra khỏi ao: giá thủng đáy và rơi tiếp thì lưới mua ở mọi nấc trên đường xuống. Bộ `12-Danh-luoi-H1-THU-NGHIEM.set`
+(`InpStrategy = 13`, `TrendBot/Grid.mqh`, lưới mua: mua ở nấc dưới, chốt lời ở nấc ngay trên). 4 luật:
+1. **Chỉ giăng khi thật sự đi ngang** (khung chính, `InpGridBars` nến): vùng cao `InpGridMinATR`–`InpGridMaxATR` ATR, ADX < `InpGridMaxADX`,
+   đã chạm đỉnh và đáy vùng mỗi phía ≥ 2 lần, giá đang ở giữa vùng.
+2. **Không giăng quá dày:** mỗi mắt lưới ≥ `InpGridMinStepCost` × spread; không đủ thì giảm số nấc, dưới 3 nấc thì không giăng.
+3. **Điểm dừng ngoài lưới:** mọi lệnh có SL đặt sẵn ở server tại đáy vùng − `InpGridStopATR` ATR. Nến đóng cửa thủng đáy vùng:
+   tắt lưới, đóng hết, cắt lỗ. Giá phá lên trên đỉnh vùng: tắt lưới (hủy lệnh chờ), lệnh còn lại giữ chốt lời.
+4. **Không dùng đòn bẩy cao:** khối lượng mỗi nấc tính sao cho nếu mọi nấc đều khớp rồi chạm SL thì tổng lỗ = `InpRiskPercent` vốn bot;
+   ký quỹ cả lưới ≤ 50% ký quỹ tự do. **Tạm tắt** (hủy lệnh chờ, giữ lệnh đang mở) trước tin Mỹ (`InpAvoidUSNews`), khi chạm lỗ ngày,
+   ngoài giờ giao dịch, spread rộng.
+Sau khi tắt lưới, nghỉ `InpGridBars`/2 nến rồi mới tìm vùng mới. Trạng thái lưới lưu Global Variable (khởi động lại MT5 vẫn nhớ).
+Gỡ bot khỏi chart: hủy lệnh chờ (lệnh đang mở vẫn có SL / TP). Chỉ lưới mua (giống bot lưới giao ngay); giá phá lên thì đứng ngoài con sóng.
+Đã thêm vào xếp hạng (`XH-Luoi-H1`). Lệnh của lưới không đi qua khóa rủi ro nhóm BTC/ETH (InpMaxGroupRiskPct).

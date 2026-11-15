@@ -121,6 +121,14 @@ PRESETS = [
         "Chiều ngược lại (hộp tích lũy sau cú giảm) thì mua. Dùng khối lượng tick của Exness, không cần dữ liệu ngoài. Chỉ chạy demo.",
     ], {"InpStrategy": "12", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
         "InpRR": "0", "InpMaxSpreadPoints": "1500"}),
+    ("12-Danh-luoi-H1-THU-NGHIEM.set", [
+        "12. Thử nghiệm: đánh lưới trong vùng đi ngang, khung H1",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ giăng khi đi ngang thật (ADX < 20, chạm đỉnh / đáy vùng ≥ 2 lần mỗi phía).",
+        "Tối đa 8 nấc, mỗi mắt ≥ 5 × spread, mua ở nấc dưới, chốt ở nấc trên. Mọi lệnh có SL dưới đáy vùng 0,5 ATR;",
+        "nến đóng thủng đáy vùng: tắt lưới, cắt lỗ. Nếu mọi nấc khớp rồi chạm SL thì tổng lỗ = 1% vốn. Tạm tắt trước tin Mỹ.",
+        "Rủi ro: giá thoát khỏi vùng. Chỉ chạy demo.",
+    ], {"InpStrategy": "13", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
+        "InpAvoidUSNews": "true", "InpMaxSpreadPoints": "1500"}),
 ]
 
 

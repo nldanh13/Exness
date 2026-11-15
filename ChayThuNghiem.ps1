@@ -321,7 +321,8 @@ $XhRuns = @(
     # Can du-lieu\flow_BTCUSDT_1h.csv (nen Binance co khoi luong mua chu dong); chua co thi khong vao lenh nao (khong du dieu kien)
     @{ N = "XH-RSICVD-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 10; InpTF = 16385; InpRR = 2 }) },
     @{ N = "XH-BigTrade-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 11; InpTF = 16385; InpRR = 2 }) },
-    @{ N = "XH-PhanPhoi-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 12; InpTF = 16385; InpRR = 0 }) }
+    @{ N = "XH-PhanPhoi-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 12; InpTF = 16385; InpRR = 0 }) },
+    @{ N = "XH-Luoi-H1";      I = (Cfg $Brk $Scalp @{ InpStrategy = 13; InpTF = 16385; InpAvoidUSNews = "true" }) }
 )
 foreach ($x in $XhRuns) {
     $Runs += @{ Name = $x.N; Inputs = $x.I; Deposit = 30000; From = (Get-Date).AddYears(-$XhNam).ToString("yyyy.MM.dd") }

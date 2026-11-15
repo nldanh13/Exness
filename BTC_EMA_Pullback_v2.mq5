@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.15"
-#property version   "5.1500"
+#define  BOT_VERSION "5.16"
+#property version   "5.1600"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -25,7 +25,8 @@ enum ENUM_STRATEGY
    STRAT_FIBVP        = 9,   // Thử nghiệm: Fibonacci + Volume Profile
    STRAT_DIVCVD       = 10,  // Thử nghiệm: phân kỳ RSI xác nhận bằng CVD
    STRAT_BIGTRADE     = 11,  // Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng
-   STRAT_DISTRIB      = 12   // Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại
+   STRAT_DISTRIB      = 12,  // Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại
+   STRAT_GRID         = 13   // Thử nghiệm: đánh lưới trong vùng đi ngang
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -79,6 +80,13 @@ input double          InpDistClimaxATR    = 1.5;        // Phân phối: nến h
 input int             InpDistBoxMin       = 8;          // Phân phối: hộp đi ngang tối thiểu (số nến)
 input double          InpDistBoxMaxATR    = 8.0;        // Phân phối: hộp cao tối đa (× ATR)
 input bool            InpDistNeedUT       = false;      // Phân phối: bắt buộc có cú phá đỉnh giả
+input int             InpGridBars         = 100;        // Lưới: tìm vùng đi ngang trong (số nến)
+input double          InpGridMinATR       = 4.0;        // Lưới: vùng cao tối thiểu (× ATR)
+input double          InpGridMaxATR       = 15.0;       // Lưới: vùng cao tối đa (× ATR)
+input double          InpGridMaxADX       = 20.0;       // Lưới: chỉ giăng khi ADX dưới
+input int             InpGridLevels       = 8;          // Lưới: số nấc tối đa
+input double          InpGridMinStepCost  = 5.0;        // Lưới: mỗi mắt lưới ≥ (× spread)
+input double          InpGridStopATR      = 0.5;        // Lưới: điểm dừng dưới đáy vùng (× ATR)
 
 input group "4. Bộ lọc xu hướng"
 input bool            InpUseHTF           = true;       // Chỉ giao dịch theo xu hướng khung lớn
@@ -285,6 +293,8 @@ double          P_BigMult, P_BigMinDelta, P_BigZoneATR;
 int             P_DistLookback, P_DistBoxMin;
 double          P_DistClimaxATR, P_DistBoxMaxATR;
 bool            P_DistNeedUT;
+int             P_GridBars, P_GridLevels;
+double          P_GridMinATR, P_GridMaxATR, P_GridMaxADX, P_GridMinStepCost, P_GridStopATR;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -403,6 +413,8 @@ void LoadParams()
    P_BigClusterMin = InpBigClusterMin; P_BigClusterBars = InpBigClusterBars;
    P_DistLookback = InpDistLookback; P_DistClimaxATR = InpDistClimaxATR; P_DistBoxMin = InpDistBoxMin;
    P_DistBoxMaxATR = InpDistBoxMaxATR; P_DistNeedUT = InpDistNeedUT;
+   P_GridBars = InpGridBars; P_GridMinATR = InpGridMinATR; P_GridMaxATR = InpGridMaxATR; P_GridMaxADX = InpGridMaxADX;
+   P_GridLevels = InpGridLevels; P_GridMinStepCost = InpGridMinStepCost; P_GridStopATR = InpGridStopATR;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -515,6 +527,13 @@ bool SetParam(const string k, const string v)
    if(k == "InpDistBoxMin") { P_DistBoxMin = (int)StringToInteger(v); return true; }
    if(k == "InpDistBoxMaxATR") { P_DistBoxMaxATR = StringToDouble(v); return true; }
    if(k == "InpDistNeedUT") { P_DistNeedUT = (v == "true" || v == "1"); return true; }
+   if(k == "InpGridBars") { P_GridBars = (int)StringToInteger(v); return true; }
+   if(k == "InpGridMinATR") { P_GridMinATR = StringToDouble(v); return true; }
+   if(k == "InpGridMaxATR") { P_GridMaxATR = StringToDouble(v); return true; }
+   if(k == "InpGridMaxADX") { P_GridMaxADX = StringToDouble(v); return true; }
+   if(k == "InpGridLevels") { P_GridLevels = (int)StringToInteger(v); return true; }
+   if(k == "InpGridMinStepCost") { P_GridMinStepCost = StringToDouble(v); return true; }
+   if(k == "InpGridStopATR") { P_GridStopATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
@@ -664,6 +683,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Signals.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
+#include "TrendBot/Grid.mqh"
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
 #include "TrendBot/ManualEntry.mqh"
@@ -848,6 +868,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 void OnDeinit(const int reason)
 {
    EventKillTimer();
+   // Go bot khoi chart: huy lenh cho cua luoi (lenh dang mo van co SL / TP o server). Doi thong so / khoi dong lai: giu nguyen.
+   if(P_Strategy == STRAT_GRID && reason == REASON_REMOVE) GridCancel();
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
@@ -1053,6 +1075,8 @@ void OnTickBody()
    CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
    UpdateLiveR();                   // tong R that so voi nguong xem lai (5 phut/lan, bao 1 lan khi xuong duoi)
    UpdatePanel();
+   // Danh luoi (chien luoc 13): tu tim vung, dat / huy lenh cho, tat luoi khi gia ra khoi vung (Grid.mqh)
+   if(P_Strategy == STRAT_GRID) { GridTick(); return; }
 
    datetime barTime = iTime(_Symbol, P_TF, 0);
    // Nhoi lenh tren khung nho hon (vd moi 15 phut): chi them lop, thoat lenh van theo khung chinh
