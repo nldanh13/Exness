@@ -105,6 +105,7 @@ th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: ri
 th { position: sticky; top: 0; background: var(--panel); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink3); font-weight: 600; cursor: pointer; user-select: none; z-index: 1; }
 th[data-tip] { text-decoration: underline dotted var(--ink3); text-underline-offset: 3px; }
 th.sorted { color: var(--accent); }
+table.tbl th { cursor: default; } table.tbl .l { text-align: left; }
 th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--panel); z-index: 1; }
 th:first-child { z-index: 2; }
 tbody tr { cursor: pointer; }
@@ -262,6 +263,11 @@ main { gap: 14px; padding-block: 14px 40px; }
   <section class="sec" id="sec-decide">
     <div class="sec-head"><h2>Quyết định của bot</h2><span class="hint">Cập nhật mỗi 10 giây</span></div>
     <div class="decide" id="decide-list"><span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span></div>
+  </section>
+
+  <section class="sec" id="sec-learn" hidden>
+    <div class="sec-head"><h2>Bot đã học được gì từ thực chiến</h2><span class="hint">Lệnh giấy = mọi setup bot thấy, theo dõi tới SL / TP. Không dùng dữ liệu backtest.</span></div>
+    <div id="learn-box"></div>
   </section>
 
   <section class="sec" id="sec-journal">
@@ -610,6 +616,37 @@ function renderDecide(list) {
       '</div>';
   }).join('');
   renderJournal(list);
+  renderLearn(list);
+}
+var SIT_NAME = { 0: 'Không phân loại', 1: 'Sắp có tin', 2: 'Vừa ra tin', 3: 'Vừa sập / tăng dựng đứng', 4: 'Xu hướng mạnh', 5: 'Xu hướng giai đoạn cuối', 6: 'Đi ngang', 7: 'Không rõ' };
+var STR_NAME = { 0: 'EMA hồi', 1: 'Phá vỡ thật', 5: 'FVG + nến', 6: 'Spring đủ', 9: 'Fib + VP', 12: 'Hộp phân phối', 14: 'Dao rơi', 15: 'Order block',
+  16: 'Sóng Dow', 17: 'VWAP', 18: 'Key Volume', 19: '3 câu hỏi', 20: 'Quét tin', 21: 'Premium / discount' };
+var LEARN_VERDICT = { 0: ['Đang thử', 'na'], 1: ['Tin dùng', 'ok'], 2: ['Chưa chắc', 'zero'], 3: ['Loại', 'no'] };
+function renderLearn(list) {
+  var rows = [], open = 0;
+  (list || []).forEach(function (x) {
+    if (!x.hoc) return;
+    var parts = String(x.hoc).split('|');
+    (parts[1] || '').replace(/mo:(\d+)/, function (_, n) { open += +n; });
+    (parts[0] || '').split(';').filter(Boolean).forEach(function (e) {
+      var a = e.split(':');
+      if (a.length < 8) return;
+      rows.push({ ma: x.ma, sit: +a[0], st: +a[1], n: +a[2], m: +a[3], w: +a[4], v: +a[5], rn: +a[6], rm: +a[7] });
+    });
+  });
+  var sec = $('sec-learn');
+  if (!rows.length && !open) { sec.hidden = !(list || []).some(function (x) { return 'hoc' in x; }); $('learn-box').innerHTML = '<p class="muted" style="margin:0">Chưa có kết quả nào. Bot đang theo dõi các setup đầu tiên.</p>'; return; }
+  sec.hidden = false;
+  rows.sort(function (a, b) { return a.sit - b.sit || b.n - a.n; });
+  function r2(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + 'R'; }
+  $('learn-box').innerHTML = '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tình huống</th><th class="l">Chiến lược</th><th class="r">Lệnh giấy</th><th class="r">TB</th><th class="r">Thắng</th><th class="l">Đánh giá</th><th class="r">Lệnh thật</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var v = LEARN_VERDICT[r.v] || ['?', 'na'];
+      return '<tr><td>' + esc(SIT_NAME[r.sit] || r.sit) + '</td><td class="l">' + esc(STR_NAME[r.st] || ('S' + r.st)) + '</td><td class="r num">' + r.n + '</td>' +
+        '<td class="r num">' + (r.n ? r2(r.m) : '–') + '</td><td class="r num">' + (r.n ? r.w.toFixed(0) + '%' : '–') + '</td>' +
+        '<td class="l"><span class="pill ' + v[1] + '">' + v[0] + '</span></td><td class="r num">' + (r.rn ? r.rn + ' · ' + r2(r.rm) : '–') + '</td></tr>';
+    }).join('') + '</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">' + open + ' lệnh giấy đang theo dõi. Đủ ' +
+    'số lệnh giấy mới xếp loại: TB ≤ 0 → loại; chắc chắn có lời → tin dùng; còn lại → chưa chắc.</p>';
 }
 function renderJournal(list) {
   var rows = [];

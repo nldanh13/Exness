@@ -48,6 +48,7 @@ void FinalizeClosed(const ulong posId)
       double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
       double riskMoney = (rDist > 0 && tickSize > 0) ? rDist / tickSize * tickValue * inVol : 0;
       // Chi tinh la lenh thua khi lo hon 10% cua 1R; lenh hoa von am vai cent khong kich hoat nghi
+      if(riskMoney > 0) LearnRealClose(posId, total / riskMoney);     // hoc tu thuc chien: R that cua lenh (Learn.mqh)
       if(total < -MathMax(riskMoney * 0.1, 0.01) && lastOut > lastLossTime)
       {
          lastLossTime = lastOut;

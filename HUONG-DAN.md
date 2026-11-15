@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.35
+# Hướng dẫn bot BTC (MT5) v5.36
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1174,3 +1174,17 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
   tình huống đó (ADX, chiều cao hộp, Dow D1, biên độ cú sập).
 - Khác Tự động (23): Tự động chọn theo điểm backtest (tuần một lần); Theo tình huống chọn theo trạng thái thị trường ngay lúc đó. Có thể
   để Tự động chọn chiến lược 24 nếu nó đứng đầu bảng xếp hạng.
+
+## v5.36: Học từ thực chiến – lưu kết quả của chính bot và dùng cho quyết định sau (16/11/2026)
+Áp dụng cho chế độ **Theo tình huống** (chiến lược 24), mặc định bật (`InpLearn`). Không dùng dữ liệu backtest (`TrendBot/Learn.mqh`):
+- **Lệnh giấy:** mọi setup bot thấy trong mỗi tình huống (kể cả không vào lệnh vì trái chiều, bị bộ lọc chặn, hay đang có lệnh) được theo
+  dõi từ giá đóng cửa nến tín hiệu: chạm SL = −1R, chạm TP của setup (không có thì 2R) = +R, quá `InpLearnMaxBars` nến = R tạm tính;
+  cùng nến chạm cả hai thì tính SL. Lệnh thật quá ít để học nhanh, nên lệnh giấy là dữ liệu chính.
+- **Lệnh thật:** R thực tế (sau phí, hòa vốn, chốt phần) được ghi riêng theo tình huống + chiến lược đã mở lệnh, để đối chiếu.
+- **Dùng để quyết định** (mỗi cặp tình huống × chiến lược): chưa đủ `InpLearnMinN` lệnh giấy → *đang thử* (vẫn dùng kiến thức, rủi ro ×
+  `InpLearnTryRisk`); R TB ≤ 0 → *loại* (không dùng trong tình huống đó, vẫn theo dõi giấy để tự phục hồi); cận dưới 90% > 0 → *tin dùng*
+  (rủi ro đủ); còn lại → *chưa chắc* (rủi ro × 0,75). Bằng chứng của mỗi quyết định ghi đánh giá này.
+- **Lưu:** `Common\Files\TrendBot_hoc_<tài khoản>_<mã>.csv`, đọc lại khi khởi động (tắt / bật MT5 không mất). Lệnh giấy đang mở thì mất
+  khi khởi động lại. Backtest học trong bộ nhớ (không đọc / ghi file) để kiểm tra chính cơ chế học.
+- **Giao diện:** khung "Bot đã học được gì từ thực chiến" – bảng tình huống × chiến lược: số lệnh giấy, R TB, % thắng, đánh giá, lệnh thật.
+- Học cần thời gian: với H1, mỗi cặp cần vài tuần tới vài tháng để đủ 20 lệnh giấy. Chạy demo trước.

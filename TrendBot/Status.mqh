@@ -145,6 +145,7 @@ void WriteStatus()
    FileWriteString(h, "quyetdinh=" + st + "\r\n");
    FileWriteString(h, "lydovao=" + g_lastEntryWhy + "\r\n");
    FileWriteString(h, "bangchung=" + g_ev + "\r\n");
+   if(P_Strategy == STRAT_SMART) FileWriteString(h, "hoc=" + LearnSummary() + "\r\n");
    FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ? TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
    if(st != g_dlogLastStatus) { DecisionLog("phan-tich", st + (g_ev != "" ? " || " + g_ev : "")); g_dlogLastStatus = st; }
    FileWriteString(h, "xuly=" + TickTimeText() + "\r\n");

@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.35"
-#property version   "5.3500"
+#define  BOT_VERSION "5.36"
+#property version   "5.3600"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -213,6 +213,10 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
+input bool            InpLearn            = true;       // Học từ thực chiến: lưu kết quả và dùng cho quyết định sau
+input int             InpLearnMinN        = 20;         // Học: đánh giá sau (số lệnh giấy mỗi cặp tình huống / chiến lược)
+input double          InpLearnTryRisk     = 0.5;        // Học: rủi ro khi chưa đủ dữ liệu (× rủi ro chuẩn)
+input int             InpLearnMaxBars     = 48;         // Học: lệnh giấy hết hạn sau (số nến)
 input double          InpSmartTrendADX    = 25;         // Tình huống: xu hướng mạnh khi ADX từ
 input double          InpSmartRangeADX    = 20;         // Tình huống: đi ngang khi ADX dưới
 input int             InpSmartRangeBars   = 40;         // Tình huống: hộp đi ngang (số nến)
@@ -354,7 +358,9 @@ bool            P_SpringFull;
 int             P_PDDays, P_PDLookback, P_ChainFullCount;
 string          P_ChainList;
 bool            P_ChainPD;
-double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR;
+double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR, P_LearnTryRisk;
+bool            P_Learn;
+int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
@@ -523,6 +529,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_Learn = InpLearn; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
    P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
    P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
@@ -650,6 +657,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpLearn") { P_Learn = (v == "true" || v == "1"); return true; }
+   if(k == "InpLearnMinN") { P_LearnMinN = (int)StringToInteger(v); return true; }
+   if(k == "InpLearnTryRisk") { P_LearnTryRisk = StringToDouble(v); return true; }
+   if(k == "InpLearnMaxBars") { P_LearnMaxBars = (int)StringToInteger(v); return true; }
    if(k == "InpSmartTrendADX") { P_SmartTrendADX = StringToDouble(v); return true; }
    if(k == "InpSmartRangeADX") { P_SmartRangeADX = StringToDouble(v); return true; }
    if(k == "InpSmartRangeBars") { P_SmartRangeBars = (int)StringToInteger(v); return true; }
@@ -905,6 +916,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/OrderFlow.mqh"
 #include "TrendBot/Dow.mqh"
 #include "TrendBot/Signals.mqh"
+#include "TrendBot/Learn.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Grid.mqh"
@@ -1431,6 +1443,7 @@ void OnTickBody()
    HedgeTick();                     // khoa / mo khoa lenh (InpHedgeLockLossR, InpHedgeLockProfitR), truoc quan ly lenh
    ManagePositions();
    SessionEndPartial();             // het gio cao diem: chot mot nua + hoa von (InpSessPartialR)
+   if(P_Strategy == STRAT_SMART) LearnUpdate();   // cham lenh giay cua cac setup (hoc tu thuc chien)
    NewsProtect();                   // sap ra tin: lenh dang loi chot bot / SL ve hoa von (InpNewsProtect)
    NewsWeekly();                    // sang thu Hai: lich tin trong tuan (InpNewsWeekly)
    StallExit();                     // lenh dung yen qua lau thi thoat (InpStallBars)
@@ -1802,6 +1815,13 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    uint rc = trade.ResultRetcode();
    bool filled = ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
    if(!filled) GroupClear();
+   // Hoc tu thuc chien: gan tinh huong + chien luoc cho vi the de ghi ket qua that khi dong (LearnRealClose)
+   if(filled && P_Strategy == STRAT_SMART && g_sigMember >= 0)
+   {
+      ulong lp = trade.ResultOrder(), ld = trade.ResultDeal();
+      if(ld > 0 && HistoryDealSelect(ld)) lp = (ulong)HistoryDealGetInteger(ld, DEAL_POSITION_ID);
+      if(lp > 0) GlobalVariableSet(GVName("LS_" + (string)lp), g_smartSit * 100 + g_sigMember);
+   }
    if(filled && parts > 1) ScalePlace(buySignal, trade.ResultPrice(), slDist, atr, parts, baseMult);
    // Muc chot mot phan theo gia (vd. dinh cu cua cu giam): ManagePositions chot InpPartialPct khi gia cham
    if(filled && g_sigPartialPx > 0)

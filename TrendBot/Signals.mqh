@@ -780,9 +780,9 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    int n = StringSplit(list, ',', ls);
    ENUM_STRATEGY keep = P_Strategy;
    bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest; int kVw = P_VwapMode;
-   int nb = 0, ns = 0;
-   double bSL = 0, bTP = 0, bPX = 0, bM = 1, sSL = 0, sTP = 0, sPX = 0, sM = 1;
-   string bN = "", sN = "", useN = "";
+   int nb = 0, ns = 0, bMem = -1, sMem = -1;
+   double bSL = 0, bTP = 0, bPX = 0, bM = 1, sSL = 0, sTP = 0, sPX = 0, sM = 1, bF = 0, sF = 0;
+   string bN = "", sN = "", useN = "", outN = "";
    for(int i = 0; i < n; i++)
    {
       int m = (int)StringToInteger(ls[i]);
@@ -794,12 +794,21 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
       g_inChain = false;
       P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw;
-      if(!ok) continue;
-      if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; } nb++; bN += (bN == "" ? "" : " + ") + ChainName(m); }
-      if(s) { if(ns == 0) { sSL = g_sigSL; sTP = g_sigTP; sPX = g_sigPartialPx; sM = g_sigRiskMult; } ns++; sN += (sN == "" ? "" : " + ") + ChainName(m); }
+      if(!ok || (!b && !s)) continue;
+      // Hoc tu thuc chien (Learn.mqh): moi setup thay duoc la 1 lenh giay; ket qua da tich luy quyet dinh co dung chien luoc nay
+      // trong tinh huong nay hay khong va voi bao nhieu rui ro
+      double sd = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
+      LearnRegister(g_smartSit, m, b ? 1 : -1, c1, sd, g_sigTP);
+      double lf; string lt;
+      int lv = LearnVerdict(g_smartSit, m, lf, lt);
+      EvAdd("Hoc - " + ChainName(m) + " (" + g_smartName + "): " + lt);
+      if(lv == 3) { outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
+      if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; bMem = m; } nb++; bF = MathMax(bF, lf); bN += (bN == "" ? "" : " + ") + ChainName(m); }
+      if(s) { if(ns == 0) { sSL = g_sigSL; sTP = g_sigTP; sPX = g_sigPartialPx; sM = g_sigRiskMult; sMem = m; } ns++; sF = MathMax(sF, lf); sN += (sN == "" ? "" : " + ") + ChainName(m); }
    }
    g_sigSL = 0; g_sigTP = 0; g_sigPartialPx = 0; g_sigRiskMult = 1;
    head += " | Dung: " + useN;
+   if(outN != "") head += " | Da loai (thuc chien lo): " + outN;
    if(dir > 0) ns = 0; if(dir < 0) nb = 0;                          // xu huong: bo setup nguoc chieu thuy trieu (khong tinh la trai chieu)
    if(nb == 0 && ns == 0) { g_status = head + " | chua co setup"; return true; }
    if(nb > 0 && ns > 0) { g_chainConflicts++; g_status = head + " | setup trai chieu (mua: " + bN + " / ban: " + sN + "), dung ngoai"; return true; }
@@ -807,6 +816,9 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    double mult = agree >= P_ChainFullCount ? 1.0 : MathMax(0.1, MathMin(1.0, P_ChainOneRisk));
    double pM = nb > 0 ? bM : sM;
    if(pM > 0 && pM < 1) mult *= pM;
+   double lF = nb > 0 ? bF : sF;                                     // he so tu du lieu thuc chien (dang thu / chua chac / tin dung)
+   if(lF > 0 && lF < 1) mult *= lF;
+   g_sigMember = nb > 0 ? bMem : sMem;
    if(nb > 0) { buyBase = true; g_sigSL = bSL; g_sigTP = bTP; g_sigPartialPx = bPX; }
    else       { sellBase = true; g_sigSL = sSL; g_sigTP = sTP; g_sigPartialPx = sPX; }
    g_sigRiskMult = mult;
