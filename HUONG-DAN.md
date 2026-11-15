@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.30
+# Hướng dẫn bot BTC (MT5) v5.31
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 24 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 25 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1099,3 +1099,20 @@ Bộ `29-Premium-Discount-D1-H4-THU-NGHIEM`, xếp hạng `XH-PremDisc-H4`:
   đầu giá hồi về + nến tăng đóng cửa trên đáy FVG → Buy.
 - SL dưới đáy cú quét − 0,25 ATR. Chốt `InpPartialPct` % ở đường giữa (mức chốt theo giá), phần còn lại TP ở cạnh trên hộp. Bỏ nếu < 1R.
   Mỗi cú quét chỉ vào 1 lần. Premium: ngược lại.
+
+## v5.31: Chuỗi phân tích – lồng ghép các chiến lược trên 1 khung (chiến lược 22, 16/11/2026) – CHƯA KIỂM THỬ
+Một chart, một khung (bộ `30-Chuoi-phan-tich-H1-THU-NGHIEM`, xếp hạng `XH-Chuoi-H1`). Mỗi nến mới chạy đúng thứ tự:
+| Bước | Câu hỏi | Lấy từ | Không đạt thì |
+|---|---|---|---|
+| B1 Thủy triều | Mùa gì, giai đoạn nào? | Dow khung `InpDowTF` (v5.23) | chưa rõ / giai đoạn cuối → đứng ngoài |
+| B2 Vị trí | Giá rẻ hay đắt? | Hộp D1 premium / discount (v5.30), `InpChainPD` | sai nửa hộp → đứng ngoài |
+| B3 Setup | Phao đã động chưa? | Các chiến lược trong `InpChainList` soi cùng nến vừa đóng | không có setup cùng chiều, hoặc có setup ngược chiều → đứng ngoài |
+| B4 Bộ lọc | Đúng giờ, không có tin, spread ổn? | Bộ lọc chung (giờ, tin, spread, khối lượng...) | bỏ lệnh |
+| B5 Khối lượng | Bao nhiêu công cụ đồng ý? | 1 setup = `InpChainOneRisk` × rủi ro; ≥ `InpChainFullCount` = đủ | – |
+- Trong chuỗi, FVG luôn chờ nến xác nhận, Spring luôn chờ đủ chuỗi, Donchian luôn chờ test lại (bản an toàn của từng chiến lược).
+- Không đưa vào chuỗi: lưới (13), quét tin (20), các chiến lược cần chỉ báo riêng hoặc phiên riêng (2, 3, 4, 7, 8, 10).
+- SL / TP / mức chốt theo giá lấy từ setup đứng trước trong `InpChainList`. Nhật ký in ra từng bước, ví dụ
+  `B1 thuy trieu TANG (lan pha 2) | B2 vung re | B3 2 setup: Order block + Key Volume | B5 rui ro x1.00`.
+- Cột báo cáo `Chuoi_TinHieu_TraiChieu` = số lần vào lệnh / số lần đứng ngoài vì setup trái chiều.
+- Đây là CÁCH LỒNG GHÉP, không phải bằng chứng có lợi thế: từng thành phần đều chưa kiểm thử. Xếp hạng sẽ cho biết chuỗi có hơn
+  từng chiến lược riêng lẻ và hơn cấu hình C hay không.

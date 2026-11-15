@@ -596,6 +596,89 @@ bool PDPattern(const double &hi[], const double &lo[], const double &op[], const
    return false;
 }
 
+// Chuoi phan tich (v5.31, chien luoc 22): long ghep cac chien luoc thanh MOT chuoi logic tren cung mot khung thoi gian.
+//  Buoc 1 - Thuy trieu (Dow, khung InpDowTF): tang chi tim mua, giam chi tim ban, chua ro = dung ngoai; giai doan cuoi
+//           (>= InpDowLateLegs lan pha dinh) = khong vao moi.
+//  Buoc 2 - Vi tri (InpChainPD): hop gia D1 InpPDDays nen - mua chi o nua re (discount), ban chi o nua dat (premium).
+//  Buoc 3 - Setup: cac chien luoc "vung + nen xac nhan" trong InpChainList cung soi nen vua dong (FVG luon cho nen xac nhan,
+//           Spring luon cho du chuoi, Donchian luon cho test lai). Chi tinh setup cung chieu thuy trieu; co setup NGUOC chieu
+//           = cac cong cu dang noi moi cai mot kieu -> dung ngoai.
+//  Buoc 4 - Bo loc chung (gio, tin, spread, khoi luong...) chay nhu moi chien luoc khac sau buoc nay.
+//  Buoc 5 - Khoi luong theo dong thuan: 1 setup = InpChainOneRisk x rui ro, >= InpChainFullCount setup = du rui ro.
+//  SL / TP / muc chot theo gia lay tu setup dau tien trong danh sach (uu tien theo thu tu InpChainList).
+string g_chainWhy = "";
+int    g_chainHits = 0, g_chainConflicts = 0;
+string ChainName(const int m)
+{
+   switch(m)
+   {
+      case 0: return "EMA hoi"; case 1: return "Pha vo + test lai"; case 5: return "FVG + nen"; case 6: return "Spring du";
+      case 9: return "Fib + VP"; case 12: return "Hop phan phoi"; case 14: return "Dao roi"; case 15: return "Order block";
+      case 16: return "Song Dow"; case 17: return "VWAP"; case 18: return "Key Volume"; case 19: return "3 cau hoi"; case 21: return "Premium/discount";
+   }
+   return "S" + IntegerToString(m);
+}
+bool ChainSignals(const double atr, const double trend, const double fast, const double c1, const double h1, const double l1,
+                  bool &buyBase, bool &sellBase)
+{
+   buyBase = false; sellBase = false;
+   // Buoc 1
+   DowState t;
+   if(!DowTide(t) || t.trend == 0) { g_status = "Chuoi B1: thuy trieu chua ro, dung ngoai"; return true; }
+   int dir = t.trend;
+   if(P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) { g_status = "Chuoi B1: thuy trieu giai doan cuoi, dung ngoai"; return true; }
+   string why = StringFormat("B1 thuy trieu %s (lan pha %d)", dir > 0 ? "TANG" : "GIAM", t.legs);
+   // Buoc 2
+   if(P_ChainPD)
+   {
+      int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
+      if(dH < 0 || dL < 0) return false;
+      double mid = (iHigh(_Symbol, PERIOD_D1, dH) + iLow(_Symbol, PERIOD_D1, dL)) / 2.0;
+      if(dir > 0 ? c1 >= mid : c1 <= mid) { g_status = "Chuoi B2: gia khong o vung " + (dir > 0 ? "re" : "dat") + ", dung ngoai"; return true; }
+      why += dir > 0 ? " | B2 vung re" : " | B2 vung dat";
+   }
+   // Buoc 3
+   string list[];
+   int n = StringSplit(P_ChainList, ',', list);
+   ENUM_STRATEGY keep = P_Strategy;
+   bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest;
+   int agree = 0, against = 0;
+   double pSL = 0, pTP = 0, pPX = 0, pMult = 1;
+   string names = "";
+   for(int i = 0; i < n; i++)
+   {
+      StringTrimLeft(list[i]); StringTrimRight(list[i]);
+      int m = (int)StringToInteger(list[i]);
+      if(list[i] == "" || m < 0 || m == STRAT_CHAIN || m == STRAT_GRID || m == STRAT_IMOM || m == STRAT_NEWS ||
+         m == STRAT_RSI_REVERT || m == STRAT_DIVCVD || m == STRAT_MACD || m == STRAT_EXHAUST || m == STRAT_ORB || m > STRAT_PD) continue;
+      P_Strategy = (ENUM_STRATEGY)m;
+      P_FvgCandle = true; P_SpringFull = true; P_BreakRetest = true;
+      bool b = false, s = false;
+      bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
+      P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet;
+      if(!ok || (!b && !s)) continue;
+      if((dir > 0 && b) || (dir < 0 && s))
+      {
+         if(agree == 0) { pSL = g_sigSL; pTP = g_sigTP; pPX = g_sigPartialPx; pMult = g_sigRiskMult; }
+         agree++; names += (names == "" ? "" : " + ") + ChainName(m);
+      }
+      else { against++; names += (names == "" ? "" : " + ") + "nguoc: " + ChainName(m); }
+   }
+   g_sigSL = 0; g_sigTP = 0; g_sigPartialPx = 0; g_sigRiskMult = 1;
+   if(agree == 0) { g_status = why + " | B3 chua co setup"; return true; }
+   if(against > 0) { g_chainConflicts++; g_status = why + " | B3 setup trai chieu (" + names + "), dung ngoai"; return true; }
+   // Buoc 5
+   double mult = agree >= P_ChainFullCount ? 1.0 : MathMax(0.1, MathMin(1.0, P_ChainOneRisk));
+   if(pMult > 0 && pMult < 1) mult *= pMult;
+   if(dir > 0) buyBase = true; else sellBase = true;
+   g_sigSL = pSL; g_sigTP = pTP; g_sigPartialPx = pPX; g_sigRiskMult = mult;
+   g_chainHits++;
+   g_chainWhy = why + StringFormat(" | B3 %d setup: %s | B5 rui ro x%.2f", agree, names, mult);
+   g_status = g_chainWhy;
+   Print("CHUOI PHAN TICH: ", g_chainWhy);
+   return true;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -1174,6 +1257,8 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          }
       }
    }
+   else if(P_Strategy == STRAT_CHAIN)
+      return ChainSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase);
    else if(P_Strategy == STRAT_PD)
    {
       int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);

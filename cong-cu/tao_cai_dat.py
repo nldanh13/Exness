@@ -273,6 +273,17 @@ PRESETS = [
         "Khung ngày cho biết đắt hay rẻ, khung H4 cho biết khi nào ra tay.",
     ], {"InpStrategy": "21", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "0", "InpUsePartial": "true",
         "InpPartialPct": "50", "InpPartialR": "99", "InpPDDays": "60", "InpPDLookback": "60"}),
+    ("30-Chuoi-phan-tich-H1-THU-NGHIEM.set", [
+        "30. Chuỗi phân tích (chiến lược 22, H1): lồng ghép các chiến lược thành 1 chuỗi logic. CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "B1 thủy triều D1 (Dow): tăng chỉ mua, giảm chỉ bán, chưa rõ / giai đoạn cuối = đứng ngoài. B2 vị trí: mua ở nửa rẻ hộp D1 60 ngày.",
+        "B3 setup trên H1: order block, FVG + nến, Key Volume, 3 câu hỏi, premium/discount, Spring đủ, sóng Dow, phá vỡ + test lại, VWAP.",
+        "Có setup ngược chiều = đứng ngoài. B4 bộ lọc chung (thêm: 30 phút trước tin không vào). B5: 1 setup = 0,5% , ≥ 2 setup = 1%.",
+        "Quản lý: hòa vốn ở 1R, chốt 50% ở 1,5R, SL theo đáy mới cao hơn (10 nến), TP 2R hoặc theo setup.",
+    ], {"InpStrategy": "22", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
+        "InpChainList": "15,5,18,19,21,6,16,1,17", "InpChainPD": "true", "InpChainFullCount": "2", "InpChainOneRisk": "0.5",
+        "InpDowTF": "16408", "InpDowLateLegs": "4", "InpPDDays": "60", "InpNewsPreMin": "30",
+        "InpUseBreakeven": "true", "InpBreakevenR": "1.0", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
+        "InpTrailSwingBars": "10"}),
 ]
 
 

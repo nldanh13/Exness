@@ -27,6 +27,7 @@ STRATEGY_LABELS = {
     "STRAT_SIMPLE":       "Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa",
     "STRAT_NEWS":         "Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật",
     "STRAT_PD":           "Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính",
+    "STRAT_CHAIN":        "Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung",
 }
 
 GROUPS = [
@@ -203,6 +204,10 @@ GROUPS = [
         ("InpSimpleLevels",   "3 câu hỏi: số đường kẻ ngang", "Chiến lược 19: chỉ nến, vài đường kẻ và 3 câu hỏi. (1) Mùa gì: đỉnh sau cao hơn = mùa tăng, chỉ mua; thấp hơn = mùa giảm, chỉ bán; lộn xộn = đứng ngoài. (2) Cá tụ ở đâu: 2–3 đường ngang ở chỗ giá từng quay đầu rõ nhất. (3) Phao động chưa: giá về đúng đường rồi một nến mạnh cùng chiều mùa (thân ≥ 60% biên độ) mới vào. SL dưới đường − 0,25 ATR."),
         ("InpSimpleLookback", "3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)", ""),
         ("InpSimplePivot",    "3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)", "Các chỗ quay đầu cách nhau < 0,5 ATR gộp thành 1 đường. Đường mạnh = tổng độ dài các cú quay đầu tại đó (đo trong 10 nến sau)."),
+        ("InpChainList",      "Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)", "Chiến lược 22 lồng ghép các chiến lược thành 1 chuỗi trên cùng khung: B1 thủy triều (Dow khung lớn: tăng chỉ mua, giảm chỉ bán, chưa rõ hoặc giai đoạn cuối = đứng ngoài) → B2 vị trí (vùng rẻ / đắt của hộp D1) → B3 setup (các chiến lược trong danh sách cùng soi nến vừa đóng; có setup ngược chiều = đứng ngoài) → B4 bộ lọc chung → B5 khối lượng theo số setup đồng thuận. Mã: 0 EMA hồi, 1 phá vỡ + test lại, 5 FVG + nến, 6 Spring đủ, 9 Fib + VP, 12 hộp phân phối, 14 dao rơi, 15 order block, 16 sóng Dow, 17 VWAP, 18 Key Volume, 19 3 câu hỏi, 21 premium / discount. SL / TP theo setup đứng trước trong danh sách."),
+        ("InpChainPD",        "Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)", "Dùng số nến D1 của 'Premium / discount: hộp giá khung ngày'."),
+        ("InpChainFullCount", "Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)", ""),
+        ("InpChainOneRisk",   "Chuỗi: rủi ro khi chỉ có 1 setup (× rủi ro chuẩn)", "Một công cụ báo = vào nhỏ; nhiều công cụ cùng báo một chiều = vào đủ. Tổng rủi ro không bao giờ vượt rủi ro chuẩn."),
         ("InpPDDays",         "Premium / discount: hộp giá khung ngày (số nến D1)", "Chiến lược 21. Hộp = đỉnh cao nhất và đáy thấp nhất của bấy nhiêu nến D1 (60 ≈ 2 tháng). Nửa trên premium (đắt, chỉ bán), nửa dưới discount (rẻ, chỉ mua), đường giữa = cân bằng; quanh đường giữa thì đứng ngoài. Trên khung chính: (1) chờ cú quét thủng đáy gần nhất trong vùng rẻ rồi kéo lại; (2) chờ nến đóng cửa vượt đỉnh gần nhất; (3) giá hồi về FVG của cú bật, nến tăng → mua. SL dưới đáy cú quét. Chốt phần đầu ở đường giữa, phần còn lại ở cạnh trên hộp."),
         ("InpPDLookback",     "Premium / discount: tìm cú quét + FVG trong (số nến khung chính)", ""),
         ("InpNewsWindowMin",  "Quét tin: tìm tín hiệu trong (phút) sau giờ tin", "Chiến lược 20. Ngày có tin đừng hỏi giá chạy hướng nào, hãy hỏi cú quét xong chưa. Cú đầu tiên sau tin vượt ra ngoài vùng đi ngang trước tin là để lấy thanh khoản. Bot chờ: không còn lập đỉnh quét mới, nến đóng cửa lại trong vùng, là nến giảm và thủng đáy cây nến tạo đỉnh quét (cấu trúc mới) → bán, SL trên đỉnh quét. Quét xuống: ngược lại. Mỗi tin 1 lần."),

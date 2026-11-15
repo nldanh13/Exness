@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.30"
-#property version   "5.3000"
+#define  BOT_VERSION "5.31"
+#property version   "5.3100"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -34,7 +34,8 @@ enum ENUM_STRATEGY
    STRAT_KEYVOL       = 18,  // Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất
    STRAT_SIMPLE       = 19,  // Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa
    STRAT_NEWS         = 20,  // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
-   STRAT_PD           = 21   // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
+   STRAT_PD           = 21,  // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
+   STRAT_CHAIN        = 22   // Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -210,6 +211,10 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
+input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
+input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
+input int             InpChainFullCount   = 2;          // Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)
+input double          InpChainOneRisk     = 0.5;        // Chuỗi: rủi ro khi chỉ có 1 setup (× rủi ro chuẩn)
 input int             InpPDDays           = 60;         // Premium / discount: hộp giá khung ngày (số nến D1)
 input int             InpPDLookback       = 60;         // Premium / discount: tìm cú quét + FVG trong (số nến khung chính)
 input int             InpNewsWindowMin    = 240;        // Quét tin: tìm tín hiệu trong (phút) sau giờ tin
@@ -339,7 +344,10 @@ int             P_NewsPreMin, P_NewsProtect, P_NewsWindowMin, P_NewsRangeMin;
 bool            P_NewsWeekly, P_NewsNFP;
 int             P_ScaleParts, P_ScaleBars, P_BESwingBars;
 bool            P_SpringFull;
-int             P_PDDays, P_PDLookback;
+int             P_PDDays, P_PDLookback, P_ChainFullCount;
+string          P_ChainList;
+bool            P_ChainPD;
+double          P_ChainOneRisk;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
@@ -507,6 +515,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
    P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
    P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
    P_ScaleParts = InpScaleParts; P_ScaleStepATR = InpScaleStepATR; P_ScaleBars = InpScaleBars; P_BESwingBars = InpBESwingBars;
@@ -631,6 +640,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpChainList") { P_ChainList = v; return true; }
+   if(k == "InpChainPD") { P_ChainPD = (v == "true" || v == "1"); return true; }
+   if(k == "InpChainFullCount") { P_ChainFullCount = (int)StringToInteger(v); return true; }
+   if(k == "InpChainOneRisk") { P_ChainOneRisk = StringToDouble(v); return true; }
    if(k == "InpPDDays") { P_PDDays = (int)StringToInteger(v); return true; }
    if(k == "InpPDLookback") { P_PDLookback = (int)StringToInteger(v); return true; }
    if(k == "InpSpringFull") { P_SpringFull = (v == "true" || v == "1"); return true; }
