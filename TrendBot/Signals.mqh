@@ -30,6 +30,23 @@ double CloseAt(const datetime t)                         // gia dong cua nen ket
    return sh < 0 ? 0 : iClose(_Symbol, P_TF, sh);
 }
 
+// Big Trades: co dinh cu (low = false) / day cu (low = true) truoc chi so j, cach muc 'price' trong 'zone' khong.
+// Dinh / day cu = cao / thap hon 3 nen moi ben. Mang theo thu tu thoi gian (chi so lon = moi hon).
+bool BigNearSwing(const double &hi[], const double &lo[], const int j, const double price, const bool low, const double zone)
+{
+   for(int q = j - 4; q >= 3; q--)
+   {
+      bool piv = true;
+      for(int m = q - 3; m <= q + 3 && piv; m++)
+      {
+         if(m == q) continue;
+         if(low ? lo[m] <= lo[q] : hi[m] >= hi[q]) piv = false;
+      }
+      if(piv && MathAbs((low ? lo[q] : hi[q]) - price) <= zone) return true;
+   }
+   return false;
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
@@ -351,6 +368,107 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          { buyBase = true; g_sigSL = MathMax(c1 - (mLo - 0.25 * atr), 0.5 * atr); g_absUsed = t1; }
          else if(vv > 0 && dv >= P_AbsorbDelta * vv && chg <= 0.25 * atr && pos >= 0.75 && rsiNow >= 100.0 - P_DivRsiLow)
          { sellBase = true; g_sigSL = MathMax((mHi + 0.25 * atr) - c1, 0.5 * atr); g_absUsed = t1; }
+      }
+   }
+   else if(P_Strategy == STRAT_BIGTRADE)
+   {
+      // Big Trades (v5.14, CHUA KIEM THU): lenh lon de lai dau chan tren bieu do. Bong bong chi cho biet CO lenh lon,
+      // khong cho biet lenh do THANG hay THUA: phai nhin gia lam gi ngay sau do. Chi xet o vung quan trong (dinh / day cu).
+      // "Bong bong" = nen co khoi luong >= InpBigMult x TB 20 nen truoc tren Binance Futures, phe chu dong ap dao
+      // (delta >= InpBigMinDelta: xanh = mua chu dong, do = ban chu dong). Exness khong co kich thuoc tung lenh nen
+      // day la xap xi theo CA cay nen, khong phai tung lenh khop.
+      // Uu tien:
+      //  1) HAP THU (manh nhat): bong bong do to sat day cu ma gia khong giam them roi bat len -> nguoi ban lon bi nuot,
+      //     thuong la day -> Buy. Bong bong xanh to sat dinh cu ma gia khong len noi -> nguoi mua bi ket -> Sell.
+      //  2) CHUOI THANH LY: >= InpBigClusterMin bong bong do trong InpBigClusterBars nen, gia roi >= 3 ATR. Thuong la
+      //     cat lo / thanh ly hang loat, khong phai tay to ban. Chuoi ket thuc ma gia ngung roi -> nguoi ban da can -> Buy.
+      //  3) GIA DI THEO: bong bong xanh to roi gia tang manh (dong cua vuot dinh nen bong bong >= 0,5 ATR trong 3 nen).
+      //     Vung bong bong thanh ho tro (nguoi dat lenh lon bao ve gia von): lan dau gia quay lai cham vung va dong nen
+      //     tang -> Buy. Bong bong do + gia giam: nguoc lai.
+      // SL ngoai vung / day / dinh 0,25 ATR (toi thieu 0,5 ATR). TP theo InpRR. Moi bong bong / chuoi chi vao 1 lan.
+      int L = P_BigLookback < 30 ? 30 : P_BigLookback;
+      double fv[], fb[];
+      datetime t1 = iTime(_Symbol, P_TF, 1);
+      bool got = MQLInfoInteger(MQL_TESTER) ? FlowFromFile(t1, L - 1, fv, fb) : FlowFromBinance(t1, L - 1, fv, fb);
+      if(!got || ArraySize(fv) != L) { g_flowNoData++; g_status = "Big Trades: chua co du lieu Binance, khong vao lenh"; return true; }
+      double hi[], lo[], cl[];
+      int bub[];
+      datetime tm[];
+      ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(cl, L); ArrayResize(bub, L); ArrayResize(tm, L);
+      for(int i = 0; i < L; i++)
+      {
+         int sh = L - i;
+         hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh);
+         tm[i] = iTime(_Symbol, P_TF, sh);
+         bub[i] = 0;
+         if(i < 20 || fv[i] <= 0) continue;
+         double avg = 0;
+         for(int q = i - 20; q < i; q++) avg += fv[q];
+         avg /= 20.0;
+         if(avg <= 0 || fv[i] < P_BigMult * avg) continue;
+         double d = (2.0 * fb[i] - fv[i]) / fv[i];
+         bub[i] = d >= P_BigMinDelta ? 1 : (d <= -P_BigMinDelta ? -1 : 0);
+      }
+      int last = L - 1;
+      double zone = P_BigZoneATR * atr, o1 = iOpen(_Symbol, P_TF, 1);
+      // 1) Hap thu: bong bong o nen 1 hoac nen 2
+      for(int j = last; j >= last - 1 && !buyBase && !sellBase; j--)
+      {
+         if(bub[j] == 0 || tm[j] <= g_bigUsed) continue;
+         double mn = lo[j], mx = hi[j];
+         for(int m = j + 1; m <= last; m++) { if(lo[m] < mn) mn = lo[m]; if(hi[m] > mx) mx = hi[m]; }
+         double rj = hi[j] - lo[j];
+         if(bub[j] < 0 && BigNearSwing(hi, lo, j, lo[j], true, zone) && mn >= lo[j] - 0.1 * atr)
+         {
+            bool react = j == last ? (rj > 0 && (c1 - lo[j]) / rj >= 0.6) : (c1 > o1 && c1 > cl[j]);
+            if(react) { buyBase = true; g_sigSL = MathMax(c1 - (mn - 0.25 * atr), 0.5 * atr); g_bigUsed = tm[j]; }
+         }
+         if(!buyBase && bub[j] > 0 && BigNearSwing(hi, lo, j, hi[j], false, zone) && mx <= hi[j] + 0.1 * atr)
+         {
+            bool react = j == last ? (rj > 0 && (hi[j] - c1) / rj >= 0.6) : (c1 < o1 && c1 < cl[j]);
+            if(react) { sellBase = true; g_sigSL = MathMax((mx + 0.25 * atr) - c1, 0.5 * atr); g_bigUsed = tm[j]; }
+         }
+      }
+      // 2) Chuoi thanh ly vua ket thuc (nen 1 khong con la bong bong cung mau)
+      int CB = P_BigClusterBars < 3 ? 3 : (P_BigClusterBars > L - 21 ? L - 21 : P_BigClusterBars);
+      if(!buyBase && !sellBase && tm[last - 1] > g_bigUsed)
+      {
+         int nRed = 0, nGreen = 0;
+         double cMx = 0, cMn = DBL_MAX;
+         for(int m = last - CB; m <= last - 1; m++)
+         {
+            if(bub[m] < 0) nRed++;
+            if(bub[m] > 0) nGreen++;
+            if(hi[m] > cMx) cMx = hi[m];
+            if(lo[m] < cMn) cMn = lo[m];
+         }
+         bool fell = cMx - cMn >= 3.0 * atr;
+         if(nRed >= P_BigClusterMin && fell && bub[last] >= 0 && l1 >= cMn - 0.1 * atr && c1 > o1)
+         { buyBase = true; g_sigSL = MathMax(c1 - (cMn - 0.25 * atr), 0.5 * atr); g_bigUsed = tm[last - 1]; }
+         else if(nGreen >= P_BigClusterMin && fell && bub[last] <= 0 && h1 <= cMx + 0.1 * atr && c1 < o1)
+         { sellBase = true; g_sigSL = MathMax((cMx + 0.25 * atr) - c1, 0.5 * atr); g_bigUsed = tm[last - 1]; }
+      }
+      // 3) Gia di theo bong bong -> vung bong bong thanh ho tro / khang cu, vao o lan cham lai dau tien
+      for(int j = last - 4; j >= 20 && !buyBase && !sellBase; j--)
+      {
+         if(bub[j] == 0 || tm[j] <= g_bigUsed) continue;
+         double bestC = cl[j + 1], worstC = cl[j + 1];
+         for(int m = j + 1; m <= j + 3; m++) { if(cl[m] > bestC) bestC = cl[m]; if(cl[m] < worstC) worstC = cl[m]; }
+         bool touched = false;
+         if(bub[j] > 0 && bestC >= hi[j] + 0.5 * atr)                   // xanh, gia tang manh sau do
+         {
+            for(int m = j + 4; m < last && !touched; m++) if(lo[m] <= hi[j]) touched = true;
+            if(!touched && l1 <= hi[j] && l1 >= lo[j] - 0.25 * atr && c1 > o1 && c1 > (hi[j] + lo[j]) / 2.0)
+            { buyBase = true; g_sigSL = MathMax(c1 - (lo[j] - 0.25 * atr), 0.5 * atr); g_bigUsed = tm[j]; }
+            break;                                                         // chi xet bong bong gan nhat co gia di theo
+         }
+         if(bub[j] < 0 && worstC <= lo[j] - 0.5 * atr)                   // do, gia giam manh sau do
+         {
+            for(int m = j + 4; m < last && !touched; m++) if(hi[m] >= lo[j]) touched = true;
+            if(!touched && h1 >= lo[j] && h1 <= hi[j] + 0.25 * atr && c1 < o1 && c1 < (hi[j] + lo[j]) / 2.0)
+            { sellBase = true; g_sigSL = MathMax((hi[j] + 0.25 * atr) - c1, 0.5 * atr); g_bigUsed = tm[j]; }
+            break;
+         }
       }
    }
    else

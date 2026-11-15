@@ -16,6 +16,7 @@ STRATEGY_LABELS = {
     "STRAT_IMOM":         "Thử nghiệm: quán tính trong ngày",
     "STRAT_FIBVP":        "Thử nghiệm: Fibonacci + Volume Profile",
     "STRAT_DIVCVD":       "Thử nghiệm: phân kỳ RSI xác nhận bằng CVD",
+    "STRAT_BIGTRADE":     "Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng",
 }
 
 GROUPS = [
@@ -59,6 +60,12 @@ GROUPS = [
         ("InpDivRsiLow",      "RSI + CVD: quá bán dưới (quá mua = 100 − mức này)", "Dùng cho tín hiệu hấp thụ: RSI quá bán là cảnh báo, chưa phải tín hiệu mua."),
         ("InpAbsorbBars",     "RSI + CVD: hấp thụ xét trong (số nến gần nhất)", "Hấp thụ ở đáy: lệnh bán chủ động đổ vào ồ ạt (CVD lao dốc) mà giá không giảm thêm = có người đỡ hết số hàng đó."),
         ("InpAbsorbDelta",    "RSI + CVD: CVD đổ ít nhất (× tổng khối lượng các nến đó)", "0,15 = bán chủ động nhiều hơn mua chủ động ít nhất 15% tổng khối lượng."),
+        ("InpBigMult",        "Big Trades: bong bóng khi khối lượng nến ≥ (× TB 20 nến)", "Bong bóng chỉ cho biết CÓ lệnh lớn, không cho biết lệnh đó thắng hay thua: bot nhìn giá ngay sau đó. Xấp xỉ theo cả cây nến Binance (Exness không có kích thước từng lệnh)."),
+        ("InpBigMinDelta",    "Big Trades: phe chủ động áp đảo tối thiểu (delta)", "Xanh = mua chủ động áp đảo, đỏ = bán chủ động áp đảo."),
+        ("InpBigLookback",    "Big Trades: xét trong (số nến)", "Ưu tiên: (1) hấp thụ – bong bóng đỏ sát đáy cũ mà giá không giảm thêm rồi bật lên → mua; (2) chuỗi bong bóng đỏ trong cú rơi nhanh (cắt lỗ / thanh lý) kết thúc, giá ngừng rơi → mua; (3) bong bóng xanh rồi giá tăng mạnh → vùng đó thành hỗ trợ, mua ở lần chạm lại đầu tiên. Đỉnh: ngược lại."),
+        ("InpBigZoneATR",     "Big Trades: gần đỉnh / đáy cũ trong (× ATR)", "Chỉ chú ý bong bóng ở vùng quan trọng: đỉnh cũ, đáy cũ."),
+        ("InpBigClusterMin",  "Big Trades: chuỗi thanh lý cần ít nhất (bong bóng)", ""),
+        ("InpBigClusterBars", "Big Trades: chuỗi thanh lý trong (số nến)", "Giá phải rơi (tăng) ít nhất 3 ATR trong khoảng này."),
     ]),
     ("4. Bộ lọc xu hướng", [
         ("InpUseHTF",    "Chỉ giao dịch theo xu hướng khung lớn", "Chỉ mua khi giá khung lớn trên EMA, chỉ bán khi dưới."),

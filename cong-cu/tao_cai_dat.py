@@ -107,6 +107,13 @@ PRESETS = [
         "CVD lấy từ nến Binance Futures (cần WebRequest fapi.binance.com; backtest cần du-lieu/flow_BTCUSDT_1h.csv). Chỉ chạy demo.",
     ], {"InpStrategy": "10", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
         "InpRR": "2", "InpMaxSpreadPoints": "1500"}),
+    ("10-Big-Trades-H1-THU-NGHIEM.set", [
+        "10. Thử nghiệm: Big Trades (lệnh lớn) tại đỉnh / đáy cũ, khung H1",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Bong bóng = nến khối lượng ≥ 3 × trung bình trên Binance, màu theo phe chủ động.",
+        "Vào khi giá phản ứng: hấp thụ ở đỉnh / đáy cũ, chuỗi thanh lý kết thúc, hoặc chạm lại vùng bong bóng đã thắng. TP 2R.",
+        "Cần WebRequest fapi.binance.com; backtest cần du-lieu/flow_BTCUSDT_1h.csv. Chỉ chạy demo.",
+    ], {"InpStrategy": "11", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
+        "InpRR": "2", "InpMaxSpreadPoints": "1500"}),
 ]
 
 

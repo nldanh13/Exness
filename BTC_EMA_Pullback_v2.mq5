@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.13"
-#property version   "5.1300"
+#define  BOT_VERSION "5.14"
+#property version   "5.1400"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -23,7 +23,8 @@ enum ENUM_STRATEGY
    STRAT_MACD         = 7,   // Thử nghiệm: MACD đa khung
    STRAT_IMOM         = 8,   // Thử nghiệm: quán tính trong ngày
    STRAT_FIBVP        = 9,   // Thử nghiệm: Fibonacci + Volume Profile
-   STRAT_DIVCVD       = 10   // Thử nghiệm: phân kỳ RSI xác nhận bằng CVD
+   STRAT_DIVCVD       = 10,  // Thử nghiệm: phân kỳ RSI xác nhận bằng CVD
+   STRAT_BIGTRADE     = 11   // Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -66,6 +67,12 @@ input int             InpDivPivot         = 3;          // RSI + CVD: đỉnh / 
 input double          InpDivRsiLow        = 30.0;       // RSI + CVD: quá bán dưới (quá mua = 100 − mức này)
 input int             InpAbsorbBars       = 5;          // RSI + CVD: hấp thụ xét trong (số nến gần nhất)
 input double          InpAbsorbDelta      = 0.15;       // RSI + CVD: CVD đổ ít nhất (× tổng khối lượng các nến đó)
+input double          InpBigMult          = 3.0;        // Big Trades: bong bóng khi khối lượng nến ≥ (× TB 20 nến)
+input double          InpBigMinDelta      = 0.10;       // Big Trades: phe chủ động áp đảo tối thiểu (delta)
+input int             InpBigLookback      = 60;         // Big Trades: xét trong (số nến)
+input double          InpBigZoneATR       = 0.5;        // Big Trades: gần đỉnh / đáy cũ trong (× ATR)
+input int             InpBigClusterMin    = 3;          // Big Trades: chuỗi thanh lý cần ít nhất (bong bóng)
+input int             InpBigClusterBars   = 6;          // Big Trades: chuỗi thanh lý trong (số nến)
 
 input group "4. Bộ lọc xu hướng"
 input bool            InpUseHTF           = true;       // Chỉ giao dịch theo xu hướng khung lớn
@@ -267,6 +274,8 @@ int             P_FibLookback, P_VPBins, P_VPTFmin;
 double          P_FibMinSwingATR, P_VPHighMult, P_FibMinRR;
 int             P_DivRsiPeriod, P_DivLookback, P_DivPivot, P_AbsorbBars;
 double          P_DivRsiLow, P_AbsorbDelta;
+int             P_BigLookback, P_BigClusterMin, P_BigClusterBars;
+double          P_BigMult, P_BigMinDelta, P_BigZoneATR;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -381,6 +390,8 @@ void LoadParams()
    P_VPHighMult = InpVPHighMult; P_VPTFmin = InpVPTFmin; P_FibMinRR = InpFibMinRR;
    P_DivRsiPeriod = InpDivRsiPeriod; P_DivLookback = InpDivLookback; P_DivPivot = InpDivPivot;
    P_DivRsiLow = InpDivRsiLow; P_AbsorbBars = InpAbsorbBars; P_AbsorbDelta = InpAbsorbDelta;
+   P_BigMult = InpBigMult; P_BigMinDelta = InpBigMinDelta; P_BigLookback = InpBigLookback; P_BigZoneATR = InpBigZoneATR;
+   P_BigClusterMin = InpBigClusterMin; P_BigClusterBars = InpBigClusterBars;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -482,6 +493,12 @@ bool SetParam(const string k, const string v)
    if(k == "InpDivRsiLow") { P_DivRsiLow = StringToDouble(v); return true; }
    if(k == "InpAbsorbBars") { P_AbsorbBars = (int)StringToInteger(v); return true; }
    if(k == "InpAbsorbDelta") { P_AbsorbDelta = StringToDouble(v); return true; }
+   if(k == "InpBigMult") { P_BigMult = StringToDouble(v); return true; }
+   if(k == "InpBigMinDelta") { P_BigMinDelta = StringToDouble(v); return true; }
+   if(k == "InpBigLookback") { P_BigLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpBigZoneATR") { P_BigZoneATR = StringToDouble(v); return true; }
+   if(k == "InpBigClusterMin") { P_BigClusterMin = (int)StringToInteger(v); return true; }
+   if(k == "InpBigClusterBars") { P_BigClusterBars = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }

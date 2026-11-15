@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.13
+# Hướng dẫn bot BTC (MT5) v5.14
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 11 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 12 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -862,3 +862,18 @@ Bộ `09-Phan-ky-RSI-CVD-H1-THU-NGHIEM.set` (`InpStrategy = 10`, H1, TP 2R):
 - CVD lấy từ nến Binance Futures cùng khung (như bộ lọc dòng tiền v5.12). Thiếu dữ liệu thì không vào lệnh. Backtest cần
   `du-lieu/flow_BTCUSDT_1h.csv`; đã thêm vào nhóm xếp hạng (`XH-RSICVD-H1`), chưa có file thì nó không có lệnh nên không đủ điều kiện.
 - CVD tính trên cửa sổ `InpDivLookback` nến (chỉ cần so tương đối giữa hai đỉnh), không phải CVD tích lũy từ đầu.
+
+## v5.14: chiến lược 11 – Big Trades tại vùng quan trọng (16/11/2026) – CHƯA KIỂM THỬ
+Kiến thức: lệnh lớn để lại dấu chân trên biểu đồ, nhưng bong bóng chỉ cho biết **có** lệnh lớn, không cho biết lệnh đó thắng hay thua.
+Phải nhìn giá làm gì ngay sau bong bóng, và chỉ chú ý ở vùng quan trọng (đỉnh cũ, đáy cũ). Mua theo bong bóng xanh / bán theo bong bóng đỏ là sai.
+Bộ `10-Big-Trades-H1-THU-NGHIEM.set` (`InpStrategy = 11`, H1, TP 2R). "Bong bóng" = nến có khối lượng ≥ `InpBigMult` × trung bình
+20 nến trên Binance Futures, xanh / đỏ theo phe chủ động áp đảo (delta ≥ `InpBigMinDelta`). Exness không có kích thước từng lệnh,
+lấy từng lệnh khớp qua mạng thì quá nặng, nên đây là xấp xỉ theo cả cây nến. Thứ tự ưu tiên:
+1. **Hấp thụ** (mạnh nhất): bong bóng đỏ to sát đáy cũ (trong `InpBigZoneATR` ATR) mà giá không giảm thêm rồi bật lên → người bán lớn
+   bị nuốt, thường là đáy → mua. Bong bóng xanh to sát đỉnh cũ mà giá không lên nổi → người mua bị kẹt → bán.
+2. **Chuỗi thanh lý**: ≥ `InpBigClusterMin` bong bóng đỏ trong `InpBigClusterBars` nến, giá rơi ≥ 3 ATR. Thường là cắt lỗ / thanh lý
+   hàng loạt, không phải tay to bán. Chuỗi kết thúc mà giá ngừng rơi → người bán đã cạn → mua. Đỉnh: ngược lại.
+3. **Giá đi theo bong bóng**: bong bóng xanh rồi giá tăng mạnh (đóng vượt đỉnh nến bong bóng ≥ 0,5 ATR trong 3 nến) → lệnh lớn đã thắng,
+   vùng bong bóng thành hỗ trợ (họ bảo vệ giá vốn) → mua ở lần chạm lại đầu tiên khi nến đóng tăng. Bong bóng đỏ: ngược lại.
+SL ngoài vùng / đáy / đỉnh 0,25 ATR (tối thiểu 0,5 ATR). Mỗi bong bóng hoặc chuỗi chỉ vào 1 lần. Kết hợp CVD (chiến lược 10)
+hoặc bộ lọc dòng tiền (v5.12) để thấy ai đang thắng. Thiếu dữ liệu Binance thì không vào lệnh. Đã thêm vào xếp hạng (`XH-BigTrade-H1`).
