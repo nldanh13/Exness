@@ -21,6 +21,7 @@ STRATEGY_LABELS = {
     "STRAT_GRID":         "Thử nghiệm: đánh lưới trong vùng đi ngang",
     "STRAT_KNIFE":        "Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh",
     "STRAT_OB":           "Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng",
+    "STRAT_DOW":          "Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều",
 }
 
 GROUPS = [
@@ -99,6 +100,11 @@ GROUPS = [
         ("InpADXMin",    "ADX tối thiểu để vào lệnh", ""),
         ("InpMTFAlign",  "Đồng thuận đa khung: số khung tối thiểu (trên 8, 0 = tắt)", "Đủ số khung (M1, M3, M5, M10, M15, M30, H1, H4) có nến đóng cùng phía EMA20 thì mới vào hoặc nhồi lệnh."),
         ("InpUseCandle", "Bắt buộc mẫu nến (pin bar / nhấn chìm)", ""),
+        ("InpDowFilter", "Lý thuyết Dow: chỉ giao dịch theo chiều thủy triều", "Thủy triều = xu hướng chính theo cấu trúc đỉnh / đáy trên khung Dow: tăng là đỉnh sau cao hơn, đáy sau cao hơn. Xu hướng còn đó cho tới khi giá đóng cửa thủng đáy gần nhất VÀ tạo đỉnh thấp hơn (hoặc đóng cửa thủng lần nữa). Áp dụng cho mọi chiến lược; chiến lược 16 luôn dùng."),
+        ("InpDowTF",     "Dow: khung của thủy triều", "Thủy triều kéo dài nhiều tháng: nên dùng D1 hoặc W1."),
+        ("InpDowPivot",  "Dow: đỉnh / đáy = cao / thấp nhất trong ± (số nến)", "Lớn hơn thì bỏ qua gợn sóng nhỏ, chỉ giữ các đỉnh / đáy quan trọng."),
+        ("InpDowLateLegs", "Dow: giai đoạn cuối từ lần phá đỉnh thứ (0 = không xét)", "Đếm số lần phá đỉnh (BOS) từ khi xu hướng đổi chiều: lần 1 = giai đoạn đầu, giữa là lúc tăng mạnh nhất, từ lần này trở đi = giai đoạn cuối (đám đông lao vào, người mua sớm bán ra): không vào lệnh mới."),
+        ("InpDowVolume", "Dow: volume phải xác nhận thủy triều", "Xu hướng tăng khỏe: nến tăng có khối lượng lớn, nến hồi khối lượng nhỏ. Bật thì chỉ mua khi khối lượng TB của nến tăng ≥ nến giảm trong 20 nến khung Dow (số tick của Exness)."),
     ]),
     ("5. Bộ lọc dữ liệu bên ngoài", [
         ("InpBreakoutUseSentiment", "Donchian: dùng lọc F&G và funding (mặc định tắt)", "Mặc định giữ tín hiệu bứt phá Donchian, không chặn khi tâm lý cực đoan. EMA pullback và chế độ tự vào M5 vẫn dùng bộ lọc nếu bật."),

@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.22
+# Hướng dẫn bot BTC (MT5) v5.23
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 17 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 18 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1011,3 +1011,15 @@ bộ `21-FVG-nen-xac-nhan-H1-THU-NGHIEM`, xếp hạng `XH-FVGNen-H1`):
 - Ít nhất một nến của mẫu phải chạm vào FVG. Lần về đầu tiên: không nến nào cũ hơn 6 nến chạm vùng trước đó.
 - Không có nến xác nhận thì không vào. Có nến đóng cửa thủng hẳn qua FVG (dưới đáy FVG tăng / trên đỉnh FVG giảm): vùng hỏng, bỏ.
 - SL dưới đáy mẫu nến hoặc đáy FVG (lấy mức thấp hơn) − 0,25 ATR, tối thiểu 0,5 ATR.
+
+## v5.23: Lý thuyết Dow – thủy triều, giai đoạn, volume, cấu trúc (16/11/2026) – CHƯA KIỂM THỬ
+SMC, Wyckoff, BOS, CHOCH đều mọc ra từ lý thuyết Dow (`TrendBot/Dow.mqh`):
+1. 3 xu hướng cùng lúc: thủy triều (chính, khung `InpDowTF`, mặc định D1), con sóng (phụ, khung chính), gợn sóng (bỏ qua bằng
+   `InpDowPivot`: đỉnh / đáy phải cao / thấp nhất trong ± N nến).
+2. 3 giai đoạn: bot đếm số lần phá đỉnh (BOS) từ khi đổi chiều; từ lần `InpDowLateLegs` = giai đoạn cuối, không vào lệnh mới.
+3. Volume xác nhận (`InpDowVolume`): khối lượng TB nến cùng chiều thủy triều ≥ nến ngược chiều (20 nến khung Dow, số tick).
+4. Xu hướng còn đó cho tới khi giá **đóng cửa** thủng đáy gần nhất **và** tạo đỉnh thấp hơn (hoặc đóng cửa thủng lần nữa)
+   – nền móng của CHOCH. Đóng cửa qua đỉnh gần nhất trong xu hướng tăng = BOS.
+- **Bộ lọc Dow** (`InpDowFilter`, mọi chiến lược): chỉ mua khi thủy triều tăng, chỉ bán khi giảm. Cột báo cáo `ChanDow`.
+- **Chiến lược 16 – Thủy triều + con sóng** (bộ `22-Dow-thuy-trieu-con-song-H4-THU-NGHIEM`, xếp hạng `XH-Dow-H4`):
+  thủy triều D1 tăng, con sóng H4 đang giảm, nến H4 đóng cửa vượt đỉnh gần nhất của con sóng → Buy; SL dưới đáy con sóng − 0,25 ATR.

@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.22"
-#property version   "5.2200"
+#define  BOT_VERSION "5.23"
+#property version   "5.2300"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -28,7 +28,8 @@ enum ENUM_STRATEGY
    STRAT_DISTRIB      = 12,  // Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại
    STRAT_GRID         = 13,  // Thử nghiệm: đánh lưới trong vùng đi ngang
    STRAT_KNIFE        = 14,  // Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh
-   STRAT_OB           = 15   // Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng
+   STRAT_OB           = 15,  // Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng
+   STRAT_DOW          = 16   // Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -106,6 +107,11 @@ input int             InpADXPeriod        = 14;         // Chu kỳ ADX (số n�
 input double          InpADXMin           = 20.0;       // ADX tối thiểu để vào lệnh
 input int             InpMTFAlign         = 0;          // Đồng thuận đa khung: số khung tối thiểu (trên 8, 0 = tắt)
 input bool            InpUseCandle        = false;      // Bắt buộc mẫu nến (pin bar / nhấn chìm)
+input bool            InpDowFilter        = false;      // Lý thuyết Dow: chỉ giao dịch theo chiều thủy triều
+input ENUM_TIMEFRAMES InpDowTF            = PERIOD_D1;  // Dow: khung của thủy triều
+input int             InpDowPivot         = 3;          // Dow: đỉnh / đáy = cao / thấp nhất trong ± (số nến)
+input int             InpDowLateLegs      = 4;          // Dow: giai đoạn cuối từ lần phá đỉnh thứ (0 = không xét)
+input bool            InpDowVolume        = false;      // Dow: volume phải xác nhận thủy triều
 
 input group "5. Bộ lọc dữ liệu bên ngoài"
 input bool            InpBreakoutUseSentiment = false;  // Donchian: dùng lọc F&G và funding (mặc định tắt)
@@ -289,7 +295,9 @@ double          P_BreakMinATR;
 double          P_BreakMinBody;
 bool            P_BreakConfirm;
 double          P_BreakMaxATR, P_BreakRetestATR;
-bool            P_BreakRetest, P_FakeoutFade, P_FvgCandle;
+bool            P_BreakRetest, P_FakeoutFade, P_FvgCandle, P_DowFilter, P_DowVolume;
+ENUM_TIMEFRAMES P_DowTF;
+int             P_DowPivot, P_DowLateLegs;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
 int             P_RsiPeriod;
@@ -454,6 +462,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowVolume = InpDowVolume;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
@@ -568,6 +577,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpDowFilter") { P_DowFilter = (v == "true" || v == "1"); return true; }
+   if(k == "InpDowTF") { P_DowTF = (ENUM_TIMEFRAMES)StringToInteger(v); return true; }
+   if(k == "InpDowPivot") { P_DowPivot = (int)StringToInteger(v); return true; }
+   if(k == "InpDowLateLegs") { P_DowLateLegs = (int)StringToInteger(v); return true; }
+   if(k == "InpDowVolume") { P_DowVolume = (v == "true" || v == "1"); return true; }
    if(k == "InpFvgCandle") { P_FvgCandle = (v == "true" || v == "1"); return true; }
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
@@ -777,6 +791,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Protection.mqh"
 #include "TrendBot/Filters.mqh"
 #include "TrendBot/OrderFlow.mqh"
+#include "TrendBot/Dow.mqh"
 #include "TrendBot/Signals.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
@@ -1240,6 +1255,8 @@ void OnTickBody()
    if((buySignal || sellSignal) && !MarketFiltersOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
    // Duong ho tro / khang cu dat cau hoi, dong tien tra loi: xac nhan cay nen tin hieu (mac dinh tat, OrderFlow.mqh)
    if((buySignal || sellSignal) && !FlowOk(buySignal, h1, l1, c1)) return;
+   // Ly thuyet Dow (Dow.mqh): thuy trieu len hay xuong, giai doan nao, volume co xac nhan (InpDowFilter; luon bat voi chien luoc 16)
+   if((buySignal || sellSignal) && !DowOk(buySignal)) return;
 
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;

@@ -363,7 +363,7 @@ double OnTester()
                    "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh",
                    "SoDot", "ChoHoi_ChamGia", "ChoHoi_HetNen", "ChoHoi_BiHuy", "ChoHoi_Khop", "RuiRoMoMax%", "NhoiBiBoVoiRuiRo", "VaoLai",
                    "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot", "ChanDongTien", "DongTienThieuDuLieu",
-                   "Khoa_MoKhoa_HetGio_DungYen_CuoiPhien");
+                   "Khoa_MoKhoa_HetGio_DungYen_CuoiPhien", "ChanDow");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -395,7 +395,7 @@ double OnTester()
                 DoubleToString(skR, 2), DoubleToString(kuR, 2), InpTrials > 1 ? InpTrials : 1, DoubleToString(sr0, 3),
                 DoubleToString(dsr, 1), minTRL > 0 ? IntegerToString((int)MathCeil(minTRL)) : "-1",
                 g_flowBlocked, g_flowNoData,
-                StringFormat("%d/%d/%d/%d/%d", g_hgLocks, g_hgUnlocks, g_hgTimeouts, g_stallExits, g_sessPartials));
+                StringFormat("%d/%d/%d/%d/%d", g_hgLocks, g_hgUnlocks, g_hgTimeouts, g_stallExits, g_sessPartials), g_dowBlocked);
       FileClose(h);
    }
    else

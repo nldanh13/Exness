@@ -207,6 +207,14 @@ PRESETS = [
         "SL dưới đáy mẫu nến / đáy FVG − 0,25 ATR, TP 2R. Nến đóng cửa thủng hẳn qua FVG: vùng hỏng, bỏ. Theo xu hướng D1.",
         "Chỉ chạy demo.",
     ], {"InpStrategy": "5", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2", "InpFvgCandle": "true"}),
+    ("22-Dow-thuy-trieu-con-song-H4-THU-NGHIEM.set", [
+        "22. Lý thuyết Dow (chiến lược 16): thủy triều = cấu trúc đỉnh / đáy D1; con sóng = cấu trúc H4. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "Chỉ mua khi thủy triều tăng, vào khi con sóng hồi (H4 đang giảm) kết thúc: nến H4 đóng cửa vượt đỉnh gần nhất của con sóng.",
+        "SL dưới đáy con sóng − 0,25 ATR, TP 2R. Không vào ở giai đoạn cuối (từ lần phá đỉnh D1 thứ 4); volume phải xác nhận.",
+        "Xu hướng chỉ đổi khi giá đóng cửa thủng đáy gần nhất và tạo đỉnh thấp hơn. Thủy triều giảm: ngược lại. Chỉ chạy demo.",
+        "Bộ lọc Dow (InpDowFilter) cũng bật được cho mọi chiến lược khác.",
+    ], {"InpStrategy": "16", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2", "InpDowTF": "16408",
+        "InpDowPivot": "3", "InpDowLateLegs": "4", "InpDowVolume": "true"}),
 ]
 
 

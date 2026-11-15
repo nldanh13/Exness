@@ -882,6 +882,16 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          }
       }
    }
+   else if(P_Strategy == STRAT_DOW)
+   {
+      // Thuy trieu + con song (v5.23): chi giao dich theo chieu thuy trieu (DowOk, khung InpDowTF), dung con song nguoc chieu
+      // lam cho vao lenh. Con song = cau truc khung chinh: dang giam (song hoi trong thuy trieu tang) va nen vua dong cua vuot
+      // dinh gan nhat cua con song -> con song da het, Buy. SL duoi day con song - 0,25 ATR. Thuy trieu giam: nguoc lai.
+      DowState w;
+      if(!DowCalc(P_TF, 300, P_DowPivot, w)) return false;
+      if(w.brk == 1 && w.prev == -1 && w.pl > 0)  { buyBase = true;  g_sigSL = MathMax(c1 - (w.pl - 0.25 * atr), 0.5 * atr); }
+      if(w.brk == -1 && w.prev == 1 && w.ph > 0)  { sellBase = true; g_sigSL = MathMax((w.ph + 0.25 * atr) - c1, 0.5 * atr); }
+   }
    else if(P_Strategy == STRAT_OB)
    {
       bool ob; int om; double os, ot; datetime okey;

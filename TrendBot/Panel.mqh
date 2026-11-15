@@ -130,7 +130,8 @@ void UpdatePanel()
                   P_Strategy == STRAT_DISTRIB ? "Hộp phân phối / tích lũy" :
                   P_Strategy == STRAT_GRID ? "Đánh lưới" :
                   P_Strategy == STRAT_KNIFE ? "Dao rơi: nhỏ – lớn – giữ" :
-                  P_Strategy == STRAT_OB ? "Order block" : "EMA pullback";
+                  P_Strategy == STRAT_OB ? "Order block" :
+                  P_Strategy == STRAT_DOW ? "Dow: thủy triều + con sóng" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)
