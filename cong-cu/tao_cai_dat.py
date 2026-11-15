@@ -129,6 +129,24 @@ PRESETS = [
         "Rủi ro: giá thoát khỏi vùng. Chỉ chạy demo.",
     ], {"InpStrategy": "13", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
         "InpAvoidUSNews": "true", "InpMaxSpreadPoints": "1500"}),
+    ("13-Phong-cach-Scalp-M5-THU-NGHIEM.set", [
+        "13. Phong cách Scalp: Donchian M5, chỉ giờ cao điểm 13–17 giờ server (UTC), theo hướng H1",
+        "Trạng thái: CHƯA ĐẠT. Mọi khung M1–M30 của Donchian đều lỗ ở 2020–2023 khi backtest (06–07/11/2026): phí ăn mòn lợi nhuận.",
+        "Hợp với: người có nhiều thời gian, phản xạ nhanh, chịu được áp lực, không muốn ôm lệnh qua đêm.",
+        "4 điều của Scalp: giờ cao điểm; theo hướng khung lớn (H1); dừng lỗ cứng 1,5 ATR, không bao giờ nới; lệnh đứng yên",
+        "6 nến (30 phút) mà chưa đi được 0,5 ATR thì thoát. Tối đa 5 lệnh / ngày để không đánh theo cảm xúc. TP 1,5R. Chỉ chạy demo.",
+    ], {"InpTF": "5", "InpUseADX": "false", "InpUseHTF": "true", "InpHTF": "16385", "InpATRMult": "1.5", "InpRR": "1.5",
+        "InpUseTrailing": "false", "InpSessionStartH": "13", "InpSessionEndH": "17", "InpStallBars": "6", "InpStallMinATR": "0.5",
+        "InpMaxTradesPerDay": "5", "InpMaxSpreadPoints": "1500"}),
+    ("14-Phong-cach-Swing-H4-THU-NGHIEM.set", [
+        "14. Phong cách Swing: xu hướng D1, vào ở vùng giá rẻ (hồi về EMA20 H4), SL dưới cấu trúc, chốt từng phần, trailing",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST cho tổ hợp này. Cấu hình swing ĐÃ kiểm thử là mặc định của bot (Donchian H4 + ADX).",
+        "Hợp với: người bận rộn, kiên nhẫn, không muốn dán mắt vào màn hình, chịu được giá lên xuống vài ngày.",
+        "4 điều của Swing: xu hướng D1 (EMA200); chỉ vào khi giá hồi về EMA20 H4; SL dưới đáy 20 nến H4 (không sát hơn 2 ATR);",
+        "chốt 1/3 ở 2R, trailing 3 ATR từ 1R. Dừng lỗ rộng nên khối lượng tự nhỏ lại (rủi ro vẫn 1% / lệnh). Chỉ chạy demo.",
+    ], {"InpStrategy": "0", "InpUseADX": "false", "InpSLStructBars": "20", "InpSLStructMinATR": "2.0", "InpRR": "0",
+        "InpUsePartial": "true", "InpPartialR": "2.0", "InpPartialPct": "33", "InpUseTrailing": "true", "InpTrailStartR": "1.0",
+        "InpTrailATRMult": "3.0"}),
 ]
 
 

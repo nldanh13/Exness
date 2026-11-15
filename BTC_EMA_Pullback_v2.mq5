@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.16"
-#property version   "5.1600"
+#define  BOT_VERSION "5.17"
+#property version   "5.1700"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -147,6 +147,10 @@ input double          InpPartialR         = 1.0;        // Chốt một phần k
 input double          InpPartialPct       = 50.0;       // Tỷ lệ khối lượng chốt (%)
 input bool            InpExitOnEMA        = false;      // Đóng hết khi nến cắt EMA nhanh ngược chiều
 input bool            InpExitOnBar        = false;      // Đóng hết ở nến đầu tiên đóng ngược chiều
+input int             InpSLStructBars     = 0;          // SL dưới cấu trúc: đáy / đỉnh của (số nến, 0 = tắt)
+input double          InpSLStructMinATR   = 1.5;        // SL dưới cấu trúc: không sát hơn (× ATR)
+input int             InpStallBars        = 0;          // Lệnh đứng yên: thoát sau (số nến, 0 = tắt)
+input double          InpStallMinATR      = 0.5;        // Lệnh đứng yên: chưa đi được (× ATR) thì thoát
 
 input group "8. Khối lượng và rủi ro"
 input double          InpRiskPercent      = 1.0;        // Rủi ro mỗi lệnh (% vốn)
@@ -167,6 +171,8 @@ input int             InpBlock1Start      = -1;         // Khung nghỉ 1: từ 
 input int             InpBlock1End        = 14;         // Khung nghỉ 1: đến giờ
 input int             InpBlock2Start      = -1;         // Khung nghỉ 2: từ giờ (giờ server, −1 = tắt)
 input int             InpBlock2End        = 20;         // Khung nghỉ 2: đến giờ
+input int             InpSessionStartH    = -1;         // Chỉ vào lệnh từ giờ (giờ server, −1 = cả ngày)
+input int             InpSessionEndH      = -1;         // Chỉ vào lệnh đến giờ
 
 input group "10. Bảo vệ tài khoản"
 input double          InpMaxDailyLossPct  = 3.0;        // Khóa lỗ trong ngày (% vốn bot, 0 = tắt)
@@ -294,6 +300,8 @@ int             P_DistLookback, P_DistBoxMin;
 double          P_DistClimaxATR, P_DistBoxMaxATR;
 bool            P_DistNeedUT;
 int             P_GridBars, P_GridLevels;
+int             P_SessionStartH, P_SessionEndH, P_SLStructBars, P_StallBars;
+double          P_SLStructMinATR, P_StallMinATR;
 double          P_GridMinATR, P_GridMaxATR, P_GridMaxADX, P_GridMinStepCost, P_GridStopATR;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
@@ -415,6 +423,8 @@ void LoadParams()
    P_DistBoxMaxATR = InpDistBoxMaxATR; P_DistNeedUT = InpDistNeedUT;
    P_GridBars = InpGridBars; P_GridMinATR = InpGridMinATR; P_GridMaxATR = InpGridMaxATR; P_GridMaxADX = InpGridMaxADX;
    P_GridLevels = InpGridLevels; P_GridMinStepCost = InpGridMinStepCost; P_GridStopATR = InpGridStopATR;
+   P_SessionStartH = InpSessionStartH; P_SessionEndH = InpSessionEndH; P_SLStructBars = InpSLStructBars;
+   P_SLStructMinATR = InpSLStructMinATR; P_StallBars = InpStallBars; P_StallMinATR = InpStallMinATR;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -534,6 +544,12 @@ bool SetParam(const string k, const string v)
    if(k == "InpGridLevels") { P_GridLevels = (int)StringToInteger(v); return true; }
    if(k == "InpGridMinStepCost") { P_GridMinStepCost = StringToDouble(v); return true; }
    if(k == "InpGridStopATR") { P_GridStopATR = StringToDouble(v); return true; }
+   if(k == "InpSessionStartH") { P_SessionStartH = (int)StringToInteger(v); return true; }
+   if(k == "InpSessionEndH") { P_SessionEndH = (int)StringToInteger(v); return true; }
+   if(k == "InpSLStructBars") { P_SLStructBars = (int)StringToInteger(v); return true; }
+   if(k == "InpSLStructMinATR") { P_SLStructMinATR = StringToDouble(v); return true; }
+   if(k == "InpStallBars") { P_StallBars = (int)StringToInteger(v); return true; }
+   if(k == "InpStallMinATR") { P_StallMinATR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
@@ -1070,6 +1086,7 @@ void OnTickBody()
    GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
    GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
    ManagePositions();
+   StallExit();                     // lenh dung yen qua lau thi thoat (InpStallBars)
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
    CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
@@ -1153,6 +1170,31 @@ void OnTickBody()
    if(SendEntry(buySignal, atr, false) > 0) ReEntryArm(buySignal, barTime);
 }
 
+// Lenh dung yen qua lau (scalp): giu >= InpStallBars nen khung chinh ma gia chua di duoc InpStallMinATR ATR theo chieu
+// lenh -> dong. Khong ap dung cho luoi (moi nac co TP rieng).
+int g_stallExits = 0;
+void StallExit()
+{
+   if(P_StallBars <= 0 || P_Strategy == STRAT_GRID) return;
+   double atr = 0;
+   if(!GetValue(hATR, 0, 1, atr) || atr <= 0) return;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsOwnSelected()) continue;
+      datetime ot = (datetime)PositionGetInteger(POSITION_TIME);
+      if(TimeCurrent() - ot < (long)P_StallBars * PeriodSeconds(P_TF)) continue;
+      bool buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), cur = PositionGetDouble(POSITION_PRICE_CURRENT);
+      if((buy ? cur - op : op - cur) >= P_StallMinATR * atr) continue;
+      if(PrepSend() && trade.PositionClose(t))
+      {
+         g_stallExits++;
+         Print("Dong lenh dung yen qua lau: ", t);
+      }
+   }
+}
+
 // Vao lai sau khi bi cat lo (InpReEntryMax): nho huong + gia dong cua nen tin hieu trong InpReEntryBars nen khung chinh.
 // Moi nen moi cua khung SL (InpSLTFmin), neu bot dang dung ngoai, lenh truoc dong lo, va gia dong cua vuot lai muc
 // tin hieu (cung phia EMA nhanh khung chinh) thi vao lai, sau khi kiem tra lai moi dieu kien bat buoc.
@@ -1211,6 +1253,19 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
    double slAtr = SLAtr(atr);
    double slDist   = g_sigSL > 0 ? g_sigSL : slAtr * P_ATRMult;
+   // Swing: SL duoi CAU TRUC (day thap nhat / dinh cao nhat InpSLStructBars nen + 0,25 ATR), khong sat hon InpSLStructMinATR ATR.
+   // Chi khi chien luoc khong tu dat SL.
+   if(g_sigSL <= 0 && P_SLStructBars > 0 && slAtr > 0)
+   {
+      double cur = SymbolInfoDouble(_Symbol, buySignal ? SYMBOL_ASK : SYMBOL_BID);
+      int ix = buySignal ? iLowest(_Symbol, P_TF, MODE_LOW, P_SLStructBars, 1) : iHighest(_Symbol, P_TF, MODE_HIGH, P_SLStructBars, 1);
+      if(ix >= 0 && cur > 0)
+      {
+         double lvl = buySignal ? iLow(_Symbol, P_TF, ix) - 0.25 * atr : iHigh(_Symbol, P_TF, ix) + 0.25 * atr;
+         double d = buySignal ? cur - lvl : lvl - cur;
+         if(d > 0) slDist = MathMax(d, P_SLStructMinATR * slAtr);
+      }
+   }
    if(P_MinSLATRMult > 0 && slAtr > 0) slDist = MathMax(slDist, slAtr * P_MinSLATRMult);
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;

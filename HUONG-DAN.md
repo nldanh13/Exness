@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.16
+# Hướng dẫn bot BTC (MT5) v5.17
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -909,3 +909,18 @@ Rủi ro là cá bơi ra khỏi ao: giá thủng đáy và rơi tiếp thì lư�
 Sau khi tắt lưới, nghỉ `InpGridBars`/2 nến rồi mới tìm vùng mới. Trạng thái lưới lưu Global Variable (khởi động lại MT5 vẫn nhớ).
 Gỡ bot khỏi chart: hủy lệnh chờ (lệnh đang mở vẫn có SL / TP). Chỉ lưới mua (giống bot lưới giao ngay); giá phá lên thì đứng ngoài con sóng.
 Đã thêm vào xếp hạng (`XH-Luoi-H1`). Lệnh của lưới không đi qua khóa rủi ro nhóm BTC/ETH (InpMaxGroupRiskPct).
+
+## v5.17: Scalp hay Swing – chọn theo con người (16/11/2026) – CHƯA KIỂM THỬ
+Kiến thức: câu hỏi đúng không phải kiểu nào lời hơn mà bạn là người như thế nào; chọn sai kiểu đánh thì phương pháp tốt mấy cũng thua.
+Ba tính năng mới (mặc định tắt) + hai bộ cài đặt:
+- `InpSessionStartH` / `InpSessionEndH`: chỉ vào lệnh trong giờ cao điểm (giờ server = UTC). Lệnh đang mở vẫn quản lý bình thường.
+- `InpStallBars` / `InpStallMinATR`: lệnh giữ ≥ N nến mà giá chưa đi theo chiều lệnh được x ATR thì thoát (lệnh đứng yên quá lâu).
+- `InpSLStructBars` / `InpSLStructMinATR`: SL dưới đáy thấp nhất (mua) / trên đỉnh cao nhất (bán) N nến gần nhất + 0,25 ATR,
+  không sát hơn x ATR (dừng lỗ dưới cấu trúc, không quá sát). Chỉ khi chiến lược không tự đặt SL.
+- **`13-Phong-cach-Scalp-M5-THU-NGHIEM`** (người có nhiều thời gian, phản xạ nhanh, chịu áp lực, không ôm lệnh qua đêm):
+  Donchian M5, chỉ 13–17 giờ UTC, theo hướng H1, SL cứng 1,5 ATR (bot không bao giờ nới SL), lệnh đứng yên 30 phút chưa đi 0,5 ATR thì thoát,
+  tối đa 5 lệnh / ngày, TP 1,5R. **Chưa đạt:** mọi khung M1–M30 của Donchian đều lỗ ở 2020–2023 khi backtest – đúng nhược điểm "phí ăn mòn".
+- **`14-Phong-cach-Swing-H4-THU-NGHIEM`** (người bận rộn, kiên nhẫn, chịu được giá lên xuống vài ngày): xu hướng D1, vào khi giá hồi về
+  EMA20 H4 (vùng giá rẻ), SL dưới đáy 20 nến H4 (≥ 2 ATR), chốt 1/3 ở 2R, trailing 3 ATR từ 1R. Rủi ro vẫn 1% / lệnh nên SL rộng thì
+  khối lượng tự nhỏ lại. Chưa backtest tổ hợp này; cấu hình swing đã kiểm thử vẫn là mặc định của bot (Donchian H4 + ADX).
+Với BTC trên Exness (spread ~24 USD / BTC), dữ liệu backtest đến nay nghiêng hẳn về Swing: chỉ khung H4 qua được cả hai giai đoạn.

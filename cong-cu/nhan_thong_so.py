@@ -140,6 +140,10 @@ GROUPS = [
         ("InpPartialPct",   "Tỷ lệ khối lượng chốt (%)", ""),
         ("InpExitOnEMA",    "Đóng hết khi nến cắt EMA nhanh ngược chiều", ""),
         ("InpExitOnBar",    "Đóng hết ở nến đầu tiên đóng ngược chiều", ""),
+        ("InpSLStructBars", "SL dưới cấu trúc: đáy / đỉnh của (số nến, 0 = tắt)", "Swing: dừng lỗ đặt dưới đáy thấp nhất (mua) / trên đỉnh cao nhất (bán) của bấy nhiêu nến gần nhất, cộng 0,25 ATR. Thay cho SL theo ATR khi chiến lược không tự đặt SL."),
+        ("InpSLStructMinATR", "SL dưới cấu trúc: không sát hơn (× ATR)", "Không đặt dừng lỗ quá sát: nếu đáy cấu trúc quá gần thì SL lùi ra ít nhất bấy nhiêu ATR."),
+        ("InpStallBars",    "Lệnh đứng yên: thoát sau (số nến, 0 = tắt)", "Scalp: lệnh đứng yên quá lâu thì thoát."),
+        ("InpStallMinATR",  "Lệnh đứng yên: chưa đi được (× ATR) thì thoát", "Sau số nến trên mà giá chưa đi theo chiều lệnh được bấy nhiêu ATR thì đóng lệnh."),
     ]),
     ("8. Khối lượng và rủi ro", [
         ("InpRiskPercent",     "Rủi ro mỗi lệnh (% vốn)", "Lot được tính để chạm SL thì mất đúng mức này. Mức đã kiểm thử: 1%."),
@@ -160,6 +164,8 @@ GROUPS = [
         ("InpBlock1End",       "Khung nghỉ 1: đến giờ", ""),
         ("InpBlock2Start",     "Khung nghỉ 2: từ giờ (giờ server, −1 = tắt)", ""),
         ("InpBlock2End",       "Khung nghỉ 2: đến giờ", ""),
+        ("InpSessionStartH",   "Chỉ vào lệnh từ giờ (giờ server, −1 = cả ngày)", "Scalp: chỉ đánh trong giờ cao điểm. Giờ server Exness = UTC; phiên Mỹ mở cửa khoảng 13:30–14:30 UTC."),
+        ("InpSessionEndH",     "Chỉ vào lệnh đến giờ", "Ngoài khung này bot không vào lệnh mới; lệnh đang mở vẫn quản lý bình thường."),
     ]),
     ("10. Bảo vệ tài khoản", [
         ("InpMaxDailyLossPct",  "Khóa lỗ trong ngày (% vốn bot, 0 = tắt)", "Chạm mức này thì chiến lược chính ngừng vào lệnh tới hết ngày. Chỉ tính lệnh của chiến lược chính; lệnh tự vào, nhồi và lệnh tay dùng mức Lỗ lệnh tay tối đa trong ngày."),

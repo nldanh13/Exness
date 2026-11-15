@@ -16,6 +16,9 @@ bool TimeAllowed(string &why)
    if(P_SkipWeekend && (dt.day_of_week == 0 || dt.day_of_week == 6)) { why = "cuoi tuan"; return false; }
    if(InWindow(dt.hour, P_Block1Start, P_Block1End) ||
       InWindow(dt.hour, P_Block2Start, P_Block2End)) { why = "khung gio tin tuc"; return false; }
+   // Scalp: chi danh trong gio cao diem (InpSessionStartH..InpSessionEndH, gio server)
+   if(P_SessionStartH >= 0 && P_SessionEndH >= 0 && P_SessionStartH != P_SessionEndH &&
+      !InWindow(dt.hour, P_SessionStartH, P_SessionEndH)) { why = "ngoai gio cao diem"; return false; }
    return true;
 }
 
