@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.32
+# Hướng dẫn bot BTC (MT5) v5.33
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1124,3 +1124,15 @@ Tab **Điều khiển** có thêm 2 khung (cần mở lại `GiaoDien.cmd` sau k
 - **Nhật ký quá trình**: các dòng mới nhất trước, lọc theo Vào / thoát lệnh, Phân tích (mỗi lần bot đổi quyết định), Quản lý lệnh
   (sửa SL, chốt phần, khóa / mở khóa), Lỗi. Giờ theo máy tính chạy MT5.
 - Bot ghi `Common\Files\TrendBot_quyetdinh_<chart>.txt` (200 dòng gần nhất, mỗi 10 giây); giao diện đọc 150 dòng cuối. Backtest không ghi.
+
+## v5.33: Bằng chứng của mỗi quyết định (16/11/2026)
+Mỗi nến mới bot gom các **con số cụ thể** dẫn tới quyết định (`g_ev`, ngăn bằng " ; "), ghi vào file trạng thái (`bangchung=`) và vào nhật ký
+sau dấu " || ". Giao diện: thẻ "Quyết định của bot" có mục **Dựa trên bằng chứng nào** (mở sẵn) và **Bằng chứng lúc vào lệnh**; mỗi dòng
+nhật ký có nút mở bằng chứng. Nội dung:
+- Bộ lọc chung khi đã có tín hiệu gốc: ADX so với ngưỡng, giá khung lớn so với EMA (hoặc MACD), mẫu nến, đa khung. Tín hiệu bị bộ lọc
+  loại thì trạng thái ghi rõ "Bỏ tín hiệu MUA: ADX thấp; ngược xu hướng khung lớn;" (trước đây chỉ là "Chờ tín hiệu").
+- Từng chiến lược: Donchian (đỉnh / đáy kênh, giá đóng cửa, thân nến %, khối lượng × TB), phá vỡ thật (mức đã phá, nến test lại),
+  FVG (vùng, nến lớn, tên mẫu nến xác nhận), order block (vùng, kiểu phản ứng), Key Volume (vùng, số nến trong vùng, số lần phản ứng),
+  3 câu hỏi (mùa, đỉnh / đáy, đường kẻ và điểm), premium / discount (hộp D1, đáy quét, đỉnh bị vượt, FVG), Spring đủ, sóng Dow, VWAP (VWAP,
+  độ lệch chuẩn, các dải). Chuỗi phân tích: B1 cấu trúc D1 và số lần phá, B2 hộp D1 và giá ở nửa nào, B3 bằng chứng từng setup, B5 hệ số rủi ro.
+- Lúc vào lệnh: SL cách bao xa (và bằng bao nhiêu ATR), TP, khối lượng, số tiền rủi ro và % vốn, số phần giải vốn.

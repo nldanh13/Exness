@@ -159,6 +159,10 @@ svg text { fill: var(--ink3); font: 11px var(--font-num); }
 .jr-row .t { color: var(--ink3); font-size: 12px; }
 .jr-row .x { overflow-wrap: anywhere; }
 @media (max-width: 640px) { .jr-row { grid-template-columns: 1fr; gap: 2px; } }
+details.ev { font-size: 12px; color: var(--ink2); }
+details.ev summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 12px; }
+details.ev ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 3px; }
+details.ev li { overflow-wrap: anywhere; }
 .verdict { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
 .verdict .q { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
 .verdict .a { font-size: 14px; max-width: 75ch; }
@@ -565,7 +569,7 @@ function trangThai(s) {
 }
 
 // ---- Quyết định của bot + nhật ký quá trình (v5.32) ----
-var JR = { f: '' };
+var JR = { f: '', open: {} };   // open: mục bằng chứng người dùng đã mở / đóng (giữ qua mỗi lần làm mới)
 var JR_KIND = { 'vao-lenh': ['Vào lệnh', 'ok'], 'thoat': ['Thoát lệnh', 'na'], 'phan-tich': ['Phân tích', 'na'],
   'quan-ly': ['Quản lý', 'zero'], 'khoa-lenh': ['Khóa lệnh', 'zero'], 'loi': ['Lỗi', 'no'] };
 function stepItems(text) {
@@ -578,6 +582,15 @@ function stepItems(text) {
     return '<li class="' + cls + '"><span class="ic">' + (cls === 'ok' ? '✓' : cls === 'no' ? '✕' : '…') + '</span><span>' + esc(p.replace(/^Chuoi /, '')) + '</span></li>';
   }).join('');
 }
+function evBlock(text, open, title, key) {
+  // Bằng chứng: các con số bot dùng để quyết định, ngăn bằng " ; "
+  var items = String(text || '').split(' ; ').filter(Boolean);
+  if (!items.length) return '';
+  if (key && key in JR.open) open = JR.open[key];
+  return '<details class="ev"' + (key ? ' data-k="' + esc(key) + '"' : '') + (open ? ' open' : '') + '><summary>' + esc(title || 'Bằng chứng') + ' (' + items.length + ')</summary><ul>' +
+    items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></details>';
+}
+function splitEv(text) { var a = String(text || '').split(' || '); return { main: a[0], ev: a.slice(1).join(' ; ') }; }
 function renderDecide(list) {
   var box = $('decide-list');
   if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); return; }
@@ -588,7 +601,8 @@ function renderDecide(list) {
     return '<div class="dcard"><div class="dcard-head"><span class="tag ' + cls + '">' + acctName(x) + '</span><b>' + esc(x.ma || '') + '</b>' +
       '<span class="muted">' + esc(x.chienluoc || '') + '</span><span class="muted">· ' + esc(trangThai(x.trangthai)) + '</span></div>' +
       (st ? '<ul class="steps">' + st + '</ul>' : '<div class="dmain">' + esc(q || 'Chưa có quyết định') + '</div>') +
-      (x.lydovao ? '<div class="dwhy">Lệnh gần nhất' + (x.lydovaoluc ? ' (' + esc(x.lydovaoluc) + ')' : '') + ': ' + esc(x.lydovao) + '</div>' : '') +
+      evBlock(x.bangchung, true, 'Dựa trên bằng chứng nào', 'q-' + (x.ma || '') + (x.chienluoc || '')) +
+      (x.lydovao ? (function () { var w = splitEv(x.lydovao); return '<div class="dwhy">Lệnh gần nhất' + (x.lydovaoluc ? ' (' + esc(x.lydovaoluc) + ')' : '') + ': ' + esc(w.main) + '</div>' + evBlock(w.ev, false, 'Bằng chứng lúc vào lệnh', 'v-' + (x.ma || '') + (x.lydovaoluc || '')); })() : '') +
       '</div>';
   }).join('');
   renderJournal(list);
@@ -610,9 +624,13 @@ function renderJournal(list) {
   box.innerHTML = rows.slice(0, 200).map(function (r) {
     var k = JR_KIND[r.k] || [r.k, 'na'];
     return '<div class="jr-row"><span class="t num">' + esc(r.t) + '</span><span><span class="pill ' + k[1] + '">' + esc(k[0]) + '</span></span>' +
-      '<span class="x">' + (list.length > 1 ? '<b>' + esc(r.m) + '</b> ' : '') + esc(r.x) + '</span></div>';
+      '<span class="x">' + (list.length > 1 ? '<b>' + esc(r.m) + '</b> ' : '') + (function () { var w = splitEv(r.x); return esc(w.main) + evBlock(w.ev, false, '', 'j-' + r.m + r.t + r.k); })() + '</span></div>';
   }).join('');
 }
+document.addEventListener('toggle', function (e) {
+  var d = e.target;
+  if (d && d.matches && d.matches('details.ev[data-k]')) JR.open[d.dataset.k] = d.open;
+}, true);
 document.addEventListener('click', function (e) {
   var c = e.target.closest && e.target.closest('#jr-filter .chip');
   if (!c) return;

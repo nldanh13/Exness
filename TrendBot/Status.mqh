@@ -142,8 +142,9 @@ void WriteStatus()
    // Quyet dinh hien tai (giao dien hien tung buoc khi noi dung co dang "B1 ... | B2 ... | ...") va ly do lenh gan nhat
    FileWriteString(h, "quyetdinh=" + st + "\r\n");
    FileWriteString(h, "lydovao=" + g_lastEntryWhy + "\r\n");
+   FileWriteString(h, "bangchung=" + g_ev + "\r\n");
    FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ? TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
-   if(st != g_dlogLastStatus) { DecisionLog("phan-tich", st); g_dlogLastStatus = st; }
+   if(st != g_dlogLastStatus) { DecisionLog("phan-tich", st + (g_ev != "" ? " || " + g_ev : "")); g_dlogLastStatus = st; }
    FileWriteString(h, "xuly=" + TickTimeText() + "\r\n");
    FileWriteString(h, "choGD=" + (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED) ? "1" : "0") + "\r\n");
    FileClose(h);

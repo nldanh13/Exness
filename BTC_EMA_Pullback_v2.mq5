@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.32"
-#property version   "5.3200"
+#define  BOT_VERSION "5.33"
+#property version   "5.3300"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -1311,6 +1311,7 @@ void OnTickBody()
    }
    if(barTime == 0 || barTime == lastBarTime) return;
    lastBarTime = barTime;
+   EvReset();                       // bang chung cua quyet dinh nen nay (v5.33)
 
    if(IsHalted())       { g_status = "DUNG HAN (sut giam)"; return; }
    if(HasOwnPosition())
@@ -1352,6 +1353,25 @@ void OnTickBody()
    bool sellSignal = P_AllowSell && sellBase
                      && (!P_UseHTF || (P_HTFMacd ? htfDn : htfClose < htfEma)) && adxOk
                      && (!P_UseCandle || BearCandle()) && MTFOk(false);
+   // Bang chung cac bo loc chung khi chien luoc da co tin hieu goc
+   if(buyBase || sellBase)
+   {
+      bool bb = buyBase;
+      string cut = "";
+      if(!(bb ? P_AllowBuy : P_AllowSell)) cut += (bb ? " tat chieu mua;" : " tat chieu ban;");
+      if(P_UseADX) { EvAdd(StringFormat("ADX %.1f (can >= %.1f)%s", adx, P_ADXMin, adxOk ? "" : " -> chan")); if(!adxOk) cut += " ADX thap;"; }
+      if(P_UseHTF)
+      {
+         bool hOk = P_HTFMacd ? (bb ? htfUp : htfDn) : (bb ? htfClose > htfEma : htfClose < htfEma);
+         if(P_HTFMacd) EvAdd(StringFormat("MACD khung lon %s", hOk ? "cung chieu" : "nguoc chieu -> chan"));
+         else EvAdd(StringFormat("Khung lon %s: dong cua %s %s EMA%d %s%s", EnumToString(P_HTF), Px(htfClose), htfClose > htfEma ? ">" : "<",
+                                 P_HTFEMA, Px(htfEma), hOk ? "" : " -> chan"));
+         if(!hOk) cut += " nguoc xu huong khung lon;";
+      }
+      if(P_UseCandle && !(bb ? BullCandle() : BearCandle())) { EvAdd("Khong co mau nen xac nhan -> chan"); cut += " thieu mau nen;"; }
+      if(P_MTFAlign > 0 && !MTFOk(bb)) { EvAdd(StringFormat("Chua du %d khung dong thuan -> chan", P_MTFAlign)); cut += " da khung chua dong thuan;"; }
+      if(!buySignal && !sellSignal) { g_status = "Bo tin hieu " + (bb ? "MUA" : "BAN") + ":" + cut; return; }
+   }
    if((buySignal || sellSignal) && !FundingOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
 
    if((buySignal || sellSignal) && !MarketFiltersOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
@@ -1651,6 +1671,13 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
                                     DoubleToString(trade.ResultPrice(), _Digits), DoubleToString(sl0, _Digits),
                                     P_Strategy == STRAT_CHAIN && g_chainWhy != "" ? g_chainWhy : StrategyName() + " " + EnumToString((ENUM_TIMEFRAMES)P_TF));
       g_lastEntryAt = TimeLocal();
+      double tpNow = 0;
+      if(PositionSelectByTicket(trade.ResultOrder())) tpNow = PositionGetDouble(POSITION_TP);
+      EvAdd(StringFormat("Vao lenh: SL cach %s (= %.2f ATR), TP %s, %.2f lot, rui ro %.2f %s (%.2f%% von)%s", Px(slDist),
+                         atr > 0 ? slDist / atr : 0, tpNow > 0 ? Px(tpNow) : "khong (giu theo SL / chot phan)", trade.ResultVolume(),
+                         g_lastRisk, AccountInfoString(ACCOUNT_CURRENCY), BotEquity() > 0 ? g_lastRisk / BotEquity() * 100.0 : 0,
+                         parts > 1 ? StringFormat(", giai von %d phan", parts) : ""));
+      if(g_ev != "") g_lastEntryWhy += " || " + g_ev;
       DecisionLog("vao-lenh", g_lastEntryWhy);
    }
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");

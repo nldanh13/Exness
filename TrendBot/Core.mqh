@@ -29,7 +29,14 @@ datetime g_pdUsed = 0;                  // premium / discount: cu quet da vao le
 datetime g_newsUsedT = 0;               // tin da danh cu quet (chien luoc 20, moi tin 1 lan)
 int      g_newsProtects = 0;             // so lan bao ve lenh truoc tin (InpNewsProtect)
 int      g_fvgPat = 0;                    // mau nen xac nhan cua lenh FVG gan nhat (ZoneCandle), de ghi nhat ky          // order block da vao lenh / da danh khang cu (moi OB 1 lan)   // dao roi: day da vao lenh thu / lenh lon (moi day 1 lan)
-double   g_sigSL = 0, g_sigTP = 0;       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
+double   g_sigSL = 0, g_sigTP = 0;
+// Bang chung cua quyet dinh (v5.33): cac con so cu the dan toi quyet dinh o nen dang xet, noi bang " ; ".
+// Xoa o dau moi nen moi, ghi vao file trang thai (bangchung=) va nhat ky quyet dinh (sau dau " || ").
+string   g_ev = "";
+double   g_pzA = 0, g_pzB = 0, g_pzC = 0, g_pzD = 0;   // so lieu tam do ham mau hinh tra ra (khong gian gia cua mau, co the doi dau)
+void EvReset() { g_ev = ""; }
+void EvAdd(const string s) { if(s == "" || StringLen(g_ev) > 1800) return; g_ev += (g_ev == "" ? "" : " ; ") + s; }
+string Px(const double v) { return DoubleToString(v, _Digits); }       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
 datetime g_fvgUsed = 0;
 datetime g_fibUsed = 0;                 // Fib + VP: thoi diem dinh/day cua con song da vao lenh (moi song chi vao 1 lan)
 datetime g_divUsed = 0, g_absUsed = 0;  // RSI + CVD: dinh/day phan ky da vao lenh; lan hap thu gan nhat da vao lenh

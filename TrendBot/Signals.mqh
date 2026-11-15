@@ -201,7 +201,7 @@ bool OBPattern(const double &hi[], const double &lo[], const double &op[], const
          if(reclaimed) continue;
          if(hi[last] >= Lw - 0.3 * atr && hi[last] <= H + 0.25 * atr && cl[last] < Lw && cl[last] < op[last])
          {
-            mode = 4; key = tm[k];
+            mode = 4; key = tm[k]; g_pzA = Lw; g_pzB = H;
             slDist = MathMax(hi[last] + 0.25 * atr - cl[last], 0.5 * atr);
             return true;
          }
@@ -219,7 +219,7 @@ bool OBPattern(const double &hi[], const double &lo[], const double &op[], const
       else if(lo[last] <= mid && lo[last] >= Lw && bull && cl[last] > mid) // 2) vao toi giua roi bat
       { mode = 2; slDist = MathMax(cl[last] - (Lw - 0.25 * atr), 0.3 * atr); }
       else return false;                                               // 1) chi cham mep / chua xac nhan: khong duoi
-      key = tm[k];
+      key = tm[k]; g_pzA = Lw; g_pzB = H; g_pzC = stall;
       tp = swingHi - cl[last] >= slDist ? swingHi : 0;
       return true;
    }
@@ -241,8 +241,12 @@ bool OBScan(const double atr, bool &buy, int &mode, double &slDist, double &tp, 
       nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
    }
    // OB tang: mode 2/3 = Buy, 4 = Sell (khang cu). OB giam (doi dau): nguoc lai
-   if(OBPattern(hi, lo, op, cl, tm, L - 1, atr, mode, slDist, tp, key)) { buy = mode != 4; return true; }
-   if(OBPattern(nh, nl, no, nc, tm, L - 1, atr, mode, slDist, tp, key)) { buy = mode == 4; tp = -tp; return true; }
+   string kind[] = {"", "", "kieu 2: vao toi giua vung roi nen xac nhan dong cua qua giua", "kieu 3: quet thung mep vung roi dong cua quay vao",
+                    "kieu 5: vung da bi dong cua thung, gia hoi lai bi tu choi (vung doi vai)"};
+   if(OBPattern(hi, lo, op, cl, tm, L - 1, atr, mode, slDist, tp, key))
+   { buy = mode != 4; EvAdd(StringFormat("Order block tang %s - %s (nen %s): %s", Px(g_pzA), Px(g_pzB), TimeToString(key, TIME_DATE | TIME_MINUTES), kind[mode])); return true; }
+   if(OBPattern(nh, nl, no, nc, tm, L - 1, atr, mode, slDist, tp, key))
+   { buy = mode == 4; tp = -tp; EvAdd(StringFormat("Order block giam %s - %s (nen %s): %s", Px(-g_pzB), Px(-g_pzA), TimeToString(key, TIME_DATE | TIME_MINUTES), kind[mode])); return true; }
    return false;
 }
 // Quet ca 2 chieu: dao roi -> mua; gia tang dung thang roi gay -> ban (doi dau gia). key = thoi diem nen day / dinh.
@@ -295,6 +299,18 @@ void KnifeAdd()
 // co nen vao hay khong. Mang theo shift (o[1] = nen vua dong). Chieu mua; chieu ban goi voi gia doi dau.
 // edge = mep vung phia gia di toi (dinh FVG tang), maxSh = nen cu nhat duoc dung (phai sau khi FVG hinh thanh).
 // Tra ve: 3 nhan chim, 4 sao mai, 1 nen bua, 2 harami + 1 nen tang xac nhan, 5 ba linh trang roi hoi nhe; 0 = chua co.
+string CandleName(const int pat, const bool buy)
+{
+   switch(pat)
+   {
+      case 1: return buy ? "nen bua (rau duoi dai)" : "nen rau tren dai";
+      case 2: return buy ? "harami tang + nen tang xac nhan" : "harami giam + nen giam xac nhan";
+      case 3: return buy ? "nhan chim tang" : "nhan chim giam";
+      case 4: return buy ? "sao mai" : "sao hom";
+      case 5: return buy ? "ba linh trang roi hoi nhe" : "ba con qua den roi hoi nhe";
+   }
+   return "?";
+}
 int ZoneCandle(const double &o[], const double &h[], const double &l[], const double &c[], const int maxSh,
                const double edge, const double inval, const double atr, double &patLow)
 {
@@ -423,13 +439,16 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
       }
       if(inside < P_KVMinBars || !exitStrong) continue;
       // Dau hieu 3: da tung phan ung
-      if(KVReactions(bot, top, L, atr) < P_KVMinReact) continue;
+      int reacts = KVReactions(bot, top, L, atr);
+      if(reacts < P_KVMinReact) continue;
+      string kvEv = StringFormat("Key Volume %s - %s: volume o >= %.1f x TB, %d nen dong cua trong vung, da phan ung %d lan", Px(bot), Px(top),
+                                 P_KVHighMult, inside, reacts);
       // Doi vai + nen phan ung ro
       bool fromAbove = c2 > top, fromBelow = c2 < bot;
       if(fromAbove && c1 > top && c1 > o1 && (MathMin(o1, c1) - l1 >= 0.4 * r1 || c1 > h2))
-      { buy = true; slDist = MathMax(c1 - (bot - 0.25 * atr), 0.5 * atr); return true; }
+      { buy = true; slDist = MathMax(c1 - (bot - 0.25 * atr), 0.5 * atr); EvAdd(kvEv + "; gia tu tren ve (ho tro), nen tang dong cua " + Px(c1) + " tren vung"); return true; }
       if(fromBelow && c1 < bot && c1 < o1 && (h1 - MathMax(o1, c1) >= 0.4 * r1 || c1 < l2))
-      { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); return true; }
+      { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); EvAdd(kvEv + "; gia tu duoi len (khang cu), nen giam dong cua " + Px(c1) + " duoi vung"); return true; }
    }
    return false;
 }
@@ -482,10 +501,12 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
       for(int j = t + 1; j < nl; j++) if(sc[j] > sc[best]) best = j;
       double tl = lv[t], ts = sc[t]; lv[t] = lv[best]; sc[t] = sc[best]; lv[best] = tl; sc[best] = ts;
       double lvl = lv[t];
+      string sEv = StringFormat("Mua %s (dinh gan nhat %s, day gan nhat %s); duong ke %s (manh thu %d, diem %.1f ATR quay dau); nen than %.0f%% bien do",
+                                s.trend == 1 ? "TANG" : "GIAM", Px(s.ph), Px(s.pl), Px(lvl), t + 1, sc[t], r1 > 0 ? body / r1 * 100.0 : 0);
       if(s.trend == 1 && strong && c2 > lvl && l1 <= lvl + 0.25 * atr && l1 >= lvl - 1.0 * atr && c1 > o1 && c1 > lvl)
-      { buy = true; slDist = MathMax(c1 - (MathMin(l1, lvl) - 0.25 * atr), 0.5 * atr); return true; }
+      { buy = true; slDist = MathMax(c1 - (MathMin(l1, lvl) - 0.25 * atr), 0.5 * atr); EvAdd(sEv); return true; }
       if(s.trend == -1 && strong && c2 < lvl && h1 >= lvl - 0.25 * atr && h1 <= lvl + 1.0 * atr && c1 < o1 && c1 < lvl)
-      { buy = false; slDist = MathMax((MathMax(h1, lvl) + 0.25 * atr) - c1, 0.5 * atr); return true; }
+      { buy = false; slDist = MathMax((MathMax(h1, lvl) + 0.25 * atr) - c1, 0.5 * atr); EvAdd(sEv); return true; }
    }
    return false;
 }
@@ -540,6 +561,7 @@ bool SpringFullPattern(const double &hi[], const double &lo[], const double &op[
       if(!ok || !(lo[last] <= rh + 0.3 * atr && cl[last] > rh)) continue;
       slDist = MathMax(cl[last] - (spLow - 0.25 * atr), 0.5 * atr);
       tp = top - cl[last] >= slDist ? top : 0;
+      g_pzA = rl; g_pzB = rh; g_pzC = spLow; g_pzD = top;
       return true;
    }
    return false;
@@ -591,6 +613,7 @@ bool PDPattern(const double &hi[], const double &lo[], const double &op[], const
       if(!(lo[last] <= gTop && cl[last] > gBot && cl[last] > op[last])) return false;
       slDist = MathMax(cl[last] - (swLow - 0.25 * atr), 0.5 * atr);
       tp1 = mid; tp2 = bxHi; sweepIx = s;
+      g_pzA = swLow; g_pzB = ph; g_pzC = gBot; g_pzD = gTop;
       return tp2 - cl[last] >= slDist;                                  // lai toi canh tren < 1R: bo
    }
    return false;
@@ -607,6 +630,7 @@ bool PDPattern(const double &hi[], const double &lo[], const double &op[], const
 //  Buoc 5 - Khoi luong theo dong thuan: 1 setup = InpChainOneRisk x rui ro, >= InpChainFullCount setup = du rui ro.
 //  SL / TP / muc chot theo gia lay tu setup dau tien trong danh sach (uu tien theo thu tu InpChainList).
 string g_chainWhy = "";
+bool   g_inChain = false;               // dang soi setup cua 1 chien luoc thanh vien trong chuoi
 int    g_chainHits = 0, g_chainConflicts = 0;
 string ChainName(const int m)
 {
@@ -628,12 +652,17 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
    int dir = t.trend;
    if(P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) { g_status = StringFormat("Chuoi B1: thuy trieu %s o giai doan cuoi (lan pha %d), dung ngoai", t.trend > 0 ? "TANG" : "GIAM", t.legs); return true; }
    string why = StringFormat("B1 thuy trieu %s (lan pha %d)", dir > 0 ? "TANG" : "GIAM", t.legs);
+   EvAdd(StringFormat("B1: cau truc dinh / day %s %s, dinh gan nhat %s, day gan nhat %s, %d lan pha %s tu khi doi chieu%s",
+                      EnumToString(P_DowTF), dir > 0 ? "TANG" : "GIAM", Px(t.ph), Px(t.pl), t.legs, dir > 0 ? "dinh" : "day",
+                      P_DowLateLegs > 0 ? StringFormat(" (giai doan cuoi tu lan %d)", P_DowLateLegs) : ""));
    // Buoc 2
    if(P_ChainPD)
    {
       int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
       if(dH < 0 || dL < 0) return false;
       double mid = (iHigh(_Symbol, PERIOD_D1, dH) + iLow(_Symbol, PERIOD_D1, dL)) / 2.0;
+      EvAdd(StringFormat("B2: hop D1 %d nen dinh %s / day %s / giua %s; gia %s nam nua %s", P_PDDays, Px(iHigh(_Symbol, PERIOD_D1, dH)),
+                         Px(iLow(_Symbol, PERIOD_D1, dL)), Px(mid), Px(c1), c1 < mid ? "DUOI (re)" : "TREN (dat)"));
       if(dir > 0 ? c1 >= mid : c1 <= mid) { g_status = why + " | B2 gia khong o vung " + (dir > 0 ? "re" : "dat") + ", dung ngoai"; return true; }
       why += dir > 0 ? " | B2 vung re" : " | B2 vung dat";
    }
@@ -654,7 +683,9 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
       P_Strategy = (ENUM_STRATEGY)m;
       P_FvgCandle = true; P_SpringFull = true; P_BreakRetest = true;
       bool b = false, s = false;
+      g_inChain = true;
       bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
+      g_inChain = false;
       P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet;
       if(!ok || (!b && !s)) continue;
       if((dir > 0 && b) || (dir < 0 && s))
@@ -669,6 +700,7 @@ bool ChainSignals(const double atr, const double trend, const double fast, const
    if(against > 0) { g_chainConflicts++; g_status = why + " | B3 setup trai chieu (" + names + "), dung ngoai"; return true; }
    // Buoc 5
    double mult = agree >= P_ChainFullCount ? 1.0 : MathMax(0.1, MathMin(1.0, P_ChainOneRisk));
+   EvAdd(StringFormat("B5: %d setup cung chieu (du rui ro khi >= %d) -> rui ro x%.2f", agree, P_ChainFullCount, mult));
    if(pMult > 0 && pMult < 1) mult *= pMult;
    if(dir > 0) buyBase = true; else sellBase = true;
    g_sigSL = pSL; g_sigTP = pTP; g_sigPartialPx = pPX; g_sigRiskMult = mult;
@@ -751,6 +783,14 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          for(int q = b + 1; q <= b + 20; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vs += (double)v; vn++; } }
          volOk = vn >= 10 && (double)iTickVolume(_Symbol, P_TF, b) >= P_BreakMinVol * vs / vn;
       }
+      if(!g_inChain)                                   // trong chuoi phan tich chi ghi khi co tin hieu (tranh nhieu)
+      {
+         double vs2 = 0; int vn2 = 0;
+         for(int q = b + 1; q <= b + 20; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vs2 += (double)v; vn2++; } }
+         EvAdd(StringFormat("Kenh Donchian %d nen: dinh %s / day %s; nen %d dong cua %s (than %.0f%% bien do, khoi luong x%.1f TB 20 nen); EMA%d %s",
+                            P_DonchianPeriod, Px(chHigh), Px(chLow), b, Px(cb), range > 0 ? body / range * 100.0 : 0,
+                            vn2 > 0 && vs2 > 0 ? (double)iTickVolume(_Symbol, P_TF, b) / (vs2 / vn2) : 0, P_TrendEMA, Px(trend)));
+      }
       buyBase  = volOk && cb > chHigh + margin && bodyBuy  && c1 > trend && (b == 1 || c1 > chHigh);
       sellBase = volOk && cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
       if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; return false; }
@@ -776,6 +816,9 @@ bool BaseSignals(const double atr, const double trend, const double fast,
                if(!ok) continue;                                          // da that bai, hoac da test (lan dau da xet)
                if(buy  && l1 <= lvl + tol && c1 > lvl && c1 > trend) buyBase = true;
                if(!buy && h1 >= lvl - tol && c1 < lvl && c1 < trend) sellBase = true;
+               if(buyBase || sellBase)
+                  EvAdd(StringFormat("Pha vo that: nen %d dong cua %s muc %s; nen vua dong test lai (%s %s) va dong cua %s van %s muc",
+                                     j, buy ? "tren" : "duoi", Px(lvl), buy ? "day" : "dinh", Px(buy ? l1 : h1), Px(c1), buy ? "tren" : "duoi"));
             }
       }
       // Kieu 2 danh nguoc (InpFakeoutFade): nen 2 dong cua pha kenh, nen 1 dong cua quay nguoc vao trong -> nguoi vua mua pha vo
@@ -904,12 +947,16 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             if(isUp)
             {
                int pat = ZoneCandle(o, h, l, c, maxSh, gtU, gbU, atr, pl);
-               if(pat > 0) { buyBase = true; g_sigSL = MathMax(c1 - (MathMin(pl, gbU) - 0.25 * atr), 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat; }
+               if(pat > 0) { buyBase = true; g_sigSL = MathMax(c1 - (MathMin(pl, gbU) - 0.25 * atr), 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat;
+                             EvAdd(StringFormat("FVG tang %s - %s (nen lon %s, chua bi dong cua thung); nen xac nhan: %s", Px(gbU), Px(gtU),
+                                                TimeToString(tk, TIME_DATE | TIME_MINUTES), CandleName(pat, true))); }
             }
             else
             {
                int pat = ZoneCandle(no, nh, nl, nc, maxSh, -gbD, -gtD, atr, pl);
-               if(pat > 0) { sellBase = true; g_sigSL = MathMax((MathMax(-pl, gtD) + 0.25 * atr) - c1, 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat; }
+               if(pat > 0) { sellBase = true; g_sigSL = MathMax((MathMax(-pl, gtD) + 0.25 * atr) - c1, 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat;
+                             EvAdd(StringFormat("FVG giam %s - %s (nen lon %s, chua bi dong cua thung); nen xac nhan: %s", Px(gbD), Px(gtD),
+                                                TimeToString(tk, TIME_DATE | TIME_MINUTES), CandleName(pat, false))); }
             }
          }
       }
@@ -958,8 +1005,14 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
          }
          double sd = 0, tp = 0;
-         if(SpringFullPattern(hi, lo, op, cl, tv, L - 1, atr, sd, tp)) { buyBase = true; g_sigSL = sd; g_sigTP = tp; }
-         else if(SpringFullPattern(nh, nl, no, nc, tv, L - 1, atr, sd, tp)) { sellBase = true; g_sigSL = sd; g_sigTP = -tp; }
+         if(SpringFullPattern(hi, lo, op, cl, tv, L - 1, atr, sd, tp))
+         { buyBase = true; g_sigSL = sd; g_sigTP = tp;
+           EvAdd(StringFormat("Hop %s - %s sau cu giam tu %s; spring thung xuong %s roi quay lai; test day volume thap; nen tang manh pha nap, hoi ve cham nap van giu",
+                              Px(g_pzA), Px(g_pzB), Px(g_pzD), Px(g_pzC))); }
+         else if(SpringFullPattern(nh, nl, no, nc, tv, L - 1, atr, sd, tp))
+         { sellBase = true; g_sigSL = sd; g_sigTP = -tp;
+           EvAdd(StringFormat("Hop %s - %s sau cu tang tu %s; upthrust vot len %s roi quay lai; test dinh volume thap; nen giam manh thung day, hoi len cham day van giu",
+                              Px(-g_pzB), Px(-g_pzA), Px(-g_pzD), Px(-g_pzC))); }
          return true;
       }
       int hiI = iHighest(_Symbol, P_TF, MODE_HIGH, P_RangeBars, 2), loI = iLowest(_Symbol, P_TF, MODE_LOW, P_RangeBars, 2);
@@ -1280,9 +1333,13 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       }
       double sd, t1, t2; int sx;
       if(PDPattern(hi, lo, op, cl, L - 1, atr, bxHi, bxLo, sd, t1, t2, sx) && tm[sx] != g_pdUsed)
-      { buyBase = true; g_sigSL = sd; g_sigPartialPx = t1; g_sigTP = t2; g_pdUsed = tm[sx]; }
+      { buyBase = true; g_sigSL = sd; g_sigPartialPx = t1; g_sigTP = t2; g_pdUsed = tm[sx];
+        EvAdd(StringFormat("Hop D1 %d nen: dinh %s / day %s / giua %s, gia %s o vung RE; quet day xuong %s, dong cua vuot dinh %s; FVG %s - %s",
+                           P_PDDays, Px(bxHi), Px(bxLo), Px((bxHi + bxLo) / 2), Px(c1), Px(g_pzA), Px(g_pzB), Px(g_pzC), Px(g_pzD))); }
       else if(PDPattern(nh, nl, no, nc, L - 1, atr, -bxLo, -bxHi, sd, t1, t2, sx) && tm[sx] != g_pdUsed)
-      { sellBase = true; g_sigSL = sd; g_sigPartialPx = -t1; g_sigTP = -t2; g_pdUsed = tm[sx]; }
+      { sellBase = true; g_sigSL = sd; g_sigPartialPx = -t1; g_sigTP = -t2; g_pdUsed = tm[sx];
+        EvAdd(StringFormat("Hop D1 %d nen: dinh %s / day %s / giua %s, gia %s o vung DAT; quet dinh len %s, dong cua thung day %s; FVG %s - %s",
+                           P_PDDays, Px(bxHi), Px(bxLo), Px((bxHi + bxLo) / 2), Px(c1), Px(-g_pzA), Px(-g_pzB), Px(-g_pzD), Px(-g_pzC))); }
    }
    else if(P_Strategy == STRAT_NEWS)
    {
@@ -1353,6 +1410,10 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          else if(l1 <= dn3 && c1 > dn3 && c1 > o1 && MathMin(o1, c1) - l1 >= 0.4 * r1)
          { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
+      if(buyBase || sellBase)
+         EvAdd(StringFormat("VWAP hom nay %s, do lech chuan %s (dai 2: %s / %s, dai 3: %s / %s); nen vua dong %s - %s, dong cua %s; muc tieu %s",
+                            Px(vw), Px(sd), Px(vw + P_VwapBand2 * sd), Px(vw - P_VwapBand2 * sd), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
+                            Px(l1), Px(h1), Px(c1), Px(g_sigTP)));
    }
    else if(P_Strategy == STRAT_DOW)
    {
@@ -1361,8 +1422,12 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       // dinh gan nhat cua con song -> con song da het, Buy. SL duoi day con song - 0,25 ATR. Thuy trieu giam: nguoc lai.
       DowState w;
       if(!DowCalc(P_TF, 300, P_DowPivot, w)) return false;
-      if(w.brk == 1 && w.prev == -1 && w.pl > 0)  { buyBase = true;  g_sigSL = MathMax(c1 - (w.pl - 0.25 * atr), 0.5 * atr); }
-      if(w.brk == -1 && w.prev == 1 && w.ph > 0)  { sellBase = true; g_sigSL = MathMax((w.ph + 0.25 * atr) - c1, 0.5 * atr); }
+      if(w.brk == 1 && w.prev == -1 && w.pl > 0)
+      { buyBase = true;  g_sigSL = MathMax(c1 - (w.pl - 0.25 * atr), 0.5 * atr);
+        EvAdd(StringFormat("Con song %s dang hoi xuong, nen dong cua %s vuot dinh gan nhat cua con song; day con song %s", EnumToString(P_TF), Px(c1), Px(w.pl))); }
+      if(w.brk == -1 && w.prev == 1 && w.ph > 0)
+      { sellBase = true; g_sigSL = MathMax((w.ph + 0.25 * atr) - c1, 0.5 * atr);
+        EvAdd(StringFormat("Con song %s dang hoi len, nen dong cua %s thung day gan nhat cua con song; dinh con song %s", EnumToString(P_TF), Px(c1), Px(w.ph))); }
    }
    else if(P_Strategy == STRAT_OB)
    {
