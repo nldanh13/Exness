@@ -17,6 +17,7 @@ STRATEGY_LABELS = {
     "STRAT_FIBVP":        "Thử nghiệm: Fibonacci + Volume Profile",
     "STRAT_DIVCVD":       "Thử nghiệm: phân kỳ RSI xác nhận bằng CVD",
     "STRAT_BIGTRADE":     "Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng",
+    "STRAT_DISTRIB":      "Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại",
 }
 
 GROUPS = [
@@ -66,6 +67,11 @@ GROUPS = [
         ("InpBigZoneATR",     "Big Trades: gần đỉnh / đáy cũ trong (× ATR)", "Chỉ chú ý bong bóng ở vùng quan trọng: đỉnh cũ, đáy cũ."),
         ("InpBigClusterMin",  "Big Trades: chuỗi thanh lý cần ít nhất (bong bóng)", ""),
         ("InpBigClusterBars", "Big Trades: chuỗi thanh lý trong (số nến)", "Giá phải rơi (tăng) ít nhất 3 ATR trong khoảng này."),
+        ("InpDistLookback",   "Phân phối: xét trong (số nến)", "5 nhịp trước cú sập: nến hưng phấn → giá đi ngang trong hộp, không tạo đỉnh mới → phá đỉnh giả → đỉnh thấp hơn → nến sập thủng đáy hộp. Không bán đuổi nến sập: chờ giá hồi test lại đáy hộp với khối lượng nhỏ, nến yếu, bị từ chối thì bán. Sau cú giảm (hộp tích lũy): ngược lại."),
+        ("InpDistClimaxATR",  "Phân phối: nến hưng phấn dài tối thiểu (× ATR)", "Nến tăng rất dài, khối lượng lớn nhất 20 nến, râu trên ≥ 20% biên độ, sau một nhịp tăng ≥ 2 ATR: đám đông mua đuổi, tay to bắt đầu bán."),
+        ("InpDistBoxMin",     "Phân phối: hộp đi ngang tối thiểu (số nến)", "Nến sập (dài ≥ 1 ATR, khối lượng ≥ 1,2 × trung bình) chỉ tính sau bấy nhiêu nến đi ngang. Mẫu hình đủ 5 nhịp rất hiếm: kiểm tra nhanh trên dữ liệu 6 năm chỉ khoảng 2 lần trên H1 và trên M30."),
+        ("InpDistBoxMaxATR",  "Phân phối: hộp cao tối đa (× ATR)", ""),
+        ("InpDistNeedUT",     "Phân phối: bắt buộc có cú phá đỉnh giả", "Vọt qua nắp hộp rồi đóng lại trong hộp: cú dụ cuối cùng. Tắt = có hay không đều được."),
     ]),
     ("4. Bộ lọc xu hướng", [
         ("InpUseHTF",    "Chỉ giao dịch theo xu hướng khung lớn", "Chỉ mua khi giá khung lớn trên EMA, chỉ bán khi dưới."),

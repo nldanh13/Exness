@@ -26,6 +26,7 @@ datetime g_fvgUsed = 0;
 datetime g_fibUsed = 0;                 // Fib + VP: thoi diem dinh/day cua con song da vao lenh (moi song chi vao 1 lan)
 datetime g_divUsed = 0, g_absUsed = 0;  // RSI + CVD: dinh/day phan ky da vao lenh; lan hap thu gan nhat da vao lenh
 datetime g_bigUsed = 0;                 // Big Trades: bong bong / chuoi bong bong da vao lenh (moi cai chi vao 1 lan)
+datetime g_distUsed = 0;                // Phan phoi / tich luy: nen hung phan cua cau truc da vao lenh (moi cau truc 1 lan)
 double   g_reqPrice = 0;                 // gia luc gui lenh vao (de do truot gia that)
 long     g_reqSpread = 0;                  // FVG da vao lenh (moi khoang trong chi vao 1 lan)
 double   g_rsi = 50;

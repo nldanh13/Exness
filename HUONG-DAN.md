@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.14
+# Hướng dẫn bot BTC (MT5) v5.15
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 12 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 13 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -877,3 +877,19 @@ lấy từng lệnh khớp qua mạng thì quá nặng, nên đây là xấp x�
    vùng bong bóng thành hỗ trợ (họ bảo vệ giá vốn) → mua ở lần chạm lại đầu tiên khi nến đóng tăng. Bong bóng đỏ: ngược lại.
 SL ngoài vùng / đáy / đỉnh 0,25 ATR (tối thiểu 0,5 ATR). Mỗi bong bóng hoặc chuỗi chỉ vào 1 lần. Kết hợp CVD (chiến lược 10)
 hoặc bộ lọc dòng tiền (v5.12) để thấy ai đang thắng. Thiếu dữ liệu Binance thì không vào lệnh. Đã thêm vào xếp hạng (`XH-BigTrade-H1`).
+
+## v5.15: chiến lược 12 – hộp phân phối / tích lũy, vào ở lần test lại (16/11/2026) – CHƯA KIỂM THỬ
+Kiến thức: cú sập nào cũng để lại dấu vết trước khi xảy ra. 5 nhịp lặp lại ở hầu hết các cú sập:
+1. **Nến hưng phấn:** tăng rất dài (≥ `InpDistClimaxATR` ATR), khối lượng lớn nhất 20 nến, râu trên ≥ 20% biên độ, sau một nhịp tăng ≥ 2 ATR.
+   Đám đông mua đuổi, tay to bắt đầu bán.
+2. **Giá không còn tạo đỉnh mới:** đi ngang trong hộp (≥ `InpDistBoxMin` nến, cao ≤ `InpDistBoxMaxATR` ATR), chạm nắp bị đạp xuống.
+3. **Phá đỉnh giả:** vọt qua nắp rồi đóng lại trong hộp (bắt buộc khi bật `InpDistNeedUT`).
+4. **Đỉnh thấp hơn:** đỉnh gần nhất trong hộp thấp hơn nắp ≥ 0,3 ATR, cấu trúc tăng bắt đầu gãy.
+5. **Nến sập:** đóng dưới đáy hộp, dài ≥ 1 ATR, khối lượng ≥ 1,2 × trung bình.
+Không bán đuổi nến sập. Bot chờ **lần test lại đầu tiên** của đáy hộp (nay là kháng cự): nến chạm vùng, đóng lại dưới đáy hộp,
+nến giảm hoặc râu trên ≥ 40%, khối lượng nhỏ hơn nến sập → bán. SL trên đỉnh thấp hơn vừa tạo, TP ở nơi cú tăng ban đầu bắt đầu
+(đáy thấp nhất 30 nến trước nến hưng phấn); bỏ nếu lãi < 1R. Hộp tích lũy sau cú giảm: ngược lại → mua.
+Bộ `11-Hop-phan-phoi-H1-THU-NGHIEM.set` (`InpStrategy = 12`, H1). Dùng khối lượng tick của Exness, không cần dữ liệu ngoài.
+Kiểm tra nhanh bằng Python trên nến M10 6 năm (chỉ đếm tín hiệu, không đo lãi lỗ): mẫu hình đủ 5 nhịp chỉ xuất hiện khoảng 2 lần
+trên H1 và 2 lần trên M30. Các ngưỡng đã nới so với bản đầu (ban đầu 0 lần). Đây là mẫu hình hiếm; đã thêm vào xếp hạng (`XH-PhanPhoi-H1`),
+nhiều khả năng không đủ 20 đợt để đủ điều kiện.

@@ -126,7 +126,8 @@ void UpdatePanel()
                   P_Strategy == STRAT_MACD ? "MACD đa khung" : P_Strategy == STRAT_IMOM ? "Quán tính trong ngày" :
                   P_Strategy == STRAT_FIBVP ? "Fibonacci + Volume Profile" :
                   P_Strategy == STRAT_DIVCVD ? "Phân kỳ RSI + CVD" :
-                  P_Strategy == STRAT_BIGTRADE ? "Big Trades" : "EMA pullback";
+                  P_Strategy == STRAT_BIGTRADE ? "Big Trades" :
+                  P_Strategy == STRAT_DISTRIB ? "Hộp phân phối / tích lũy" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)

@@ -114,6 +114,13 @@ PRESETS = [
         "Cần WebRequest fapi.binance.com; backtest cần du-lieu/flow_BTCUSDT_1h.csv. Chỉ chạy demo.",
     ], {"InpStrategy": "11", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
         "InpRR": "2", "InpMaxSpreadPoints": "1500"}),
+    ("11-Hop-phan-phoi-H1-THU-NGHIEM.set", [
+        "11. Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại, khung H1",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Nến hưng phấn → hộp đi ngang → (phá đỉnh giả) → đỉnh thấp hơn → nến sập thủng hộp.",
+        "Bán ở lần test lại đáy hộp bị từ chối (khối lượng nhỏ, nến yếu). SL trên đỉnh thấp hơn, TP nơi cú tăng ban đầu bắt đầu.",
+        "Chiều ngược lại (hộp tích lũy sau cú giảm) thì mua. Dùng khối lượng tick của Exness, không cần dữ liệu ngoài. Chỉ chạy demo.",
+    ], {"InpStrategy": "12", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
+        "InpRR": "0", "InpMaxSpreadPoints": "1500"}),
 ]
 
 

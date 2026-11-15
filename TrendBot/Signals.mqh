@@ -47,6 +47,74 @@ bool BigNearSwing(const double &hi[], const double &lo[], const int j, const dou
    return false;
 }
 
+// Phan phoi (v5.15): tim 5 nhip tren mang theo thu tu thoi gian (chi so lon = moi hon), chieu BAN.
+// Chieu MUA (tich luy) goi cung ham voi gia doi dau (hi' = -lo, lo' = -hi): moi so sanh tu dao nguoc.
+// Tra ve true khi nen 'last' (nen 1) la lan test lai day hop bi tu choi. slDist = khoang cach SL, tpPx = gia TP
+// (cung he toa do mang dua vao), climaxT = thoi diem nen hung phan (moi cau truc chi vao 1 lan).
+bool DistPattern(const double &hi[], const double &lo[], const double &op[], const double &cl[], const double &tv[],
+                 const datetime &tm[], const int last, const double atr, const datetime usedT,
+                 double &slDist, double &tpPx, datetime &climaxT)
+{
+   int boxMin = P_DistBoxMin < 4 ? 4 : P_DistBoxMin;
+   for(int c = last - boxMin - 3; c >= 31; c--)
+   {
+      if(tm[c] <= usedT) return false;                                  // cu hon cau truc da vao lenh: dung
+      // 1) Nen hung phan: tang dai, khoi luong lon nhat 20 nen truoc, rau tren >= 20% bien do; sau nhip tang >= 2 ATR
+      double rg = hi[c] - lo[c];
+      if(cl[c] <= op[c] || rg < P_DistClimaxATR * atr || hi[c] - cl[c] < 0.2 * rg) continue;
+      bool maxVol = true;
+      double tLow = lo[c];
+      for(int q = c - 30; q < c; q++) { if(q >= c - 20 && tv[q] >= tv[c]) maxVol = false; if(lo[q] < tLow) tLow = lo[q]; }
+      if(!maxVol || hi[c] - tLow < 2.0 * atr) continue;
+      double top = hi[c];
+      // 2) Hop di ngang sau nen hung phan (khong tao dinh moi), toi khi co nen sap
+      double bot = DBL_MAX;
+      int d = -1, touches = 0;
+      bool ut = false, broke = false;
+      for(int m = c + 1; m <= last - 1; m++)
+      {
+         double avg = 0;
+         for(int q = m - 20; q < m; q++) avg += tv[q];
+         avg /= 20.0;
+         // 5) Nen sap: dong duoi day hop, dai >= 1 ATR, khoi luong >= 1,2 x TB, sau it nhat boxMin nen di ngang
+         if(m - c - 1 >= boxMin && bot < DBL_MAX && cl[m] < bot && hi[m] - lo[m] >= atr && tv[m] >= 1.2 * avg) { d = m; break; }
+         if(hi[m] > top + 0.5 * atr && cl[m] > top) { broke = true; break; }  // dong han tren nap: con tang, khong phai hop
+         if(hi[m] >= top - 0.5 * atr) touches++;                           // cham nap hop
+         if(hi[m] > top && cl[m] < top) ut = true;                         // 3) pha dinh gia: vot qua nap, dong lai trong hop
+         if(lo[m] < bot) bot = lo[m];
+      }
+      if(broke || d < 0 || top - bot > P_DistBoxMaxATR * atr || touches < 1 || (P_DistNeedUT && !ut)) continue;
+      // 4) Dinh thap hon: dinh gan nhat trong hop (cao hon 2 nen moi ben) thap hon nap >= 0,3 ATR
+      double lh = 0;
+      for(int p = d - 3; p >= c + 3 && lh == 0; p--)
+      {
+         bool piv = true;
+         for(int j = p - 2; j <= p + 2 && piv; j++) if(j != p && hi[j] >= hi[p]) piv = false;
+         if(piv) lh = hi[p];
+      }
+      if(lh <= 0 || lh > top - 0.3 * atr) continue;
+      // Test lai day hop (nay la khang cu): lan cham dau tien sau nen sap, khoi luong nho, nen yeu, dong lai duoi day hop
+      for(int m = d + 1; m <= last - 1; m++) if(hi[m] >= bot - 0.25 * atr) return false;   // da test truoc do
+      double avg1 = 0;
+      for(int q = last - 20; q < last; q++) avg1 += tv[q];
+      avg1 /= 20.0;
+      bool test = hi[last] >= bot - 0.25 * atr && hi[last] <= bot + 0.5 * atr;
+      // Nen yeu bi tu choi: dong lai duoi day hop, nen giam hoac rau tren >= 40% bien do; khoi luong nho hon nen sap
+      // va nho hon trung binh 20 nen (TB chi de doi chieu khi nen sap qua lon)
+      double rgl = hi[last] - lo[last];
+      bool rej = cl[last] < op[last] || (rgl > 0 && hi[last] - MathMax(op[last], cl[last]) >= 0.4 * rgl);
+      bool weak = cl[last] < bot && rej && tv[last] < tv[d] && tv[last] < 1.5 * avg1;
+      if(!test || !weak) return false;
+      double slPx = MathMax(lh, hi[last]) + 0.25 * atr;                 // SL tren dinh thap hon vua tao
+      slDist = MathMax(slPx - cl[last], 0.5 * atr);
+      tpPx = tLow;                                                       // TP: noi cu tang ban dau bat dau
+      if(cl[last] - tpPx < slDist) return false;                         // lai < 1R: bo
+      climaxT = tm[c];
+      return true;
+   }
+   return false;
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
@@ -470,6 +538,40 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             break;
          }
       }
+   }
+   else if(P_Strategy == STRAT_DISTRIB)
+   {
+      // Hop phan phoi / tich luy (v5.15, CHUA KIEM THU). Cu sap nao cung de lai dau vet tren bieu do truoc khi xay ra,
+      // 5 nhip lap lai o hau het cac cu sap:
+      //  1) nen hung phan: tang rat dai, khoi luong lon nhat ca doan, de rau tren (dam dong mua duoi, tay to bat dau ban)
+      //  2) gia khong con tao dinh moi: di ngang trong hop, moi lan cham nap bi dap xuong (co nguoi ban chan o tren)
+      //  3) pha dinh gia: vot qua nap roi dong lai trong hop (cu du cuoi cung; InpDistNeedUT = bat buoc)
+      //  4) dinh thap hon: lan hoi sau khong cham noi nap hop, cau truc tang bat dau gay
+      //  5) nen sap: giam dai, khoi luong lon, thung day hop.
+      // KHONG ban duoi nen sap: cho gia hoi len test lai day hop (nay la khang cu), khoi luong nho, nen yeu, bi tu choi -> Sell.
+      // SL tren dinh thap hon vua tao, TP o noi cu tang ban dau bat dau. Day hop tich luy (sau cu giam): nguoc lai -> Buy.
+      // Khoi luong = so tick cua Exness (so lan bao gia), khong can du lieu ngoai.
+      int L = P_DistLookback < 80 ? 80 : P_DistLookback;
+      double hi[], lo[], op[], cl[], tv[];
+      double nh[], nl2[], no[], nc[];
+      datetime tm[];
+      ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(op, L); ArrayResize(cl, L); ArrayResize(tv, L); ArrayResize(tm, L);
+      ArrayResize(nh, L); ArrayResize(nl2, L); ArrayResize(no, L); ArrayResize(nc, L);
+      for(int i = 0; i < L; i++)
+      {
+         int sh = L - i;
+         hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh);
+         op[i] = iOpen(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh);
+         tv[i] = (double)iTickVolume(_Symbol, P_TF, sh); tm[i] = iTime(_Symbol, P_TF, sh);
+         if(hi[i] <= 0 || lo[i] <= 0) return false;                       // thieu du lieu nen
+         nh[i] = -lo[i]; nl2[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];  // doi dau: tich luy thanh phan phoi
+      }
+      double sl = 0, tp = 0;
+      datetime ct = 0;
+      if(DistPattern(hi, lo, op, cl, tv, tm, L - 1, atr, g_distUsed, sl, tp, ct))
+      { sellBase = true; g_sigSL = sl; g_sigTP = tp; g_distUsed = ct; }
+      else if(DistPattern(nh, nl2, no, nc, tv, tm, L - 1, atr, g_distUsed, sl, tp, ct))
+      { buyBase = true; g_sigSL = sl; g_sigTP = -tp; g_distUsed = ct; }
    }
    else
    {
