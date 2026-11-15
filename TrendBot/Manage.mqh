@@ -60,6 +60,7 @@ void FinalizeClosed(const ulong posId)
    GlobalVariableDel(GVName("C_"  + (string)posId));
    GlobalVariableDel(GVName("PT_" + (string)posId));
    GlobalVariableDel(GVName("PV_" + (string)posId));
+   GlobalVariableDel(GVName("HL_" + (string)posId));
 }
 void ReconcileClosed()
 {
@@ -84,6 +85,7 @@ void ReconcileClosed()
 
 void ManagePositions()
 {
+   if(HedgeActive()) return;               // dang khoa 2 chieu (Hedge.mqh): 2 lenh bu tru, khong hoa von / trailing
    double atr = 0;
    bool haveAtr = GetValue(hATR, 0, 1, atr);
    if(haveAtr) atr = SLAtr(atr);           // InpSLTFmin: trailing / uoc luong 1R theo ATR khung SL
@@ -273,6 +275,7 @@ ENUM_TIMEFRAMES PyrTF()
 // addOnly = true: goi tu khung nho (InpPyramidTFmin), chi xet them lop; cac luat thoat van chay theo nen khung chinh
 void PyramidStep(const bool addOnly = false)
 {
+   if(HedgeActive()) return;
    double fast, atr;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr) || atr <= 0) return;
    atr = SLAtr(atr);                       // InpSLTFmin: buoc nhoi va SL lop moi theo ATR khung SL
@@ -310,6 +313,18 @@ void PyramidStep(const bool addOnly = false)
    if(cnt >= P_PyramidMax || IsHalted() || GuardHalted() || DailyLossHit() || (P_GuardAlgoDayPct > 0 && GuardBucketLocked(2))) return;
    if(!MTFOk(buy)) return;                                   // cac khung nho/lon chua dong thuan thi chua nhoi
    if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
+   // Chi nhoi khi gia hoi ve roi bat len (InpPyramidRetest): nen truoc da lui >= 0,5 ATR tu dinh 5 nen gan nhat
+   // (day voi lenh ban) va nen vua dong cua theo chieu lenh
+   ENUM_TIMEFRAMES ptf = addOnly ? PyrTF() : P_TF;
+   if(P_PyramidRetest)
+   {
+      double o1 = iOpen(_Symbol, ptf, 1);
+      int ih = iHighest(_Symbol, ptf, MODE_HIGH, 5, 1), il = iLowest(_Symbol, ptf, MODE_LOW, 5, 1);
+      if(ih < 0 || il < 0) return;
+      double hh = iHigh(_Symbol, ptf, ih), ll = iLow(_Symbol, ptf, il);
+      double l12 = MathMin(iLow(_Symbol, ptf, 1), iLow(_Symbol, ptf, 2)), h12 = MathMax(iHigh(_Symbol, ptf, 1), iHigh(_Symbol, ptf, 2));
+      if(buy ? (hh - l12 < 0.5 * atr || c1 <= o1) : (h12 - ll < 0.5 * atr || c1 >= o1)) return;
+   }
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
    // Gio nghi / cuoi tuan va tin My (v5.10.19): nhoi la them rui ro, phai qua cung bo loc nhu lenh vao moi
    string pw = "", pn = "";
@@ -324,6 +339,28 @@ void PyramidStep(const bool addOnly = false)
       double op = PositionGetDouble(POSITION_PRICE_OPEN), sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP);
       bool better = buy ? (sl < op) : (sl <= 0 || sl > op);
       if(better) TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(op, _Digits), tp), "Sua SL", "#" + (string)tk);
+   }
+   // SL chung duoi day (tren dinh) InpPyramidSLBars nen gan nhat - 0,25 ATR: chi doi len, khong bao gio noi ra
+   double structSL = 0;
+   if(P_PyramidSLBars > 0)
+   {
+      int ix = buy ? iLowest(_Symbol, P_TF, MODE_LOW, P_PyramidSLBars, 1) : iHighest(_Symbol, P_TF, MODE_HIGH, P_PyramidSLBars, 1);
+      double mdist = (double)MathMax(SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL), SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * _Point + _Point * 2;
+      double px = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      if(ix >= 0)
+      {
+         structSL = buy ? iLow(_Symbol, P_TF, ix) - 0.25 * atr : iHigh(_Symbol, P_TF, ix) + 0.25 * atr;
+         if(buy ? structSL >= px - mdist : structSL <= px + mdist) structSL = 0;
+      }
+      if(structSL > 0)
+         for(int i = PositionsTotal() - 1; i >= 0; i--)
+         {
+            ulong tk = PositionGetTicket(i);
+            if(tk == 0 || !IsOwnSelected()) continue;
+            double sl0 = PositionGetDouble(POSITION_SL), tp0 = PositionGetDouble(POSITION_TP);
+            if(buy ? structSL > sl0 + _Point : (sl0 <= 0 || structSL < sl0 - _Point))
+               TradeDone(PrepSend() && trade.PositionModify(tk, NormalizeDouble(structSL, _Digits), tp0), "SL chung", "#" + (string)tk);
+         }
    }
    // Chi nhoi khi DOC LAI trang thai vi the thay moi lop cu da co SL >= hoa von. Server tu choi sua SL
    // (gan gia, thi truong dong...) thi lop cu van chiu rui ro day du -> bo qua lan nhoi nay, thu lai o nen sau.
@@ -366,6 +403,7 @@ void PyramidStep(const bool addOnly = false)
    double price = buy ? tick.ask : tick.bid;
    g_reqPrice = price; g_reqSpread = (long)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    double sl = buy ? price - slDist : price + slDist;
+   if(structSL > 0) sl = buy ? MathMax(sl, structSL) : MathMin(sl, structSL);   // lop moi dung chung SL neu sat hon
    double tp = P_RR > 0 ? (buy ? price + slDist * P_RR : price - slDist * P_RR) : 0.0;
    if(!EntryMarginOk(buy, lots, price, sl, tp))
    { g_status = "BO NHOI: thieu ky quy du tru"; GroupClear(); GroupUnlock(); return; }

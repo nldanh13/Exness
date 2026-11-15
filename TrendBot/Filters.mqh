@@ -16,10 +16,18 @@ bool TimeAllowed(string &why)
    if(P_SkipWeekend && (dt.day_of_week == 0 || dt.day_of_week == 6)) { why = "cuoi tuan"; return false; }
    if(InWindow(dt.hour, P_Block1Start, P_Block1End) ||
       InWindow(dt.hour, P_Block2Start, P_Block2End)) { why = "khung gio tin tuc"; return false; }
-   // Scalp: chi danh trong gio cao diem (InpSessionStartH..InpSessionEndH, gio server)
-   if(P_SessionStartH >= 0 && P_SessionEndH >= 0 && P_SessionStartH != P_SessionEndH &&
-      !InWindow(dt.hour, P_SessionStartH, P_SessionEndH)) { why = "ngoai gio cao diem"; return false; }
+   // Chi danh trong gio cao diem (InpSessionStartH..EndH va / hoac InpSession2StartH..EndH, gio server)
+   if(SessionsSet() && !InSession(dt.hour)) { why = "ngoai gio cao diem"; return false; }
    return true;
+}
+bool SessionsSet()
+{
+   return (P_SessionStartH >= 0 && P_SessionEndH >= 0 && P_SessionStartH != P_SessionEndH) ||
+          (P_Session2StartH >= 0 && P_Session2EndH >= 0 && P_Session2StartH != P_Session2EndH);
+}
+bool InSession(const int hour)
+{
+   return InWindow(hour, P_SessionStartH, P_SessionEndH) || InWindow(hour, P_Session2StartH, P_Session2EndH);
 }
 
 //--- Mau nen -------------------------------------------------------

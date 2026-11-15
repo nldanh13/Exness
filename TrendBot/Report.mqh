@@ -243,15 +243,16 @@ double OnTester()
    int nP = ArraySize(posIds);
    double campNet[], campRisk[];
    ArrayResize(campNet, nP); ArrayResize(campRisk, nP);
-   int nC = 0; datetime campEnd = 0; bool campBuy = true;
+   int nC = 0; datetime campEnd = 0;
    for(int j = 0; j < nP; j++)
    {
-      bool join = nC > 0 && posIn[j] > 0 && posIn[j] < campEnd && posBuy[j] == campBuy;
+      // Lenh nguoc chieu mo khi dot con mo chi co the la lenh khoa (Hedge.mqh): cung dot, khong tach rieng
+      bool join = nC > 0 && posIn[j] > 0 && posIn[j] < campEnd;
       if(!join)
       {
          double sd = 0;
          campNet[nC] = 0; campRisk[nC] = PosRiskMoney(posIds[j], sd);
-         campBuy = posBuy[j]; campEnd = 0; nC++;
+         campEnd = 0; nC++;
       }
       campNet[nC - 1] += posNet[j];
       datetime e = posOut[j] > 0 ? posOut[j] : D'2999.12.31';   // chua dong (khong xay ra trong tester): coi nhu mo mai
@@ -361,7 +362,8 @@ double OnTester()
                    "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
                    "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh",
                    "SoDot", "ChoHoi_ChamGia", "ChoHoi_HetNen", "ChoHoi_BiHuy", "ChoHoi_Khop", "RuiRoMoMax%", "NhoiBiBoVoiRuiRo", "VaoLai",
-                   "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot", "ChanDongTien", "DongTienThieuDuLieu");
+                   "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot", "ChanDongTien", "DongTienThieuDuLieu",
+                   "Khoa_MoKhoa_HetGio_DungYen_CuoiPhien");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -392,7 +394,8 @@ double OnTester()
                 DoubleToString(g_maxOpenRiskPct, 2), g_chainSkips, g_reEntries,
                 DoubleToString(skR, 2), DoubleToString(kuR, 2), InpTrials > 1 ? InpTrials : 1, DoubleToString(sr0, 3),
                 DoubleToString(dsr, 1), minTRL > 0 ? IntegerToString((int)MathCeil(minTRL)) : "-1",
-                g_flowBlocked, g_flowNoData);
+                g_flowBlocked, g_flowNoData,
+                StringFormat("%d/%d/%d/%d/%d", g_hgLocks, g_hgUnlocks, g_hgTimeouts, g_stallExits, g_sessPartials));
       FileClose(h);
    }
    else

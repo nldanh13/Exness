@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.17
+# Hướng dẫn bot BTC (MT5) v5.18
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -924,3 +924,28 @@ Ba tính năng mới (mặc định tắt) + hai bộ cài đặt:
   EMA20 H4 (vùng giá rẻ), SL dưới đáy 20 nến H4 (≥ 2 ATR), chốt 1/3 ở 2R, trailing 3 ATR từ 1R. Rủi ro vẫn 1% / lệnh nên SL rộng thì
   khối lượng tự nhỏ lại. Chưa backtest tổ hợp này; cấu hình swing đã kiểm thử vẫn là mặc định của bot (Donchian H4 + ADX).
 Với BTC trên Exness (spread ~24 USD / BTC), dữ liệu backtest đến nay nghiêng hẳn về Swing: chỉ khung H4 qua được cả hai giai đoạn.
+
+## v5.18: Khóa lệnh (hedging) và đánh theo giờ cao điểm (16/11/2026) – CHƯA KIỂM THỬ
+**Khóa – mở khóa – nhồi** (`TrendBot/Hedge.mqh`, mặc định tắt, tài khoản phải ở chế độ phòng hộ):
+- Khóa: bot giữ đúng 1 lệnh, lệnh đó lỗ `InpHedgeLockLossR` R (khóa lỗ, < 1 để khóa trước khi chạm SL) hoặc lời
+  `InpHedgeLockProfitR` R khi sắp có tin Mỹ / từ `InpHedgeFriHour` giờ thứ Sáu (khóa lời) → mở lệnh ngược chiều cùng khối lượng,
+  bỏ SL / TP lệnh gốc, ghi lại vùng đỉnh / đáy `InpHedgeZoneBars` nến. Mỗi lệnh chỉ khóa 1 lần.
+- Mở khóa: không theo một cây nến. Nến đóng cửa hẳn ra ngoài vùng → nến sau hồi về test lại (≤ `InpHedgeRetestATR` ATR quanh mép)
+  mà vẫn đóng cửa ngoài vùng → đóng lệnh ngược xu hướng, giữ lệnh cùng xu hướng. Đóng lại vào trong vùng = phá vỡ giả, chờ tiếp.
+  Khóa lời chỉ mở khóa khi tin / cuối tuần đã qua.
+- Lệnh còn lại: SL dưới đáy nến test − 0,25 ATR (đang lời thì ít nhất hòa vốn), rồi quản lý như thường (hòa vốn, trailing, nhồi).
+  Không đặt được SL thì bot đóng luôn, không để lệnh trần. Một lệnh bị đóng ngoài ý muốn: lệnh kia đặt SL ở mép vùng bên kia.
+- Không khóa quá lâu: quá `InpHedgeMaxBars` nến chưa xác nhận thì đóng cả hai (= cắt lỗ). Giữ 2 lệnh tốn phí (spread, swap) gấp đôi.
+- Lúc đang khóa: không hòa vốn / trailing / nhồi / vào lệnh mới; 2 lệnh không có SL nên mọi kiểm tra rủi ro nhóm coi như hết hạn mức.
+  Báo cáo backtest gộp lệnh khóa vào cùng đợt với lệnh gốc (R tính theo SL ban đầu của lệnh gốc).
+
+**Nhồi đúng bài** (dùng cho cả lệnh còn lại sau mở khóa và đánh theo giờ): `InpPyramidRetest` chỉ nhồi khi giá hồi về ≥ 0,5 ATR
+từ đỉnh 5 nến rồi đóng cửa bật lên; `InpPyramidSLBars` dời SL chung của mọi lớp lên dưới đáy N nến gần nhất. Vẫn giữ các luật cũ:
+chỉ nhồi khi đang lời, lớp sau nhỏ hơn (`InpPyramidLotFactor`), lớp cũ về hòa vốn trước khi nhồi.
+
+**Giờ cao điểm** (giờ server Exness = UTC; Việt Nam = UTC + 7):
+- `InpSession2StartH` / `InpSession2EndH`: khung cao điểm thứ hai. Vào lệnh và nhồi chỉ trong một trong hai khung.
+  London mở 14–15 giờ VN = 7–8 UTC; New York 19:30–23 giờ VN = 12:30–16 UTC; phiên Á buổi sáng và đêm khuya là giờ vắng.
+- `InpSessPartialR`: vừa ra khỏi giờ cao điểm, lệnh đang lời ≥ x R thì chốt một nửa và dời SL về hòa vốn (mỗi lệnh 1 lần).
+- Bộ cài đặt: **`15-Khoa-lenh-Hedging-H4-THU-NGHIEM`**, **`16-Gio-cao-diem-London-NewYork-H1-THU-NGHIEM`**.
+- Cột báo cáo mới `Khoa_MoKhoa_HetGio_DungYen_CuoiPhien` = số lần khóa / mở khóa / hết hạn khóa / thoát lệnh đứng yên / chốt cuối phiên.

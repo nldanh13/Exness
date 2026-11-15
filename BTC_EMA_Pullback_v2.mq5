@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.17"
-#property version   "5.1700"
+#define  BOT_VERSION "5.18"
+#property version   "5.1800"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -130,6 +130,8 @@ input double          InpPyramidLotFactor = 0.5;        // Hệ số giảm lot 
 input int             InpPyramidMax       = 1;          // Nhồi lệnh: tổng số lớp tối đa (1 = tắt)
 input double          InpPyramidStepATR   = 1.0;        // Nhồi thêm khi giá đi tiếp (× ATR)
 input int             InpPyramidTFmin     = 0;          // Kiểm tra nhồi mỗi (phút, 0 = mỗi nến khung chính)
+input bool            InpPyramidRetest    = false;      // Chỉ nhồi khi giá hồi về rồi bật lên
+input int             InpPyramidSLBars    = 0;          // Nhồi: SL chung dưới đáy / trên đỉnh (số nến, 0 = tắt)
 
 input group "7. Dừng lỗ và chốt lời"
 input double          InpMinSLATRMult     = 1.0;        // SL tối thiểu theo ATR (0 = tắt)
@@ -151,6 +153,14 @@ input int             InpSLStructBars     = 0;          // SL dưới cấu trú
 input double          InpSLStructMinATR   = 1.5;        // SL dưới cấu trúc: không sát hơn (× ATR)
 input int             InpStallBars        = 0;          // Lệnh đứng yên: thoát sau (số nến, 0 = tắt)
 input double          InpStallMinATR      = 0.5;        // Lệnh đứng yên: chưa đi được (× ATR) thì thoát
+input double          InpSessPartialR     = 0;          // Hết giờ cao điểm: chốt một nửa nếu đang lời (R, 0 = tắt)
+input double          InpHedgeLockLossR   = 0;          // Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)
+input double          InpHedgeLockProfitR = 0;          // Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)
+input bool            InpHedgeNews        = true;       // Khóa lời trước tin Mỹ
+input int             InpHedgeFriHour     = 20;         // Khóa lời cuối tuần: từ giờ thứ Sáu (giờ server, −1 = tắt)
+input int             InpHedgeZoneBars    = 20;         // Vùng giá quan trọng khi khóa (số nến)
+input double          InpHedgeRetestATR   = 0.3;        // Mở khóa: nến test lại cách mép vùng tối đa (× ATR)
+input int             InpHedgeMaxBars     = 48;         // Khóa quá (số nến) chưa xác nhận thì đóng cả hai (0 = không giới hạn)
 
 input group "8. Khối lượng và rủi ro"
 input double          InpRiskPercent      = 1.0;        // Rủi ro mỗi lệnh (% vốn)
@@ -173,6 +183,8 @@ input int             InpBlock2Start      = -1;         // Khung nghỉ 2: từ 
 input int             InpBlock2End        = 20;         // Khung nghỉ 2: đến giờ
 input int             InpSessionStartH    = -1;         // Chỉ vào lệnh từ giờ (giờ server, −1 = cả ngày)
 input int             InpSessionEndH      = -1;         // Chỉ vào lệnh đến giờ
+input int             InpSession2StartH   = -1;         // Giờ cao điểm 2: từ giờ (−1 = không dùng)
+input int             InpSession2EndH     = -1;         // Giờ cao điểm 2: đến giờ
 
 input group "10. Bảo vệ tài khoản"
 input double          InpMaxDailyLossPct  = 3.0;        // Khóa lỗ trong ngày (% vốn bot, 0 = tắt)
@@ -301,6 +313,9 @@ double          P_DistClimaxATR, P_DistBoxMaxATR;
 bool            P_DistNeedUT;
 int             P_GridBars, P_GridLevels;
 int             P_SessionStartH, P_SessionEndH, P_SLStructBars, P_StallBars;
+int             P_Session2StartH, P_Session2EndH, P_PyramidSLBars, P_HedgeFriHour, P_HedgeZoneBars, P_HedgeMaxBars;
+bool            P_PyramidRetest, P_HedgeNews;
+double          P_SessPartialR, P_HedgeLockLossR, P_HedgeLockProfitR, P_HedgeRetestATR;
 double          P_SLStructMinATR, P_StallMinATR;
 double          P_GridMinATR, P_GridMaxATR, P_GridMaxADX, P_GridMinStepCost, P_GridStopATR;
 int             P_OrbMinutes;
@@ -424,6 +439,10 @@ void LoadParams()
    P_GridBars = InpGridBars; P_GridMinATR = InpGridMinATR; P_GridMaxATR = InpGridMaxATR; P_GridMaxADX = InpGridMaxADX;
    P_GridLevels = InpGridLevels; P_GridMinStepCost = InpGridMinStepCost; P_GridStopATR = InpGridStopATR;
    P_SessionStartH = InpSessionStartH; P_SessionEndH = InpSessionEndH; P_SLStructBars = InpSLStructBars;
+   P_Session2StartH = InpSession2StartH; P_Session2EndH = InpSession2EndH; P_PyramidRetest = InpPyramidRetest;
+   P_PyramidSLBars = InpPyramidSLBars; P_SessPartialR = InpSessPartialR; P_HedgeLockLossR = InpHedgeLockLossR;
+   P_HedgeLockProfitR = InpHedgeLockProfitR; P_HedgeNews = InpHedgeNews; P_HedgeFriHour = InpHedgeFriHour;
+   P_HedgeZoneBars = InpHedgeZoneBars; P_HedgeRetestATR = InpHedgeRetestATR; P_HedgeMaxBars = InpHedgeMaxBars;
    P_SLStructMinATR = InpSLStructMinATR; P_StallBars = InpStallBars; P_StallMinATR = InpStallMinATR;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
@@ -546,6 +565,18 @@ bool SetParam(const string k, const string v)
    if(k == "InpGridStopATR") { P_GridStopATR = StringToDouble(v); return true; }
    if(k == "InpSessionStartH") { P_SessionStartH = (int)StringToInteger(v); return true; }
    if(k == "InpSessionEndH") { P_SessionEndH = (int)StringToInteger(v); return true; }
+   if(k == "InpSession2StartH") { P_Session2StartH = (int)StringToInteger(v); return true; }
+   if(k == "InpSession2EndH") { P_Session2EndH = (int)StringToInteger(v); return true; }
+   if(k == "InpPyramidRetest") { P_PyramidRetest = (v == "true" || v == "1"); return true; }
+   if(k == "InpPyramidSLBars") { P_PyramidSLBars = (int)StringToInteger(v); return true; }
+   if(k == "InpSessPartialR") { P_SessPartialR = StringToDouble(v); return true; }
+   if(k == "InpHedgeLockLossR") { P_HedgeLockLossR = StringToDouble(v); return true; }
+   if(k == "InpHedgeLockProfitR") { P_HedgeLockProfitR = StringToDouble(v); return true; }
+   if(k == "InpHedgeNews") { P_HedgeNews = (v == "true" || v == "1"); return true; }
+   if(k == "InpHedgeFriHour") { P_HedgeFriHour = (int)StringToInteger(v); return true; }
+   if(k == "InpHedgeZoneBars") { P_HedgeZoneBars = (int)StringToInteger(v); return true; }
+   if(k == "InpHedgeRetestATR") { P_HedgeRetestATR = StringToDouble(v); return true; }
+   if(k == "InpHedgeMaxBars") { P_HedgeMaxBars = (int)StringToInteger(v); return true; }
    if(k == "InpSLStructBars") { P_SLStructBars = (int)StringToInteger(v); return true; }
    if(k == "InpSLStructMinATR") { P_SLStructMinATR = StringToDouble(v); return true; }
    if(k == "InpStallBars") { P_StallBars = (int)StringToInteger(v); return true; }
@@ -700,6 +731,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Grid.mqh"
+#include "TrendBot/Hedge.mqh"
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
 #include "TrendBot/ManualEntry.mqh"
@@ -1085,7 +1117,9 @@ void OnTickBody()
    // khi chien luoc chinh dang dung han hoac cham lo ngay (MainStopped trong ManualEntry.mqh).
    GuardPyramid();                  // tu nhoi lenh tay theo xu huong (InpGuardPyramidMax)
    GuardAutoEntry();                // thu nghiem: bot tu vao lenh dau (InpGuardAutoEntry)
+   HedgeTick();                     // khoa / mo khoa lenh (InpHedgeLockLossR, InpHedgeLockProfitR), truoc quan ly lenh
    ManagePositions();
+   SessionEndPartial();             // het gio cao diem: chot mot nua + hoa von (InpSessPartialR)
    StallExit();                     // lenh dung yen qua lau thi thoat (InpStallBars)
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
@@ -1170,12 +1204,43 @@ void OnTickBody()
    if(SendEntry(buySignal, atr, false) > 0) ReEntryArm(buySignal, barTime);
 }
 
+// Truoc khi sang gio vang: lenh dang loi >= InpSessPartialR R thi chot mot nua va doi SL ve hoa von (1 lan / lenh,
+// dung chung dau "da chot mot phan" voi InpUsePartial). Kich hoat o lan dau tien bot thay gio da ra khoi khung cao diem.
+void SessionEndPartial()
+{
+   static int wasIn = -1;
+   if(P_SessPartialR <= 0 || !SessionsSet()) return;
+   MqlDateTime dt; TimeToStruct(TimeCurrent(), dt);
+   int inNow = InSession(dt.hour) ? 1 : 0;
+   bool edge = wasIn == 1 && inNow == 0;
+   wasIn = inNow;
+   if(!edge || HedgeActive() || P_Strategy == STRAT_GRID) return;
+   double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsOwnSelected()) continue;
+      ulong id = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
+      string rK = GVName("R_" + (string)id), pK = GVName("P_" + (string)id);
+      double r = GlobalVariableCheck(rK) ? GlobalVariableGet(rK) : 0;
+      if(r <= 0 || GlobalVariableCheck(pK)) continue;
+      bool buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), cur = PositionGetDouble(POSITION_PRICE_CURRENT);
+      double sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP), vol = PositionGetDouble(POSITION_VOLUME);
+      if((buy ? cur - op : op - cur) < P_SessPartialR * r) continue;
+      double half = NormalizeVolume(vol * 0.5);
+      if(half >= minL && vol - half >= minL - 1e-9 && PrepSend() && trade.PositionClosePartial(t, half)) g_sessPartials++;
+      GlobalVariableSet(pK, 1);
+      if(PositionSelectByTicket(t) && (buy ? sl < op : (sl <= 0 || sl > op)))
+         TradeDone(PrepSend() && trade.PositionModify(t, NormalizeDouble(op, _Digits), tp), "Het gio cao diem: SL ve hoa von", "#" + (string)t);
+   }
+}
+
 // Lenh dung yen qua lau (scalp): giu >= InpStallBars nen khung chinh ma gia chua di duoc InpStallMinATR ATR theo chieu
 // lenh -> dong. Khong ap dung cho luoi (moi nac co TP rieng).
-int g_stallExits = 0;
 void StallExit()
 {
-   if(P_StallBars <= 0 || P_Strategy == STRAT_GRID) return;
+   if(P_StallBars <= 0 || P_Strategy == STRAT_GRID || HedgeActive()) return;
    double atr = 0;
    if(!GetValue(hATR, 0, 1, atr) || atr <= 0) return;
    for(int i = PositionsTotal() - 1; i >= 0; i--)

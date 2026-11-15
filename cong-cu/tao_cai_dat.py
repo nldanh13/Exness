@@ -147,6 +147,25 @@ PRESETS = [
     ], {"InpStrategy": "0", "InpUseADX": "false", "InpSLStructBars": "20", "InpSLStructMinATR": "2.0", "InpRR": "0",
         "InpUsePartial": "true", "InpPartialR": "2.0", "InpPartialPct": "33", "InpUseTrailing": "true", "InpTrailStartR": "1.0",
         "InpTrailATRMult": "3.0"}),
+    ("15-Khoa-lenh-Hedging-H4-THU-NGHIEM.set", [
+        "15. Khóa lệnh 3 bước: khóa, mở khóa, nhồi (Donchian H4 + ADX như mặc định)",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo. Tài khoản phải ở chế độ phòng hộ (Hedging).",
+        "Khóa lỗ khi lệnh lỗ 0,6R; khóa lời 1,5R trước tin Mỹ / từ 20 giờ thứ Sáu (UTC). Mở khóa khi giá đóng cửa ra ngoài đỉnh / đáy",
+        "20 nến rồi hồi về test lại (≤ 0,3 ATR) và giữ được. Khóa quá 48 nến (8 ngày) thì đóng cả hai = cắt lỗ.",
+        "Lệnh còn lại: nhồi tối đa 3 lớp, lớp sau bằng 1/2 lớp trước, chỉ nhồi khi giá hồi về rồi bật lên, SL chung dưới đáy 10 nến; trailing 3 ATR.",
+    ], {"InpHedgeLockLossR": "0.6", "InpHedgeLockProfitR": "1.5", "InpHedgeNews": "true", "InpHedgeFriHour": "20",
+        "InpHedgeZoneBars": "20", "InpHedgeRetestATR": "0.3", "InpHedgeMaxBars": "48",
+        "InpPyramidMax": "3", "InpPyramidLotFactor": "0.5", "InpPyramidStepATR": "1.0", "InpPyramidRetest": "true",
+        "InpPyramidSLBars": "10", "InpUseTrailing": "true", "InpTrailStartR": "1.0", "InpTrailATRMult": "3.0"}),
+    ("16-Gio-cao-diem-London-NewYork-H1-THU-NGHIEM.set", [
+        "16. Đánh theo giờ: Donchian H1, chỉ vào lệnh và nhồi trong giờ cao điểm London (7–10 UTC = 14–17 giờ Việt Nam)",
+        "và New York (12–16 UTC = 19–23 giờ Việt Nam). Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "Ra khỏi giờ cao điểm mà lệnh đang lời từ 1R: chốt một nửa và dời SL về hòa vốn (giờ vắng có lắc cũng đã giữ được lời).",
+        "Sang giờ cao điểm tiếp theo: nhồi tối đa 3 lớp khi giá hồi về rồi bật lên, lớp sau bằng 1/2, SL chung dưới đáy 10 nến.",
+        "Giờ server Exness = UTC. Mùa hè châu Âu / Mỹ (tháng 3–10) các phiên mở sớm hơn 1 giờ.",
+    ], {"InpTF": "16385", "InpSessionStartH": "7", "InpSessionEndH": "10", "InpSession2StartH": "12", "InpSession2EndH": "16",
+        "InpSessPartialR": "1.0", "InpPyramidMax": "3", "InpPyramidLotFactor": "0.5", "InpPyramidStepATR": "1.0",
+        "InpPyramidRetest": "true", "InpPyramidSLBars": "10"}),
 ]
 
 
