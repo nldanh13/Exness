@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.19"
-#property version   "5.1900"
+#define  BOT_VERSION "5.20"
+#property version   "5.2000"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -27,7 +27,8 @@ enum ENUM_STRATEGY
    STRAT_BIGTRADE     = 11,  // Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng
    STRAT_DISTRIB      = 12,  // Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại
    STRAT_GRID         = 13,  // Thử nghiệm: đánh lưới trong vùng đi ngang
-   STRAT_KNIFE        = 14   // Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh
+   STRAT_KNIFE        = 14,  // Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh
+   STRAT_OB           = 15   // Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -162,6 +163,11 @@ input int             InpKnifeBars        = 30;         // Dao rơi: cú giảm 
 input double          InpKnifeDropATR     = 6.0;        // Dao rơi: cú giảm dài ít nhất (× ATR)
 input double          InpKnifeProbePct    = 25;         // Dao rơi: lệnh thử ở đáy dùng (% rủi ro chuẩn, 0 = không thử)
 input double          InpKnifeRetestATR   = 0.3;        // Dao rơi: nến test lại cách đỉnh gần nhất tối đa (× ATR)
+input int             InpOBLookback       = 60;         // Order block: tìm trong (số nến)
+input double          InpOBImpulseATR     = 1.5;        // Order block: cú đẩy sau nến OB ít nhất (× ATR)
+input double          InpOBMaxATR         = 2.5;        // Order block: vùng rộng tối đa (× ATR)
+input int             InpOBStallBars      = 6;          // Order block: lình xình trong vùng quá (số nến) thì đứng ngoài
+input bool            InpOBBreaker        = true;       // Order block thủng: đánh khi giá hồi lên vùng thành kháng cự
 input double          InpHedgeLockLossR   = 0;          // Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)
 input double          InpHedgeLockProfitR = 0;          // Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)
 input bool            InpHedgeNews        = true;       // Khóa lời trước tin Mỹ
@@ -324,7 +330,9 @@ int             P_SessionStartH, P_SessionEndH, P_SLStructBars, P_StallBars;
 int             P_Session2StartH, P_Session2EndH, P_PyramidSLBars, P_HedgeFriHour, P_HedgeZoneBars, P_HedgeMaxBars;
 bool            P_PyramidRetest, P_HedgeNews;
 int             P_TrailSwingBars, P_KnifeLookback, P_KnifeBars;
-double          P_KnifeDropATR, P_KnifeProbePct, P_KnifeRetestATR, P_PyramidStopPct;
+double          P_KnifeDropATR, P_KnifeProbePct, P_KnifeRetestATR, P_PyramidStopPct, P_OBImpulseATR, P_OBMaxATR;
+int             P_OBLookback, P_OBStallBars;
+bool            P_OBBreaker;
 double          P_SessPartialR, P_HedgeLockLossR, P_HedgeLockProfitR, P_HedgeRetestATR;
 double          P_SLStructMinATR, P_StallMinATR;
 double          P_GridMinATR, P_GridMaxATR, P_GridMaxADX, P_GridMinStepCost, P_GridStopATR;
@@ -452,6 +460,8 @@ void LoadParams()
    P_Session2StartH = InpSession2StartH; P_Session2EndH = InpSession2EndH; P_PyramidRetest = InpPyramidRetest;
    P_PyramidSLBars = InpPyramidSLBars; P_SessPartialR = InpSessPartialR; P_HedgeLockLossR = InpHedgeLockLossR;
    P_HedgeLockProfitR = InpHedgeLockProfitR; P_HedgeNews = InpHedgeNews; P_HedgeFriHour = InpHedgeFriHour;
+   P_OBLookback = InpOBLookback; P_OBImpulseATR = InpOBImpulseATR; P_OBMaxATR = InpOBMaxATR;
+   P_OBStallBars = InpOBStallBars; P_OBBreaker = InpOBBreaker;
    P_PyramidStopPct = InpPyramidStopPct; P_TrailSwingBars = InpTrailSwingBars; P_KnifeLookback = InpKnifeLookback; P_KnifeBars = InpKnifeBars;
    P_KnifeDropATR = InpKnifeDropATR; P_KnifeProbePct = InpKnifeProbePct; P_KnifeRetestATR = InpKnifeRetestATR;
    P_HedgeZoneBars = InpHedgeZoneBars; P_HedgeRetestATR = InpHedgeRetestATR; P_HedgeMaxBars = InpHedgeMaxBars;
@@ -588,6 +598,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpHedgeFriHour") { P_HedgeFriHour = (int)StringToInteger(v); return true; }
    if(k == "InpHedgeZoneBars") { P_HedgeZoneBars = (int)StringToInteger(v); return true; }
    if(k == "InpHedgeRetestATR") { P_HedgeRetestATR = StringToDouble(v); return true; }
+   if(k == "InpOBLookback") { P_OBLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpOBImpulseATR") { P_OBImpulseATR = StringToDouble(v); return true; }
+   if(k == "InpOBMaxATR") { P_OBMaxATR = StringToDouble(v); return true; }
+   if(k == "InpOBStallBars") { P_OBStallBars = (int)StringToInteger(v); return true; }
+   if(k == "InpOBBreaker") { P_OBBreaker = (v == "true" || v == "1"); return true; }
    if(k == "InpPyramidStopPct") { P_PyramidStopPct = StringToDouble(v); return true; }
    if(k == "InpTrailSwingBars") { P_TrailSwingBars = (int)StringToInteger(v); return true; }
    if(k == "InpKnifeLookback") { P_KnifeLookback = (int)StringToInteger(v); return true; }

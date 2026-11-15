@@ -184,6 +184,14 @@ PRESETS = [
     ], {"InpPyramidMax": "3", "InpPyramidLotFactor": "0.5", "InpPyramidStepATR": "1.0", "InpPyramidRetest": "true",
         "InpPyramidSLBars": "10", "InpPyramidStopPct": "70", "InpRR": "4", "InpUsePartial": "true", "InpPartialR": "2.0",
         "InpPartialPct": "33", "InpUseTrailing": "true", "InpTrailStartR": "2.0", "InpTrailATRMult": "3.0"}),
+    ("19-Order-block-5-phan-ung-H1-THU-NGHIEM.set", [
+        "19. Order block (chiến lược 15, H1): chạm vùng chưa phải tín hiệu, cách giá phản ứng mới là tín hiệu. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "OB tăng = nến giảm cuối cùng trước cú đẩy ≥ 1,5 ATR. Vào: kiểu 2 (vào tới giữa vùng rồi nến tăng đóng trên giữa, SL dưới đáy vùng)",
+        "và kiểu 3 (quét thủng đáy rồi đóng cửa quay vào, SL dưới đáy râu). Không đuổi kiểu 1 (chạm mép bật mạnh); đứng ngoài kiểu 4",
+        "(lình xình ≥ 6 nến) và kiểu 5 (đóng cửa thủng). Vùng thủng mà giá hồi lên bị từ chối: bán (kháng cự). TP đỉnh con sóng hoặc 2R.",
+        "Theo xu hướng D1 (EMA200). OB giảm: ngược lại. Chỉ chạy demo.",
+    ], {"InpStrategy": "15", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2",
+        "InpOBLookback": "60", "InpOBImpulseATR": "1.5", "InpOBMaxATR": "2.5", "InpOBStallBars": "6", "InpOBBreaker": "true"}),
 ]
 
 

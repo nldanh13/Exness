@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.19
+# Hướng dẫn bot BTC (MT5) v5.20
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 15 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 16 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -970,3 +970,17 @@ chỉ nhồi khi đang lời, lớp sau nhỏ hơn (`InpPyramidLotFactor`), lớ
 4. `InpPyramidSLBars`: mỗi lần thêm, SL chung dời lên dưới đáy mới nhất. Tổng rủi ro mở không vượt 1 lệnh chuẩn (có từ trước, CalcLots).
 - Biết lúc dừng: `InpPyramidStopPct` – giá đã đi x% quãng đường từ lớp đầu tới mục tiêu lớn (TP lớp đầu, hoặc mức `PX_`) thì ngừng
   thêm lớp, chuyển sang chốt từng phần. Bot không có chế độ nhồi khi đang lỗ (trung bình giá) và sẽ không có.
+
+## v5.20: Order block – 5 kiểu phản ứng (chiến lược 15, 16/11/2026) – CHƯA KIỂM THỬ
+Quy tắc chung: chạm order block chưa phải tín hiệu, cách giá phản ứng tại đó mới là tín hiệu (`InpStrategy = 15`,
+bộ `19-Order-block-5-phan-ung-H1-THU-NGHIEM`).
+- Order block tăng = nến giảm cuối cùng ngay trước cú đẩy lên (trong 3 nến, giá đóng cửa cao hơn đỉnh nến đó ≥ `InpOBImpulseATR` ATR).
+  Vùng = đỉnh..đáy nến đó, rộng ≤ `InpOBMaxATR` ATR. Tìm trong `InpOBLookback` nến, lấy vùng gần nhất giá đang về. Mỗi vùng vào 1 lần.
+- Kiểu 1 – chạm mép trên rồi bật mạnh: **không đuổi**, chờ nhịp hồi sau.
+- Kiểu 2 – vào tới giữa vùng rồi nến tăng đóng cửa trên giữa vùng: **Buy**, SL dưới đáy vùng − 0,25 ATR (phản ứng chuẩn nhất).
+- Kiểu 3 – râu quét thủng đáy rồi nến tăng đóng cửa quay lại: **Buy**, SL dưới đáy râu − 0,1 ATR (thường mạnh nhất).
+- Kiểu 4 – lình xình trong vùng ≥ `InpOBStallBars` nến: **đứng ngoài**.
+- Kiểu 5 – nến đóng cửa thủng hẳn đáy vùng: **đứng ngoài**. `InpOBBreaker`: giá hồi lên lại, chạm đáy vùng và nến giảm đóng cửa dưới
+  → **Sell** (vùng thành kháng cự), SL trên nến đó + 0,25 ATR.
+- TP: đỉnh con sóng sau cú đẩy nếu xa hơn 1R, không thì theo `InpRR`. Order block giảm: làm ngược lại.
+- Đã thêm vào đợt xếp hạng (`XH-OrderBlock-H1`, nay là 16 chiến lược).

@@ -165,6 +165,86 @@ bool KnifePattern(const double &hi[], const double &lo[], const double &op[], co
    }
    return false;
 }
+// Order block (v5.20, CHUA KIEM THU). OB tang = nen giam CUOI CUNG ngay truoc mot cu day len manh (trong 3 nen gia dong cua
+// cao hon dinh nen do >= InpOBImpulseATR ATR). Vung = dinh..day cay nen do (rong <= InpOBMaxATR ATR). Cham OB chua phai tin hieu,
+// CACH GIA PHAN UNG tai do moi la tin hieu. Xet nen vua dong khi gia quay ve vung:
+//  1) Cham mep tren roi bat manh (khong vao toi nua vung): phe mua rat manh - lo roi thi KHONG duoi, cho nhip hoi sau.
+//  2) Vao toi giua vung roi nen tang dong cua tren giua vung: phan ung chuan -> Buy, SL duoi day OB.
+//  3) Quet thung day (rau duoi day OB) roi dong cua quay lai ben trong, nen tang: thuong la manh nhat -> Buy, SL duoi day cay rau.
+//  4) Di ngang linh xinh trong vung >= InpOBStallBars nen: phe mua do du -> khong vao (o trong vung cang lau cang de thung).
+//  5) Nen dong cua thung han duoi day OB: vung hong, dung ngoai. Gia hoi len lai vung do (InpOBBreaker): vung thanh khang cu,
+//     nen giam bi tu choi o day vung -> Sell, SL tren nen do.
+// TP = dinh con song sau cu day neu xa hon 1R, khong thi theo InpRR. OB giam: doi dau gia.
+bool OBPattern(const double &hi[], const double &lo[], const double &op[], const double &cl[], const datetime &tm[],
+               const int last, const double atr, int &mode, double &slDist, double &tp, datetime &key)
+{
+   mode = 0; slDist = 0; tp = 0; key = 0;
+   int k0 = MathMax(1, last - P_OBLookback);
+   for(int k = last - 4; k >= k0; k--)
+   {
+      if(cl[k] >= op[k] || cl[k + 1] <= op[k + 1]) continue;           // nen giam cuoi cung, ngay sau la nen tang
+      double H = hi[k], Lw = lo[k], mid = (H + Lw) / 2.0;
+      if(H - Lw > P_OBMaxATR * atr || H - Lw < 0.1 * atr) continue;
+      int ie = -1;
+      for(int i = k + 1; i <= MathMin(k + 3, last - 1) && ie < 0; i++) if(cl[i] >= H + P_OBImpulseATR * atr) ie = i;
+      if(ie < 0) continue;
+      double swingHi = hi[ie];
+      for(int m = ie; m < last; m++) swingHi = MathMax(swingHi, hi[m]);
+      int brk = -1;
+      for(int m = ie + 1; m < last && brk < 0; m++) if(cl[m] < Lw) brk = m;
+      if(brk >= 0)
+      {
+         // 5) vung da hong: chi con co the thanh khang cu khi gia hoi len lai
+         if(!P_OBBreaker || tm[k] == g_obFlipUsed) continue;
+         bool reclaimed = false;
+         for(int m = brk + 1; m < last && !reclaimed; m++) if(cl[m] > H) reclaimed = true;
+         if(reclaimed) continue;
+         if(hi[last] >= Lw - 0.3 * atr && hi[last] <= H + 0.25 * atr && cl[last] < Lw && cl[last] < op[last])
+         {
+            mode = 4; key = tm[k];
+            slDist = MathMax(hi[last] + 0.25 * atr - cl[last], 0.5 * atr);
+            return true;
+         }
+         continue;
+      }
+      if(lo[last] > H) continue;                                       // gia chua ve vung nay
+      if(tm[k] == g_obUsed) return false;                              // OB nay da vao lenh
+      if(cl[last] < Lw) return false;                                  // 5) vua dong cua thung han: dung ngoai
+      int stall = 0;
+      for(int m = last - 1; m > ie && lo[m] <= H && cl[m] >= Lw && cl[m] <= H; m--) stall++;
+      if(stall >= P_OBStallBars) return false;                         // 4) linh xinh trong vung: dung ngoai
+      bool bull = cl[last] > op[last];
+      if(lo[last] < Lw && cl[last] >= Lw && bull)                      // 3) quet thung day roi quay lai
+      { mode = 3; slDist = MathMax(cl[last] - (lo[last] - 0.1 * atr), 0.3 * atr); }
+      else if(lo[last] <= mid && lo[last] >= Lw && bull && cl[last] > mid) // 2) vao toi giua roi bat
+      { mode = 2; slDist = MathMax(cl[last] - (Lw - 0.25 * atr), 0.3 * atr); }
+      else return false;                                               // 1) chi cham mep / chua xac nhan: khong duoi
+      key = tm[k];
+      tp = swingHi - cl[last] >= slDist ? swingHi : 0;
+      return true;
+   }
+   return false;
+}
+bool OBScan(const double atr, bool &buy, int &mode, double &slDist, double &tp, datetime &key)
+{
+   int L = (P_OBLookback < 20 ? 20 : P_OBLookback) + 6;
+   double hi[], lo[], op[], cl[], nh[], nl[], no[], nc[];
+   datetime tm[];
+   ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(op, L); ArrayResize(cl, L); ArrayResize(tm, L);
+   ArrayResize(nh, L); ArrayResize(nl, L); ArrayResize(no, L); ArrayResize(nc, L);
+   for(int i = 0; i < L; i++)
+   {
+      int sh = L - i;
+      hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh);
+      op[i] = iOpen(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh); tm[i] = iTime(_Symbol, P_TF, sh);
+      if(hi[i] <= 0 || lo[i] <= 0) return false;
+      nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
+   }
+   // OB tang: mode 2/3 = Buy, 4 = Sell (khang cu). OB giam (doi dau): nguoc lai
+   if(OBPattern(hi, lo, op, cl, tm, L - 1, atr, mode, slDist, tp, key)) { buy = mode != 4; return true; }
+   if(OBPattern(nh, nl, no, nc, tm, L - 1, atr, mode, slDist, tp, key)) { buy = mode == 4; tp = -tp; return true; }
+   return false;
+}
 // Quet ca 2 chieu: dao roi -> mua; gia tang dung thang roi gay -> ban (doi dau gia). key = thoi diem nen day / dinh.
 bool KnifeScan(const double atr, bool &buy, int &mode, double &slDist, double &target, datetime &key)
 {
@@ -648,6 +728,16 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             g_sigRiskMult = km == 1 ? MathMin(1.0, P_KnifeProbePct / 100.0) : 1.0;
             if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
+      }
+   }
+   else if(P_Strategy == STRAT_OB)
+   {
+      bool ob; int om; double os, ot; datetime okey;
+      if(OBScan(atr, ob, om, os, ot, okey))
+      {
+         if(ob) buyBase = true; else sellBase = true;
+         g_sigSL = os; g_sigTP = ot;
+         if(om == 4) g_obFlipUsed = okey; else g_obUsed = okey;
       }
    }
    else if(P_Strategy == STRAT_DISTRIB)
