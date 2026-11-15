@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.27"
-#property version   "5.2700"
+#define  BOT_VERSION "5.28"
+#property version   "5.2800"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -144,6 +144,9 @@ input group "6. Cách vào lệnh"
 input bool            InpManualEntry      = false;      // Tự bấm BUY / SELL trên chart (bot không tự vào)
 input double          InpEntryPullATR     = 0;          // Chờ giá hồi trước khi vào (× ATR, 0 = vào ngay)
 input int             InpEntryPullMode    = 0;          // Hết nến mà giá chưa hồi: 0 = bỏ, 1 = vào giá thị trường
+input int             InpScaleParts       = 1;          // Giải vốn: chia lệnh thành (phần, 1 = vào hết một lần)
+input double          InpScaleStepATR     = 0.5;        // Giải vốn: mỗi phần sau đặt sâu hơn (× ATR)
+input int             InpScaleBars        = 6;          // Giải vốn: hủy phần chưa khớp sau (số nến)
 input int             InpReEntryMax       = 0;          // Vào lại sau khi dính SL: tối đa (lần, 0 = tắt)
 input int             InpReEntryBars      = 6;          // Chỉ vào lại trong vòng (số nến khung chính)
 input bool            InpAutoSelect       = false;      // Tự chọn chiến lược: chỉ vào lệnh khi chiến lược này đứng đầu
@@ -167,6 +170,7 @@ input double          InpTrailStartR      = 0.0;        // Bắt đầu trailing
 input double          InpTrailATRMult     = 3.0;        // Khoảng cách trailing = ATR ×
 input bool            InpUseBreakeven     = false;      // Dời SL về hòa vốn
 input double          InpBreakevenR       = 1.0;        // Dời về hòa vốn khi lãi đạt (R)
+input int             InpBESwingBars      = 0;          // Hoặc khi nến đóng cửa qua đỉnh gần nhất trước lệnh (số nến, 0 = tắt)
 input double          InpBEBufferR        = 0.05;       // Cộng thêm vào mức hòa vốn (R)
 input bool            InpUsePartial       = false;      // Chốt lời một phần
 input double          InpPartialR         = 1.0;        // Chốt một phần khi lãi đạt (R)
@@ -327,6 +331,8 @@ double          P_VwapBand1, P_VwapBand2, P_VwapBand3, P_VwapMinRR, P_KVHighMult
 int             P_KVLookback, P_KVBins, P_KVMinBars, P_KVMinReact, P_SimpleLevels, P_SimpleLookback, P_SimplePivot;
 int             P_NewsPreMin, P_NewsProtect, P_NewsWindowMin, P_NewsRangeMin;
 bool            P_NewsWeekly, P_NewsNFP;
+int             P_ScaleParts, P_ScaleBars, P_BESwingBars;
+double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
@@ -492,6 +498,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_ScaleParts = InpScaleParts; P_ScaleStepATR = InpScaleStepATR; P_ScaleBars = InpScaleBars; P_BESwingBars = InpBESwingBars;
    P_NewsPreMin = InpNewsPreMin; P_NewsProtect = InpNewsProtect; P_NewsWeekly = InpNewsWeekly; P_NewsNFP = InpNewsNFP;
    P_NewsWindowMin = InpNewsWindowMin; P_NewsRangeMin = InpNewsRangeMin; P_NewsRangeMaxATR = InpNewsRangeMaxATR;
    P_SimpleLevels = InpSimpleLevels; P_SimpleLookback = InpSimpleLookback; P_SimplePivot = InpSimplePivot;
@@ -613,6 +620,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpScaleParts") { P_ScaleParts = (int)StringToInteger(v); return true; }
+   if(k == "InpScaleStepATR") { P_ScaleStepATR = StringToDouble(v); return true; }
+   if(k == "InpScaleBars") { P_ScaleBars = (int)StringToInteger(v); return true; }
+   if(k == "InpBESwingBars") { P_BESwingBars = (int)StringToInteger(v); return true; }
    if(k == "InpNewsPreMin") { P_NewsPreMin = (int)StringToInteger(v); return true; }
    if(k == "InpNewsProtect") { P_NewsProtect = (int)StringToInteger(v); return true; }
    if(k == "InpNewsNFP") { P_NewsNFP = (v == "true" || v == "1"); return true; }
@@ -1247,6 +1258,7 @@ void OnTickBody()
    NewsProtect();                   // sap ra tin: lenh dang loi chot bot / SL ve hoa von (InpNewsProtect)
    NewsWeekly();                    // sang thu Hai: lich tin trong tuan (InpNewsWeekly)
    StallExit();                     // lenh dung yen qua lau thi thoat (InpStallBars)
+   ScaleCleanup();                  // huy phan giai von chua khop (InpScaleParts)
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
    CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
@@ -1400,6 +1412,48 @@ void NewsProtect()
    }
 }
 
+// Giai von (v5.28): da xac dinh xu huong va vung vao thi chia so von dinh vao thanh 2-3 phan. Phan dau vao khi gia cham vung,
+// phan sau la lenh cho Limit sau hon InpScaleStepATR x ATR moi nac (gia di sau hon thi gia trung binh dep hon). TAT CA chung 1 SL
+// va TP; moi phan rui ro 1/n -> tong rui ro van chi InpRiskPercent. Day la ke hoach co tu truoc khi vao, KHONG phai nhoi khi dang lo:
+// so phan, muc gia va khoi luong co dinh ngay luc vao lenh. Phan chua khop bi huy sau InpScaleBars nen hoac khi khong con lenh.
+void ScalePlace(const bool buy, const double entry, const double slDist, const double atr, const int parts, const double baseMult)
+{
+   if(entry <= 0 || atr <= 0) return;
+   double sl = buy ? entry - slDist : entry + slDist;
+   double tp = 0;
+   for(int i = PositionsTotal() - 1; i >= 0 && tp == 0; i--)
+      if(PositionGetTicket(i) != 0 && IsOwnSelected()) tp = PositionGetDouble(POSITION_TP);
+   double minDist = (double)MathMax(SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL), SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * _Point + _Point * 2;
+   for(int k = 1; k < parts; k++)
+   {
+      double px = buy ? entry - k * P_ScaleStepATR * atr : entry + k * P_ScaleStepATR * atr;
+      double d = buy ? px - sl : sl - px;
+      if(d < MathMax(minDist, 0.2 * atr)) break;                       // qua sat SL: khong dat them
+      g_sigRiskMult = baseMult / parts;
+      double lots = CalcLots(d);
+      if(lots < SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN) - 1e-9) break;
+      bool ok = PrepSend() && (buy ? trade.BuyLimit(lots, NormalizeDouble(px, _Digits), _Symbol, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0, ORDER_TIME_GTC, 0, "BTC bot SCALE")
+                                   : trade.SellLimit(lots, NormalizeDouble(px, _Digits), _Symbol, NormalizeDouble(sl, _Digits), tp > 0 ? NormalizeDouble(tp, _Digits) : 0, ORDER_TIME_GTC, 0, "BTC bot SCALE"));
+      TradeDone(ok, "Giai von: dat phan " + IntegerToString(k + 1), buy ? "BUY LIMIT" : "SELL LIMIT");
+   }
+   g_sigRiskMult = 1;
+}
+// Huy phan giai von chua khop: qua InpScaleBars nen, hoac khong con lenh nao (lenh dau da dong)
+void ScaleCleanup()
+{
+   if(P_ScaleParts <= 1) return;
+   bool has = HasOwnPosition();
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+   {
+      ulong t = OrderGetTicket(i);
+      if(t == 0 || OrderGetString(ORDER_SYMBOL) != _Symbol || OrderGetInteger(ORDER_MAGIC) != (long)P_Magic) continue;
+      if(StringFind(OrderGetString(ORDER_COMMENT), "SCALE") < 0) continue;
+      datetime ts = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
+      if(!has || TimeCurrent() - ts >= (long)P_ScaleBars * PeriodSeconds(P_TF) || HedgeActive())
+         TradeDone(PrepSend() && trade.OrderDelete(t), "Huy phan giai von chua khop", "#" + (string)t);
+   }
+}
+
 // Lenh dung yen qua lau (scalp): giu >= InpStallBars nen khung chinh ma gia chua di duoc InpStallMinATR ATR theo chieu
 // lenh -> dong. Khong ap dung cho luoi (moi nac co TP rieng).
 void StallExit()
@@ -1501,6 +1555,10 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
 
    // Tu day toi khi gui lenh xong: giu khoa chung voi bot ma cung nhom. Khong lay duoc khoa thi KHONG vao lenh,
    // vi khong biet bot kia dang dung bao nhieu rui ro; thu lai o tick sau (van trong nen nay).
+   // Giai von (InpScaleParts): phan dau vao ngay voi 1/n rui ro, cac phan sau la lenh cho sau hon trong vung, chung SL
+   int parts = (P_ScaleParts > 1 && P_Strategy != STRAT_GRID) ? MathMin(P_ScaleParts, 3) : 1;
+   double baseMult = (g_sigRiskMult > 0 && g_sigRiskMult < 1) ? g_sigRiskMult : 1.0;
+   if(parts > 1) g_sigRiskMult = baseMult / parts;
    if(!GroupLock())
    {
       g_status = "Cho khoa rui ro chung voi bot cung nhom, chua vao lenh";
@@ -1548,6 +1606,7 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    uint rc = trade.ResultRetcode();
    bool filled = ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
    if(!filled) GroupClear();
+   if(filled && parts > 1) ScalePlace(buySignal, trade.ResultPrice(), slDist, atr, parts, baseMult);
    // Muc chot mot phan theo gia (vd. dinh cu cua cu giam): ManagePositions chot InpPartialPct khi gia cham
    if(filled && g_sigPartialPx > 0)
    {

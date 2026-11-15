@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.27
+# Hướng dẫn bot BTC (MT5) v5.28
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1070,3 +1070,13 @@ quét một đầu rồi quay đầu đi theo hướng thật. Tin mạnh nhất
   quy tắc, chưa đối chiếu BLS) chỉ nạp khi bật `InpNewsNFP`. `tin_my.csv` giữ nguyên CPI / FOMC đã kiểm chứng để cấu hình C so sánh được.
 - Lịch tin cho backtest nay được nạp khi dùng bất kỳ tính năng nào cần giờ tin (trước đây chỉ khi bật tránh tin – khóa lời trước tin
   trong backtest đã không có dữ liệu).
+
+## v5.28: 4 kỹ thuật đánh – phương pháp cho biết vào ở đâu, kỹ thuật quyết định mang về bao nhiêu (16/11/2026) – CHƯA KIỂM THỬ
+Bộ `27-Bon-ky-thuat-danh-H4-THU-NGHIEM` ghép đủ 4 kỹ thuật trên Donchian H4:
+1. **Giải vốn** (mới, `InpScaleParts` 2–3): phần đầu vào ngay với 1/n rủi ro; phần sau là lệnh chờ Limit sâu hơn `InpScaleStepATR` ATR mỗi
+   nấc, chung SL và TP, khối lượng tính để mỗi phần cũng 1/n rủi ro → tổng rủi ro vẫn đúng `InpRiskPercent`. Kế hoạch cố định lúc vào lệnh,
+   không phải nhồi khi lỗ. Hủy phần chưa khớp sau `InpScaleBars` nến hoặc khi lệnh đầu đã đóng. Báo cáo cộng rủi ro các phần vào 1R của đợt.
+2. **Hòa vốn không quá sớm**: có sẵn `InpBreakevenR` (mặc định 1R); mới `InpBESwingBars`: hoặc khi nến đóng cửa vượt đỉnh gần nhất trước lệnh.
+3. **Rời SL theo giá**: có sẵn từ v5.19 (`InpTrailSwingBars`, dưới mỗi đáy mới cao hơn).
+4. **Chốt từng phần**: có sẵn (`InpUsePartial`, `InpPartialR`, `InpPartialPct`).
+Lưu ý: mỗi phần giải vốn là một lệnh riêng nên 1R (để hòa vốn / chốt phần) của phần sau tính theo khoảng cách tới SL chung, nhỏ hơn phần đầu.

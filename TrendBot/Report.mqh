@@ -40,6 +40,20 @@ double PosRiskMoney(const ulong pid, double &slDist)
    return 0;
 }
 
+bool PosIsScale(const ulong pid)
+{
+   if(!HistorySelectByPosition(pid)) return false;
+   for(int i = 0; i < HistoryDealsTotal(); i++)
+   {
+      ulong d = HistoryDealGetTicket(i);
+      if(HistoryDealGetInteger(d, DEAL_ENTRY) != DEAL_ENTRY_IN) continue;
+      if(StringFind(HistoryDealGetString(d, DEAL_COMMENT), "SCALE") >= 0) return true;
+      ulong ord = (ulong)HistoryDealGetInteger(d, DEAL_ORDER);
+      return HistoryOrderSelect(ord) && StringFind(HistoryOrderGetString(ord, ORDER_COMMENT), "SCALE") >= 0;
+   }
+   return false;
+}
+
 // Phan phoi chuan: CDF (xap xi erf Abramowitz-Stegun 7.1.26, sai so < 1,5e-7) va nghich dao (Acklam, sai so ~1e-9)
 double NormCdf(const double x)
 {
@@ -254,6 +268,8 @@ double OnTester()
          campNet[nC] = 0; campRisk[nC] = PosRiskMoney(posIds[j], sd);
          campEnd = 0; nC++;
       }
+      // Phan giai von (lenh cho "SCALE") la mot phan cua cung 1 lenh da len ke hoach: cong rui ro vao 1R cua dot
+      if(join && PosIsScale(posIds[j])) { double sd2 = 0; campRisk[nC - 1] += PosRiskMoney(posIds[j], sd2); }
       campNet[nC - 1] += posNet[j];
       datetime e = posOut[j] > 0 ? posOut[j] : D'2999.12.31';   // chua dong (khong xay ra trong tester): coi nhu mo mai
       if(e > campEnd) campEnd = e;

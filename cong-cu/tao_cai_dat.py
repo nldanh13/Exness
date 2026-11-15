@@ -248,6 +248,15 @@ PRESETS = [
     ], {"InpStrategy": "20", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
         "InpNewsWindowMin": "240", "InpNewsRangeMin": "180", "InpNewsRangeMaxATR": "4", "InpNewsWeekly": "true",
         "InpNewsNFP": "true"}),
+    ("27-Bon-ky-thuat-danh-H4-THU-NGHIEM.set", [
+        "27. 4 kỹ thuật đánh (Donchian H4 + ADX như mặc định). CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "1) Giải vốn: 3 phần, phần đầu vào ngay, 2 phần chờ sâu hơn 0,5 / 1 ATR, chung SL, tổng rủi ro vẫn 1% (hủy sau 6 nến).",
+        "2) Hòa vốn: khi lời 1R hoặc nến đóng cửa vượt đỉnh 10 nến trước lệnh – không sớm hơn.",
+        "3) Rời SL theo giá: dưới mỗi đáy mới cao hơn của 10 nến (từ khi lời 0,5R). 4) Chốt từng phần: 50% ở 1,5R.",
+        "Không đặt TP: phần còn lại để thị trường tự báo khi nào hết sức.",
+    ], {"InpScaleParts": "3", "InpScaleStepATR": "0.5", "InpScaleBars": "6", "InpUseBreakeven": "true", "InpBreakevenR": "1.0",
+        "InpBESwingBars": "10", "InpTrailSwingBars": "10", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
+        "InpRR": "0", "InpUseTrailing": "false"}),
 ]
 
 

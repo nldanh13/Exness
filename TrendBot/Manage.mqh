@@ -242,7 +242,20 @@ void ManagePositions()
 
       // 2) Hoa von va 3) trailing ATR
       double newSL = sl;
-      if(P_UseBreakeven && rNow >= P_BreakevenR)
+      // Dung doi ve hoa von qua som: cho gia di duoc >= InpBreakevenR R, HOAC (InpBESwingBars) nen vua dong cua vuot dinh gan nhat
+      // truoc luc vao lenh (cao nhat InpBESwingBars nen truoc nen vao; day voi lenh ban). Tu luc do lenh gan nhu khong the thua.
+      bool swingBE = false;
+      if(P_BESwingBars > 0 && rNow > 0)
+      {
+         int sh0 = iBarShift(_Symbol, P_TF, (datetime)PositionGetInteger(POSITION_TIME), false);
+         if(sh0 >= 1)
+         {
+            int ix = isBuy ? iHighest(_Symbol, P_TF, MODE_HIGH, P_BESwingBars, sh0 + 1) : iLowest(_Symbol, P_TF, MODE_LOW, P_BESwingBars, sh0 + 1);
+            double cc = iClose(_Symbol, P_TF, 1);
+            if(ix >= 0) swingBE = isBuy ? cc > iHigh(_Symbol, P_TF, ix) : cc < iLow(_Symbol, P_TF, ix);
+         }
+      }
+      if(P_UseBreakeven && (rNow >= P_BreakevenR || swingBE))
       {
          if(isBuy  && (sl <= 0 || sl < beLevel)) newSL = beLevel;
          if(!isBuy && (sl <= 0 || sl > beLevel)) newSL = beLevel;
