@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.36"
-#property version   "5.3600"
+#define  BOT_VERSION "5.36.1"
+#property version   "5.3601"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -1540,7 +1540,8 @@ void OnTickBody()
    // Ly thuyet Dow (Dow.mqh): thuy trieu len hay xuong, giai doan nao, volume co xac nhan (InpDowFilter; luon bat voi chien luoc 16)
    if((buySignal || sellSignal) && !DowOk(buySignal)) return;
 
-   g_status = "Cho tin hieu";
+   // Chuoi phan tich / Theo tinh huong tu ghi trang thai (tinh huong, buoc dung lai): khong ghi de bang "Cho tin hieu"
+   if(P_Strategy != STRAT_SMART && P_Strategy != STRAT_CHAIN) g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;
 
    if(P_EntryPullATR > 0)
