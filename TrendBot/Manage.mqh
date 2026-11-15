@@ -61,6 +61,7 @@ void FinalizeClosed(const ulong posId)
    GlobalVariableDel(GVName("PT_" + (string)posId));
    GlobalVariableDel(GVName("PV_" + (string)posId));
    GlobalVariableDel(GVName("HL_" + (string)posId));
+   GlobalVariableDel(GVName("PX_" + (string)posId));
 }
 void ReconcileClosed()
 {
@@ -180,7 +181,11 @@ void ManagePositions()
       // Luu khoi luong CON LAI muc tieu (PV_) o lan dau. Moi lan chi dong phan con thieu so voi muc tieu,
       // nen neu server chi khop mot phan (DONE_PARTIAL) thi lan sau bot dong not, khong dong lo qua tay.
       string vKey = GVName("PV_" + (string)posId);
-      if(P_UsePartial && !GlobalVariableCheck(pKey) && (rNow >= P_PartialR || GlobalVariableCheck(vKey)))
+      // Muc chot theo gia do chien luoc dat (PX_, vd. dinh cu cua cu giam voi dao roi), them vao muc theo R
+      string xKey = GVName("PX_" + (string)posId);
+      double pxT = GlobalVariableCheck(xKey) ? GlobalVariableGet(xKey) : 0;
+      bool pxHit = pxT > 0 && (isBuy ? price >= pxT : price <= pxT);
+      if(P_UsePartial && !GlobalVariableCheck(pKey) && (rNow >= P_PartialR || pxHit || GlobalVariableCheck(vKey)))
       {
          if(!GlobalVariableCheck(vKey))
          {
@@ -246,6 +251,17 @@ void ManagePositions()
          double cand = isBuy ? price - atr * P_TrailATRMult : price + atr * P_TrailATRMult;
          if(isBuy  && cand > newSL) newSL = cand;
          if(!isBuy && (newSL <= 0 || cand < newSL)) newSL = cand;
+      }
+      // Giu lenh: moi khi gia tao day moi cao hon (dinh moi thap hon voi lenh ban), doi SL len duoi day do (InpTrailSwingBars)
+      if(P_TrailSwingBars > 0 && haveAtr && rNow >= 0.5)
+      {
+         int ix = isBuy ? iLowest(_Symbol, P_TF, MODE_LOW, P_TrailSwingBars, 1) : iHighest(_Symbol, P_TF, MODE_HIGH, P_TrailSwingBars, 1);
+         if(ix >= 0)
+         {
+            double cand = isBuy ? iLow(_Symbol, P_TF, ix) - 0.25 * atr : iHigh(_Symbol, P_TF, ix) + 0.25 * atr;
+            if(isBuy  && cand > newSL) newSL = cand;
+            if(!isBuy && (newSL <= 0 || cand < newSL)) newSL = cand;
+         }
       }
       newSL = NormalizeDouble(newSL, _Digits);
 
@@ -313,17 +329,38 @@ void PyramidStep(const bool addOnly = false)
    if(cnt >= P_PyramidMax || IsHalted() || GuardHalted() || DailyLossHit() || (P_GuardAlgoDayPct > 0 && GuardBucketLocked(2))) return;
    if(!MTFOk(buy)) return;                                   // cac khung nho/lon chua dong thuan thi chua nhoi
    if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
-   // Chi nhoi khi gia hoi ve roi bat len (InpPyramidRetest): nen truoc da lui >= 0,5 ATR tu dinh 5 nen gan nhat
-   // (day voi lenh ban) va nen vua dong cua theo chieu lenh
+   // Chi nhoi khi gia PHA DINH MOI roi HOI VE cham lai vung vua pha va giu duoc (InpPyramidRetest), khong mua duoi nen dang tang:
+   // dinh cu = cao nhat nen 6-25; mot trong nen 2-5 da dong cua tren dinh cu; nen vua dong cham ve trong 0,3 ATR quanh dinh cu,
+   // van dong cua tren va la nen tang. Lenh ban: nguoc lai voi day cu.
    ENUM_TIMEFRAMES ptf = addOnly ? PyrTF() : P_TF;
    if(P_PyramidRetest)
    {
-      double o1 = iOpen(_Symbol, ptf, 1);
-      int ih = iHighest(_Symbol, ptf, MODE_HIGH, 5, 1), il = iLowest(_Symbol, ptf, MODE_LOW, 5, 1);
-      if(ih < 0 || il < 0) return;
-      double hh = iHigh(_Symbol, ptf, ih), ll = iLow(_Symbol, ptf, il);
-      double l12 = MathMin(iLow(_Symbol, ptf, 1), iLow(_Symbol, ptf, 2)), h12 = MathMax(iHigh(_Symbol, ptf, 1), iHigh(_Symbol, ptf, 2));
-      if(buy ? (hh - l12 < 0.5 * atr || c1 <= o1) : (h12 - ll < 0.5 * atr || c1 >= o1)) return;
+      double o1 = iOpen(_Symbol, ptf, 1), l1 = iLow(_Symbol, ptf, 1), h1 = iHigh(_Symbol, ptf, 1);
+      int ix = buy ? iHighest(_Symbol, ptf, MODE_HIGH, 20, 6) : iLowest(_Symbol, ptf, MODE_LOW, 20, 6);
+      if(ix < 0) return;
+      double lvl = buy ? iHigh(_Symbol, ptf, ix) : iLow(_Symbol, ptf, ix);
+      bool broke = false;
+      for(int k = 2; k <= 5 && !broke; k++) { double ck = iClose(_Symbol, ptf, k); broke = buy ? ck > lvl : ck < lvl; }
+      bool held = buy ? (l1 <= lvl + 0.3 * atr && c1 > lvl && c1 > o1) : (h1 >= lvl - 0.3 * atr && c1 < lvl && c1 < o1);
+      if(!broke || !held) return;
+   }
+   // Biet luc dung (InpPyramidStopPct): gia da di duoc >= x% quang duong tu lop dau toi muc tieu lon (TP lop dau, hoac muc
+   // chot theo gia PX_) thi ngung them lop, chuyen sang chot tung phan
+   if(P_PyramidStopPct > 0)
+   {
+      datetime t0 = D'2999.12.31'; double op0 = 0, tg = 0;
+      for(int i = PositionsTotal() - 1; i >= 0; i--)
+      {
+         if(PositionGetTicket(i) == 0 || !IsOwnSelected()) continue;
+         datetime t = (datetime)PositionGetInteger(POSITION_TIME);
+         if(t >= t0) continue;
+         t0 = t; op0 = PositionGetDouble(POSITION_PRICE_OPEN); tg = PositionGetDouble(POSITION_TP);
+         string xk = GVName("PX_" + (string)PositionGetInteger(POSITION_IDENTIFIER));
+         if(tg <= 0 && GlobalVariableCheck(xk)) tg = GlobalVariableGet(xk);
+      }
+      double full = buy ? tg - op0 : op0 - tg;
+      if(tg > 0 && full > 0 && (buy ? c1 - op0 : op0 - c1) >= full * P_PyramidStopPct / 100.0)
+      { g_status = "Gia gan muc tieu lon: ngung nhoi, chuyen sang chot tung phan"; return; }
    }
    if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
    // Gio nghi / cuoi tuan va tin My (v5.10.19): nhoi la them rui ro, phai qua cung bo loc nhu lenh vao moi

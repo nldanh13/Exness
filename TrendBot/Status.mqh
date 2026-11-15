@@ -24,6 +24,7 @@ string StrategyName()
       case STRAT_BIGTRADE:   return "Big Trades";
       case STRAT_DISTRIB:    return "Hop phan phoi / tich luy";
       case STRAT_GRID:       return "Danh luoi";
+      case STRAT_KNIFE:      return "Dao roi: nho - lon - giu";
    }
    return "EMA pullback";
 }

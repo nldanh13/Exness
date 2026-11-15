@@ -322,7 +322,8 @@ $XhRuns = @(
     @{ N = "XH-RSICVD-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 10; InpTF = 16385; InpRR = 2 }) },
     @{ N = "XH-BigTrade-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 11; InpTF = 16385; InpRR = 2 }) },
     @{ N = "XH-PhanPhoi-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 12; InpTF = 16385; InpRR = 0 }) },
-    @{ N = "XH-Luoi-H1";      I = (Cfg $Brk $Scalp @{ InpStrategy = 13; InpTF = 16385; InpAvoidUSNews = "true" }) }
+    @{ N = "XH-Luoi-H1";      I = (Cfg $Brk $Scalp @{ InpStrategy = 13; InpTF = 16385; InpAvoidUSNews = "true" }) },
+    @{ N = "XH-DaoRoi-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 14; InpTF = 16385; InpRR = 0; InpUsePartial = "true"; InpPartialPct = 50; InpPartialR = 99; InpTrailSwingBars = 10 }) }
 )
 foreach ($x in $XhRuns) {
     $Runs += @{ Name = $x.N; Inputs = $x.I; Deposit = 30000; From = (Get-Date).AddYears(-$XhNam).ToString("yyyy.MM.dd") }

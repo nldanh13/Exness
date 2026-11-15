@@ -115,12 +115,108 @@ bool DistPattern(const double &hi[], const double &lo[], const double &op[], con
    return false;
 }
 
+// Dao roi (v5.19, CHUA KIEM THU): dung bat con dao dang roi. Khong chi bao nao noi truoc duoc dau la day; nhung cu bat
+// trong luc roi la bay de tay to co cho ban them. Nguoi kiem nhieu nhat mua SAU day. 3 chu: NHO, LON, GIU.
+//  - Dao roi: gia giam >= InpKnifeDropATR ATR tu dinh xuong day trong toi da InpKnifeBars nen (day = thap nhat InpKnifeLookback nen).
+//  - NHO (mode 1): nen ngay sau day dong cua tang vuot dinh nen truoc -> lenh thu InpKnifeProbePct % rui ro chuan, SL duoi day.
+//  - LON (mode 2): gia dong cua vuot dinh gan nhat cua cu giam (dinh thap hon cuoi cung truoc day), roi co nen hoi ve test lai
+//    (cham trong InpKnifeRetestATR ATR) ma van dong cua tren va la nen tang -> vao lenh day du. SL duoi day cao hon vua tao.
+//    Pha len roi dong lai duoi muc do: that bai, khong vao. Tong rui ro lenh thu + lenh lon khong vuot 1 lenh chuan (CalcLots).
+//  - GIU: chot mot phan (InpPartialPct) o dinh cu cua cu giam, phan con lai doi SL len duoi moi day cao hon (InpTrailSwingBars).
+// Ban nguoc lai (gia tang dung thang roi gay) doi dau gia.
+bool KnifePattern(const double &hi[], const double &lo[], const double &op[], const double &cl[],
+                  const int last, const double atr, int &mode, double &slDist, double &target, int &iLow0)
+{
+   mode = 0; slDist = 0; target = 0; iLow0 = -1;
+   int iLo = 0;
+   for(int i = 1; i <= last; i++) if(lo[i] <= lo[iLo]) iLo = i;
+   if(iLo < 5 || iLo > last - 1) return false;                         // day phai la nen da qua (khong phai nen vua dong)
+   int from = MathMax(0, iLo - P_KnifeBars), iTop = from;
+   for(int i = from; i <= iLo; i++) if(hi[i] > hi[iTop]) iTop = i;
+   if(hi[iTop] - lo[iLo] < P_KnifeDropATR * atr) return false;          // khong phai cu giam manh
+   iLow0 = iLo; target = hi[iTop];
+   // Dinh gan nhat cua cu giam: pivot high (2 nen moi ben) gan day nhat; roi thang khong co nhip hoi thi lay dinh 3 nen truoc day
+   double lvl = 0;
+   for(int k = iLo - 1; k >= iTop + 2 && lvl == 0; k--)
+      if(k + 2 <= last && hi[k] > hi[k - 1] && hi[k] > hi[k - 2] && hi[k] >= hi[k + 1] && hi[k] >= hi[k + 2]) lvl = hi[k];
+   if(lvl == 0) for(int k = MathMax(0, iLo - 3); k <= iLo; k++) lvl = MathMax(lvl, hi[k]);
+   int jb = -1;
+   for(int j = iLo + 1; j <= last - 1 && jb < 0; j++) if(cl[j] > lvl) jb = j;
+   if(jb > 0)
+   {
+      for(int m = jb + 1; m < last; m++) if(cl[m] < lvl) return false;   // pha len roi dong lai duoi: that bai
+      if(lo[last] <= lvl + P_KnifeRetestATR * atr && cl[last] > lvl && cl[last] > op[last])
+      {
+         double hl = lo[last];
+         for(int m = jb; m <= last; m++) hl = MathMin(hl, lo[m]);        // day cao hon vua tao
+         slDist = MathMax(cl[last] - (hl - 0.25 * atr), 0.5 * atr);
+         if(target <= cl[last] + 0.5 * atr) target = 0;                  // dinh cu qua gan: chot theo R
+         mode = 2;
+         return true;
+      }
+      return false;
+   }
+   // Lenh thu nho: 1-2 nen sau day, nen vua dong tang va vuot dinh nen truoc
+   if(iLo >= last - 2 && cl[last] > op[last] && cl[last] > hi[last - 1])
+   {
+      slDist = MathMax(cl[last] - (lo[iLo] - 0.25 * atr), 0.5 * atr);
+      mode = 1;
+      return true;
+   }
+   return false;
+}
+// Quet ca 2 chieu: dao roi -> mua; gia tang dung thang roi gay -> ban (doi dau gia). key = thoi diem nen day / dinh.
+bool KnifeScan(const double atr, bool &buy, int &mode, double &slDist, double &target, datetime &key)
+{
+   int L = P_KnifeLookback < 20 ? 20 : P_KnifeLookback;
+   double hi[], lo[], op[], cl[], nh[], nl[], no[], nc[];
+   datetime tm[];
+   ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(op, L); ArrayResize(cl, L); ArrayResize(tm, L);
+   ArrayResize(nh, L); ArrayResize(nl, L); ArrayResize(no, L); ArrayResize(nc, L);
+   for(int i = 0; i < L; i++)
+   {
+      int sh = L - i;
+      hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh);
+      op[i] = iOpen(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh); tm[i] = iTime(_Symbol, P_TF, sh);
+      if(hi[i] <= 0 || lo[i] <= 0) return false;
+      nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
+   }
+   int ix = -1;
+   if(KnifePattern(hi, lo, op, cl, L - 1, atr, mode, slDist, target, ix)) { buy = true; key = tm[ix]; return true; }
+   if(KnifePattern(nh, nl, no, nc, L - 1, atr, mode, slDist, target, ix)) { buy = false; target = -target; key = tm[ix]; return true; }
+   return false;
+}
+// Goi o nen moi khi dang giu lenh (lenh thu): xac nhan sau day thi vao lenh lon cung chieu, qua cac bo loc rui ro co ban
+void KnifeAdd()
+{
+   double atr = 0;
+   if(!GetValue(hATR, 0, 1, atr) || atr <= 0) return;
+   bool buy; int mode; double sd, tg; datetime key;
+   if(!KnifeScan(atr, buy, mode, sd, tg, key) || mode != 2 || key == g_knifeUsed || key != g_knifeProbeUsed) return;
+   int cnt = 0; bool same = true;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(PositionGetTicket(i) == 0 || !IsOwnSelected()) continue;
+      cnt++;
+      if((PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) != buy) same = false;
+   }
+   if(cnt != 1 || !same) return;                                       // chi them vao dung lenh thu cung chieu
+   if(IsHalted() || GuardHalted() || DailyLossHit() || HedgeActive()) return;
+   if(buy ? !P_AllowBuy : !P_AllowSell) return;
+   if(P_MaxSpreadPoints > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > P_MaxSpreadPoints) return;
+   string w = "", nm = "";
+   if(!TimeAllowed(w) || (P_AvoidUSNews && USNewsNear(nm))) return;
+   g_knifeUsed = key;
+   g_sigSL = sd; g_sigTP = 0; g_sigRiskMult = 1; g_sigPartialPx = tg;
+   SendEntry(buy, atr, false);
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
 {
    buyBase = false; sellBase = false;
-   g_sigSL = 0; g_sigTP = 0;
+   g_sigSL = 0; g_sigTP = 0; g_sigRiskMult = 1; g_sigPartialPx = 0;
    if(P_Strategy == STRAT_DONCHIAN)
    {
       // Pha vo: nen "b" dong vuot dinh/day cao nhat/thap nhat cua N nen truoc no.
@@ -536,6 +632,21 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             if(!touched && h1 >= lo[j] && h1 <= hi[j] + 0.25 * atr && c1 < o1 && c1 < (hi[j] + lo[j]) / 2.0)
             { sellBase = true; g_sigSL = MathMax((hi[j] + 0.25 * atr) - c1, 0.5 * atr); g_bigUsed = tm[j]; }
             break;
+         }
+      }
+   }
+   else if(P_Strategy == STRAT_KNIFE)
+   {
+      bool kb; int km; double ks, kt; datetime kk;
+      if(KnifeScan(atr, kb, km, ks, kt, kk))
+      {
+         bool take = km == 2 ? kk != g_knifeUsed : (P_KnifeProbePct > 0 && kk != g_knifeProbeUsed && kk != g_knifeUsed);
+         if(take)
+         {
+            if(kb) buyBase = true; else sellBase = true;
+            g_sigSL = ks; g_sigPartialPx = kt;
+            g_sigRiskMult = km == 1 ? MathMin(1.0, P_KnifeProbePct / 100.0) : 1.0;
+            if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
       }
    }

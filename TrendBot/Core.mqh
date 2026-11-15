@@ -21,6 +21,9 @@ int      hMkt  = INVALID_HANDLE;
 int      hRSI  = INVALID_HANDLE;
 int      hATRD1 = INVALID_HANDLE, hBB = INVALID_HANDLE;
 int      hMACD = INVALID_HANDLE, hMACDH = INVALID_HANDLE;
+double   g_sigRiskMult = 1;              // he so rui ro lenh nay do chien luoc dat (vd. lenh thu nho o day dao roi)
+double   g_sigPartialPx = 0;             // muc gia chot mot phan do chien luoc dat (0 = theo R)
+datetime g_knifeProbeUsed = 0, g_knifeUsed = 0;   // dao roi: day da vao lenh thu / lenh lon (moi day 1 lan)
 double   g_sigSL = 0, g_sigTP = 0;       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
 datetime g_fvgUsed = 0;
 datetime g_fibUsed = 0;                 // Fib + VP: thoi diem dinh/day cua con song da vao lenh (moi song chi vao 1 lan)

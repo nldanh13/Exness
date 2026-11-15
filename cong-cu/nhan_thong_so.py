@@ -19,6 +19,7 @@ STRATEGY_LABELS = {
     "STRAT_BIGTRADE":     "Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng",
     "STRAT_DISTRIB":      "Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại",
     "STRAT_GRID":         "Thử nghiệm: đánh lưới trong vùng đi ngang",
+    "STRAT_KNIFE":        "Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh",
 }
 
 GROUPS = [
@@ -123,7 +124,9 @@ GROUPS = [
         ("InpPyramidMax",     "Nhồi lệnh: tổng số lớp tối đa (1 = tắt)", "Đã thử ngày 07/11/2026: ở cùng mức sụt giảm không hơn cấu hình C."),
         ("InpPyramidStepATR", "Nhồi thêm khi giá đi tiếp (× ATR)", "Trước khi nhồi, các lớp cũ được dời SL về hòa vốn."),
         ("InpPyramidTFmin",   "Kiểm tra nhồi mỗi (phút, 0 = mỗi nến khung chính)", ""),
-        ("InpPyramidRetest",  "Chỉ nhồi khi giá hồi về rồi bật lên", "Nến gần nhất phải lùi ít nhất 0,5 ATR so với đỉnh 5 nến (đáy với lệnh bán) và nến vừa đóng cửa theo chiều lệnh: thêm lệnh ở chỗ hồi về hỗ trợ rồi bật lên, không đuổi giá."),
+        ("InpPyramidRetest",  "Chỉ nhồi khi giá phá đỉnh mới rồi hồi về giữ được", "Không mua đuổi cây nến đang tăng. Đỉnh cũ = cao nhất của nến thứ 6–25; một trong 4 nến trước đã đóng cửa trên đỉnh cũ; nến vừa đóng hồi về chạm vùng vừa phá (trong 0,3 ATR), vẫn đóng cửa trên và là nến tăng. Lệnh bán: ngược lại."),
+        ("InpPyramidStopPct", "Ngừng nhồi khi giá đã đi (% đường tới mục tiêu, 0 = tắt)", "Biết lúc dừng: giá đã đi bấy nhiêu % quãng đường từ lớp đầu tới mục tiêu lớn (TP của lớp đầu, hoặc mức chốt theo giá của chiến lược) thì ngừng thêm lớp, chuyển sang chốt từng phần. Lớp đầu không có mục tiêu thì không áp dụng."),
+        ("InpTrailSwingBars", "Giữ lệnh: SL dưới đáy / trên đỉnh mới (số nến, 0 = tắt)", "Từ khi lệnh lời 0,5R: mỗi khi giá tạo đáy mới cao hơn, SL dời lên dưới đáy thấp nhất của bấy nhiêu nến gần nhất (trừ 0,25 ATR). Chỉ dời theo chiều có lợi."),
         ("InpPyramidSLBars",  "Nhồi: SL chung dưới đáy / trên đỉnh (số nến, 0 = tắt)", "Mỗi lần nhồi, SL của mọi lớp dời lên dưới đáy thấp nhất của bấy nhiêu nến gần nhất (trừ 0,25 ATR). Chỉ dời theo chiều có lợi."),
     ]),
     ("7. Dừng lỗ và chốt lời", [
@@ -147,6 +150,11 @@ GROUPS = [
         ("InpStallBars",    "Lệnh đứng yên: thoát sau (số nến, 0 = tắt)", "Scalp: lệnh đứng yên quá lâu thì thoát."),
         ("InpStallMinATR",  "Lệnh đứng yên: chưa đi được (× ATR) thì thoát", "Sau số nến trên mà giá chưa đi theo chiều lệnh được bấy nhiêu ATR thì đóng lệnh."),
         ("InpSessPartialR", "Hết giờ cao điểm: chốt một nửa nếu đang lời (R, 0 = tắt)", "Lúc vừa ra khỏi khung giờ cao điểm, lệnh đang lời từ bấy nhiêu R trở lên được chốt một nửa và dời SL về hòa vốn (mỗi lệnh 1 lần). Giờ vắng có lắc thế nào cũng đã giữ được lời. Cần đặt giờ cao điểm ở nhóm 9."),
+        ("InpKnifeLookback",  "Dao rơi: tìm đáy trong (số nến)", "Chiến lược 14. Đáy = giá thấp nhất của bấy nhiêu nến gần nhất."),
+        ("InpKnifeBars",      "Dao rơi: cú giảm diễn ra trong tối đa (số nến)", "Đỉnh bắt đầu cú giảm phải nằm trong bấy nhiêu nến trước đáy."),
+        ("InpKnifeDropATR",   "Dao rơi: cú giảm dài ít nhất (× ATR)", "Chỉ xét những cú giảm mạnh (con dao đang rơi)."),
+        ("InpKnifeProbePct",  "Dao rơi: lệnh thử ở đáy dùng (% rủi ro chuẩn, 0 = không thử)", "NHỎ: 1–2 nến sau đáy có nến tăng đóng cửa vượt đỉnh nến trước thì vào lệnh thử bằng phần nhỏ rủi ro, SL dưới đáy. Sai thì mất ít, đúng thì đã có một chân trong lệnh."),
+        ("InpKnifeRetestATR", "Dao rơi: nến test lại cách đỉnh gần nhất tối đa (× ATR)", "LỚN: giá đóng cửa vượt đỉnh gần nhất của cú giảm, rồi có nến hồi về chạm lại trong khoảng này mà vẫn đóng cửa trên và là nến tăng thì vào lệnh lớn, SL dưới đáy cao hơn vừa tạo. Tổng rủi ro lệnh thử + lệnh lớn không quá 1 lệnh chuẩn. Phá lên rồi đóng lại dưới thì bỏ."),
         ("InpHedgeLockLossR", "Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)", "THỬ NGHIỆM. Lệnh đang lỗ bấy nhiêu R (nhỏ hơn 1, trước khi chạm SL): mở lệnh ngược chiều cùng khối lượng, bỏ SL / TP lệnh gốc, chờ thị trường lộ hướng. Chỉ khóa khi bot giữ đúng 1 lệnh. Giữ 2 lệnh tốn phí gấp đôi."),
         ("InpHedgeLockProfitR", "Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)", "THỬ NGHIỆM. Lệnh đang lời từ bấy nhiêu R mà sắp có tin Mỹ hoặc sắp cuối tuần: mở lệnh ngược chiều để giữ nguyên phần lời. Chỉ mở khóa sau khi tin / cuối tuần đã qua."),
         ("InpHedgeNews",      "Khóa lời trước tin Mỹ", "Dùng cùng khoảng giờ với bộ lọc tin (InpNewsHours). Backtest cần file tin_my.csv."),

@@ -201,6 +201,7 @@ double CalcLots(const double slDistance)
    double riskBase = MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY));
    if(riskBase <= 0 || P_RiskPercent <= 0) return 0;
    double riskMoney  = riskBase * P_RiskPercent / 100.0;
+   if(g_sigRiskMult > 0 && g_sigRiskMult < 1) riskMoney *= g_sigRiskMult;   // lenh thu nho (chien luoc tu dat)
    // Giam co theo sut giam tu dinh von cua bot: < 5% giu nguyen, 5-10% con 50%, > 10% con 25%.
    // Chi tro lai muc chuan khi von lap dinh moi. Khong bao gio tang co de "go".
    if(P_DDScale)

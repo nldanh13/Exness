@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.18"
-#property version   "5.1800"
+#define  BOT_VERSION "5.19"
+#property version   "5.1900"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -26,7 +26,8 @@ enum ENUM_STRATEGY
    STRAT_DIVCVD       = 10,  // Thử nghiệm: phân kỳ RSI xác nhận bằng CVD
    STRAT_BIGTRADE     = 11,  // Thử nghiệm: Big Trades (lệnh lớn) tại vùng quan trọng
    STRAT_DISTRIB      = 12,  // Thử nghiệm: hộp phân phối / tích lũy, vào ở lần test lại
-   STRAT_GRID         = 13   // Thử nghiệm: đánh lưới trong vùng đi ngang
+   STRAT_GRID         = 13,  // Thử nghiệm: đánh lưới trong vùng đi ngang
+   STRAT_KNIFE        = 14   // Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -130,7 +131,9 @@ input double          InpPyramidLotFactor = 0.5;        // Hệ số giảm lot 
 input int             InpPyramidMax       = 1;          // Nhồi lệnh: tổng số lớp tối đa (1 = tắt)
 input double          InpPyramidStepATR   = 1.0;        // Nhồi thêm khi giá đi tiếp (× ATR)
 input int             InpPyramidTFmin     = 0;          // Kiểm tra nhồi mỗi (phút, 0 = mỗi nến khung chính)
-input bool            InpPyramidRetest    = false;      // Chỉ nhồi khi giá hồi về rồi bật lên
+input bool            InpPyramidRetest    = false;      // Chỉ nhồi khi giá phá đỉnh mới rồi hồi về giữ được
+input double          InpPyramidStopPct   = 0;          // Ngừng nhồi khi giá đã đi (% đường tới mục tiêu, 0 = tắt)
+input int             InpTrailSwingBars   = 0;          // Giữ lệnh: SL dưới đáy / trên đỉnh mới (số nến, 0 = tắt)
 input int             InpPyramidSLBars    = 0;          // Nhồi: SL chung dưới đáy / trên đỉnh (số nến, 0 = tắt)
 
 input group "7. Dừng lỗ và chốt lời"
@@ -154,6 +157,11 @@ input double          InpSLStructMinATR   = 1.5;        // SL dưới cấu trú
 input int             InpStallBars        = 0;          // Lệnh đứng yên: thoát sau (số nến, 0 = tắt)
 input double          InpStallMinATR      = 0.5;        // Lệnh đứng yên: chưa đi được (× ATR) thì thoát
 input double          InpSessPartialR     = 0;          // Hết giờ cao điểm: chốt một nửa nếu đang lời (R, 0 = tắt)
+input int             InpKnifeLookback    = 60;         // Dao rơi: tìm đáy trong (số nến)
+input int             InpKnifeBars        = 30;         // Dao rơi: cú giảm diễn ra trong tối đa (số nến)
+input double          InpKnifeDropATR     = 6.0;        // Dao rơi: cú giảm dài ít nhất (× ATR)
+input double          InpKnifeProbePct    = 25;         // Dao rơi: lệnh thử ở đáy dùng (% rủi ro chuẩn, 0 = không thử)
+input double          InpKnifeRetestATR   = 0.3;        // Dao rơi: nến test lại cách đỉnh gần nhất tối đa (× ATR)
 input double          InpHedgeLockLossR   = 0;          // Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)
 input double          InpHedgeLockProfitR = 0;          // Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)
 input bool            InpHedgeNews        = true;       // Khóa lời trước tin Mỹ
@@ -315,6 +323,8 @@ int             P_GridBars, P_GridLevels;
 int             P_SessionStartH, P_SessionEndH, P_SLStructBars, P_StallBars;
 int             P_Session2StartH, P_Session2EndH, P_PyramidSLBars, P_HedgeFriHour, P_HedgeZoneBars, P_HedgeMaxBars;
 bool            P_PyramidRetest, P_HedgeNews;
+int             P_TrailSwingBars, P_KnifeLookback, P_KnifeBars;
+double          P_KnifeDropATR, P_KnifeProbePct, P_KnifeRetestATR, P_PyramidStopPct;
 double          P_SessPartialR, P_HedgeLockLossR, P_HedgeLockProfitR, P_HedgeRetestATR;
 double          P_SLStructMinATR, P_StallMinATR;
 double          P_GridMinATR, P_GridMaxATR, P_GridMaxADX, P_GridMinStepCost, P_GridStopATR;
@@ -442,6 +452,8 @@ void LoadParams()
    P_Session2StartH = InpSession2StartH; P_Session2EndH = InpSession2EndH; P_PyramidRetest = InpPyramidRetest;
    P_PyramidSLBars = InpPyramidSLBars; P_SessPartialR = InpSessPartialR; P_HedgeLockLossR = InpHedgeLockLossR;
    P_HedgeLockProfitR = InpHedgeLockProfitR; P_HedgeNews = InpHedgeNews; P_HedgeFriHour = InpHedgeFriHour;
+   P_PyramidStopPct = InpPyramidStopPct; P_TrailSwingBars = InpTrailSwingBars; P_KnifeLookback = InpKnifeLookback; P_KnifeBars = InpKnifeBars;
+   P_KnifeDropATR = InpKnifeDropATR; P_KnifeProbePct = InpKnifeProbePct; P_KnifeRetestATR = InpKnifeRetestATR;
    P_HedgeZoneBars = InpHedgeZoneBars; P_HedgeRetestATR = InpHedgeRetestATR; P_HedgeMaxBars = InpHedgeMaxBars;
    P_SLStructMinATR = InpSLStructMinATR; P_StallBars = InpStallBars; P_StallMinATR = InpStallMinATR;
    P_OrbMinutes = InpOrbMinutes;
@@ -576,6 +588,13 @@ bool SetParam(const string k, const string v)
    if(k == "InpHedgeFriHour") { P_HedgeFriHour = (int)StringToInteger(v); return true; }
    if(k == "InpHedgeZoneBars") { P_HedgeZoneBars = (int)StringToInteger(v); return true; }
    if(k == "InpHedgeRetestATR") { P_HedgeRetestATR = StringToDouble(v); return true; }
+   if(k == "InpPyramidStopPct") { P_PyramidStopPct = StringToDouble(v); return true; }
+   if(k == "InpTrailSwingBars") { P_TrailSwingBars = (int)StringToInteger(v); return true; }
+   if(k == "InpKnifeLookback") { P_KnifeLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpKnifeBars") { P_KnifeBars = (int)StringToInteger(v); return true; }
+   if(k == "InpKnifeDropATR") { P_KnifeDropATR = StringToDouble(v); return true; }
+   if(k == "InpKnifeProbePct") { P_KnifeProbePct = StringToDouble(v); return true; }
+   if(k == "InpKnifeRetestATR") { P_KnifeRetestATR = StringToDouble(v); return true; }
    if(k == "InpHedgeMaxBars") { P_HedgeMaxBars = (int)StringToInteger(v); return true; }
    if(k == "InpSLStructBars") { P_SLStructBars = (int)StringToInteger(v); return true; }
    if(k == "InpSLStructMinATR") { P_SLStructMinATR = StringToDouble(v); return true; }
@@ -941,7 +960,7 @@ void OnDeinit(const int reason)
 
 datetime g_lastManage = 0;
 int      g_pendDir = 0;            // tin hieu dang cho gia hoi ve: 1 buy, -1 sell, 0 khong co
-double   g_pendPrice = 0, g_pendATR = 0, g_pendSigSL = 0, g_pendSigTP = 0;
+double   g_pendPrice = 0, g_pendATR = 0, g_pendSigSL = 0, g_pendSigTP = 0, g_pendRiskMult = 1, g_pendPartialPx = 0;
 datetime g_pendExpire = 0;
 void CheckPendingEntry()
 {
@@ -966,7 +985,7 @@ void CheckPendingEntry()
       g_status = "Huy lenh cho: " + g_status;
       return;
    }
-   g_sigSL = g_pendSigSL; g_sigTP = g_pendSigTP;
+   g_sigSL = g_pendSigSL; g_sigTP = g_pendSigTP; g_sigRiskMult = g_pendRiskMult; g_sigPartialPx = g_pendPartialPx;
    int r = SendEntry(buy, g_pendATR, true);
    if(r == 0) return;               // chua lay duoc khoa rui ro chung: giu lenh cho, thu lai o tick sau
    g_pendDir = 0;
@@ -1149,6 +1168,8 @@ void OnTickBody()
    if(HasOwnPosition())
    {
       g_status = "Dang giu lenh";
+      // Dao roi: dang giu lenh thu o day, gio co xac nhan sau day thi vao lenh lon (Signals.mqh KnifeAdd)
+      if(P_Strategy == STRAT_KNIFE) KnifeAdd();
       if(P_PyramidMax > 1 || P_ExitOnEMA || P_ExitOnBar || P_Strategy == STRAT_IMOM) PyramidStep();
       return;
    }
@@ -1196,6 +1217,7 @@ void OnTickBody()
    {
       // Cho gia hoi ve x ATR (sau pha vo H4, ~75% lan gia hoi >= 0,25 ATR trong 4 gio sau - du lieu M10 2021-2026)
       g_pendDir = buySignal ? 1 : -1; g_pendATR = atr; g_pendSigSL = g_sigSL; g_pendSigTP = g_sigTP;
+      g_pendRiskMult = g_sigRiskMult; g_pendPartialPx = g_sigPartialPx;
       g_pendPrice = buySignal ? c1 - P_EntryPullATR * atr : c1 + P_EntryPullATR * atr;
       g_pendExpire = barTime + PeriodSeconds(P_TF);
       g_status = StringFormat("Cho gia hoi ve %s de %s", DoubleToString(g_pendPrice, _Digits), buySignal ? "BUY" : "SELL");
@@ -1384,6 +1406,13 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
    uint rc = trade.ResultRetcode();
    bool filled = ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_DONE_PARTIAL);
    if(!filled) GroupClear();
+   // Muc chot mot phan theo gia (vd. dinh cu cua cu giam): ManagePositions chot InpPartialPct khi gia cham
+   if(filled && g_sigPartialPx > 0)
+   {
+      ulong pid = trade.ResultOrder(), dl = trade.ResultDeal();
+      if(dl > 0 && HistoryDealSelect(dl)) pid = (ulong)HistoryDealGetInteger(dl, DEAL_POSITION_ID);
+      if(pid > 0) GlobalVariableSet(GVName("PX_" + (string)pid), g_sigPartialPx);
+   }
    GroupUnlock();                                    // mo khoa truoc khi gui thong bao (Telegram co the cham)
    TradeDone(ok, "Vao lenh", buySignal ? "BUY" : "SELL");
    return filled ? 1 : -1;

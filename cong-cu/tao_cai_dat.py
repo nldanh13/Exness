@@ -166,6 +166,24 @@ PRESETS = [
     ], {"InpTF": "16385", "InpSessionStartH": "7", "InpSessionEndH": "10", "InpSession2StartH": "12", "InpSession2EndH": "16",
         "InpSessPartialR": "1.0", "InpPyramidMax": "3", "InpPyramidLotFactor": "0.5", "InpPyramidStepATR": "1.0",
         "InpPyramidRetest": "true", "InpPyramidSLBars": "10"}),
+    ("17-Dao-roi-nho-lon-giu-H1-THU-NGHIEM.set", [
+        "17. Không bắt dao rơi (chiến lược 14, H1): NHỎ – LỚN – GIỮ. Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "Dao rơi = giảm ≥ 6 ATR trong ≤ 30 nến. NHỎ: nến tăng ngay sau đáy -> lệnh thử 25% rủi ro, SL dưới đáy.",
+        "LỚN: giá vượt đỉnh gần nhất của cú giảm, hồi về test lại (≤ 0,3 ATR) và giữ được -> lệnh lớn, SL dưới đáy cao hơn.",
+        "Tổng rủi ro 2 lệnh ≤ 1%. GIỮ: không TP; chốt 50% ở đỉnh cũ của cú giảm, phần còn lại SL dưới đáy mới của 10 nến.",
+        "Không lọc xu hướng (vào sau đáy là đi ngược xu hướng cũ). Bán khi giá tăng dựng đứng rồi gãy: ngược lại.",
+    ], {"InpStrategy": "14", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "0",
+        "InpUsePartial": "true", "InpPartialPct": "50", "InpPartialR": "99", "InpTrailSwingBars": "10",
+        "InpKnifeLookback": "60", "InpKnifeBars": "30", "InpKnifeDropATR": "6", "InpKnifeProbePct": "25", "InpKnifeRetestATR": "0.3"}),
+    ("18-Nhoi-khi-thang-kim-tu-thap-H4-THU-NGHIEM.set", [
+        "18. Nhồi lệnh khi thắng, 4 quy tắc (Donchian H4 + ADX như mặc định). Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "1) Lớp đầu phải lời và SL về hòa vốn mới thêm lớp. 2) Chỉ thêm khi giá phá đỉnh mới rồi hồi về chạm vùng vừa phá và giữ được.",
+        "3) Kim tự tháp: lớp 1 = 1 phần, lớp 2 = 1/2, lớp 3 = 1/4. 4) Mỗi lần thêm, SL chung dời lên dưới đáy 10 nến gần nhất.",
+        "Tổng rủi ro mở không bao giờ vượt 1 lệnh chuẩn. TP 4R; giá đi được 70% đường tới TP thì ngừng nhồi, chốt 1/3 ở 2R, trailing 3 ATR.",
+        "Không bao giờ nhồi khi đang lỗ (bot không có chế độ trung bình giá).",
+    ], {"InpPyramidMax": "3", "InpPyramidLotFactor": "0.5", "InpPyramidStepATR": "1.0", "InpPyramidRetest": "true",
+        "InpPyramidSLBars": "10", "InpPyramidStopPct": "70", "InpRR": "4", "InpUsePartial": "true", "InpPartialR": "2.0",
+        "InpPartialPct": "33", "InpUseTrailing": "true", "InpTrailStartR": "2.0", "InpTrailATRMult": "3.0"}),
 ]
 
 
