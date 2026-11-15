@@ -1184,8 +1184,8 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
 - **Dùng để quyết định** (mỗi cặp tình huống × chiến lược): chưa đủ `InpLearnMinN` lệnh giấy → *đang thử* (vẫn dùng kiến thức, rủi ro ×
   `InpLearnTryRisk`); R TB ≤ 0 → *loại* (không dùng trong tình huống đó, vẫn theo dõi giấy để tự phục hồi); cận dưới 90% > 0 → *tin dùng*
   (rủi ro đủ); còn lại → *chưa chắc* (rủi ro × 0,75). Bằng chứng của mỗi quyết định ghi đánh giá này.
-- **Lưu:** `Common\Files\TrendBot_hoc_<tài khoản>_<mã>.csv`, đọc lại khi khởi động (tắt / bật MT5 không mất). Lệnh giấy đang mở thì mất
-  khi khởi động lại. Backtest học trong bộ nhớ (không đọc / ghi file) để kiểm tra chính cơ chế học.
+- **Lưu:** `Common\Files\TrendBot_hoc_<tài khoản>_<mã>.csv`, đọc lại khi khởi động (tắt / bật MT5 không mất; lệnh giấy
+  đang mở được lưu và chấm bù từ v5.37). Backtest học trong bộ nhớ (không đọc / ghi file) để kiểm tra chính cơ chế học.
 - **Giao diện:** khung "Bot đã học được gì từ thực chiến" – bảng tình huống × chiến lược: số lệnh giấy, R TB, % thắng, đánh giá, lệnh thật.
 - Học cần thời gian: với H1, mỗi cặp cần vài tuần tới vài tháng để đủ 20 lệnh giấy. Chạy demo trước.
 
