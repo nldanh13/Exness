@@ -95,7 +95,7 @@ void DecisionLog(const string kind, const string text)
    if(MQLInfoInteger(MQL_TESTER) || text == "") return;
    DecisionLoad();
    string t = text;
-   StringReplace(t, "\r", " "); StringReplace(t, "\n", " "); StringReplace(t, "|", "/");
+   StringReplace(t, "\r", " "); StringReplace(t, "\n", " ");   // giu dau "|": giao dien noi lai phan sau truong thu 2
    int n = ArraySize(g_dlog);
    if(n >= 200) { ArrayRemove(g_dlog, 0, n - 199); n = ArraySize(g_dlog); }
    ArrayResize(g_dlog, n + 1);
