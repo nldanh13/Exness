@@ -40,6 +40,7 @@ string   g_autoName = "", g_autoWant = "";
 datetime g_autoRead = 0;
 int      g_smartSit = 0;                 // tinh huong thi truong vua chan doan (chien luoc 24, Signals.mqh)
 string   g_smartName = "";
+int      g_smartPrev = 0, g_smartPrevDir = 0;   // tinh huong / chieu thuy trieu o nen truoc (vung dem)
 double   g_pzA = 0, g_pzB = 0, g_pzC = 0, g_pzD = 0;   // so lieu tam do ham mau hinh tra ra (khong gian gia cua mau, co the doi dau)
 void EvReset() { g_ev = ""; }
 void EvAdd(const string s) { if(s == "" || StringLen(g_ev) > 1800) return; g_ev += (g_ev == "" ? "" : " ; ") + s; }

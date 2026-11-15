@@ -1226,3 +1226,8 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
 Bộ `33-Theo-tinh-huong-von-770-nghin-M15-THU-NGHIEM`: phân tích M15 (SL ngắn hơn), `InpMaxRiskRoundUp = 6` – chỉ vào 0,01 lot khi dính SL
 mất ≤ 6% vốn (SL ≤ ~175 USD giá), còn lại bỏ; lỗ ngày 3% (thua 1 lệnh là nghỉ tới hết ngày), dừng hẳn khi sụt 15%; không chốt từng phần
 (không chia được 0,01 lot). Spread ~6,4 USD / BTC ≈ 3–4% của 1R mỗi lệnh. Khung nhỏ chưa có lợi thế khi backtest Donchian vì phí.
+
+### v5.39.1: Vùng đệm tình huống
+Theo tình huống: đã ở *xu hướng mạnh* thì giữ cho tới khi ADX < `InpSmartTrendADX` − 3 hoặc thủy triều đổi chiều; đã ở *đi ngang* thì giữ cho tới
+khi ADX ≥ `InpSmartRangeADX` + 3 hoặc hộp rộng hơn 1,15 × `InpSmartRangeATR` ATR. Tránh đổi bộ kiến thức mỗi nến khi ADX dao động quanh ngưỡng.
+Bằng chứng ghi "(đổi từ ...)" hoặc "(giữ tình huống: vùng đệm ±3 ADX)".
