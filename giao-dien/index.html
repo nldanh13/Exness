@@ -314,14 +314,17 @@ main { gap: 14px; padding-block: 14px 40px; }
     <div class="opts">
       <div class="field" id="nhom-row"><label for="nhom">Nhóm:</label>
         <select id="nhom">
-          <option value="file">Danh sách Claude chọn</option>
-          <option value="h4">Nhóm A</option>
-          <option value="luotsong">Nhóm B</option>
-          <option value="von1tr">Nhóm B (quy mô nhỏ)</option>
-          <option value="xephang">Xếp hạng chiến lược (25 cấu hình, 6 năm)</option>
+          <option value="xephang">Xếp hạng chiến lược – nên chạy (25 cấu hình, 6 năm)</option>
+          <option value="file">Đợt kiểm tra Claude đang làm</option>
+          <optgroup label="Nhóm cũ (các đợt nghiên cứu trước)">
+            <option value="h4">Các cấu hình khung H4</option>
+            <option value="luotsong">Lướt sóng khung nhỏ</option>
+            <option value="von1tr">Lướt sóng – vốn 1 triệu</option>
+          </optgroup>
           <option value="tatca">Tất cả (rất lâu)</option>
         </select>
       </div>
+      <p class="muted" id="nhom-help" style="margin:0;font-size:12px"></p>
       <details class="plist" id="list-row"><summary id="list-title"></summary><div class="ptags" id="list-box"></div></details>
       <div class="banner warn" id="real-warn" hidden></div>
       <label class="opt" id="opt-git-row" hidden><input type="checkbox" id="opt-git" onchange="this.dataset.touched=1"><span>Lấy bản mới (<span id="opt-git-n">0</span> thay đổi)</span></label>
@@ -499,6 +502,7 @@ function realBusy(d) { return bots(d).filter(function (b) { return b.taikhoan ==
 function renderOptions() {
   var v = selViec(), d = S.last || {};
   $('nhom-row').hidden = v !== 'sosanh';
+  $('nhom-help').hidden = v !== 'sosanh';
   $('job-desc').textContent = JOB_DESC[v] || '';
   var list = null, title = '';
   if (v === 'sosanh' && $('nhom').value === 'file') { list = d.ChiChay; title = 'Xem danh sách phương án (' + (list ? list.length : 0) + ')'; }
@@ -734,8 +738,18 @@ function poll() {
 
 function initRun() {
   document.querySelectorAll('input[name="viec"]').forEach(function (r) { r.addEventListener('change', renderOptions); });
-  $('nhom').addEventListener('change', function () { store('tb-nhom', $('nhom').value); renderOptions(); });
+  $('nhom').addEventListener('change', function () { store('tb-nhom', $('nhom').value); nhomHelp(); renderOptions(); });
   var n = store('tb-nhom'); if (n) $('nhom').value = n;
+  nhomHelp();
+  function nhomHelp() {
+    var h = { xephang: 'Mỗi chiến lược 1 cấu hình đại diện, 6 năm. Ra bảng chiến lược nào đang tốt nhất – bot tự chọn đọc bảng này. Nên chạy mỗi tuần.',
+      file: 'Những cấu hình Claude đang kiểm tra trong đợt hiện tại (file chi-chay.txt). Bấm "Xem danh sách phương án" để biết gồm những gì.',
+      h4: 'Nhóm cũ: mọi biến thể khung H4 đã thử trước đây (Donchian, EMA, nhồi lệnh...). Chỉ cần khi muốn xem lại.',
+      luotsong: 'Nhóm cũ: các biến thể lướt sóng khung M1–M30 (đều lỗ vì phí ở 2020–2023) + cấu hình C để so.',
+      von1tr: 'Nhóm cũ: lướt sóng với vốn 1 triệu đồng (rủi ro theo lot tối thiểu).',
+      tatca: 'Chạy toàn bộ các cấu hình đã khai báo (hơn 100). Rất lâu, chỉ dùng khi thật cần.' };
+    $('nhom-help').textContent = h[$('nhom').value] || '';
+  }
   $('btn-follow').onclick = function () { S.follow = !S.follow; this.setAttribute('aria-pressed', S.follow); this.textContent = 'Tự cuộn: ' + (S.follow ? 'bật' : 'tắt'); };
   if (NHUNG) {
     $('static-note').hidden = false;
