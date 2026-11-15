@@ -100,6 +100,13 @@ PRESETS = [
         "Con sóng 100 nến H1 (≥ 4 ATR), Volume Profile đếm tick M5, SL dưới vùng dày, TP ở đỉnh / đáy con sóng.",
         "Exness chỉ có số tick, không có khối lượng thật. Chỉ chạy demo.",
     ], {"InpStrategy": "9", "InpTF": "16385", "InpUseADX": "false", "InpUseTrailing": "false", "InpMaxSpreadPoints": "1500"}),
+    ("09-Phan-ky-RSI-CVD-H1-THU-NGHIEM.set", [
+        "09. Thử nghiệm: phân kỳ RSI xác nhận bằng CVD, khung H1",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. RSI phân kỳ là cảnh báo, CVD xác nhận là bằng chứng: có cả hai mới vào lệnh.",
+        "Thêm tín hiệu hấp thụ: RSI quá bán + bán chủ động đổ vào mà giá không giảm thêm. SL qua đỉnh / đáy, TP 2R.",
+        "CVD lấy từ nến Binance Futures (cần WebRequest fapi.binance.com; backtest cần du-lieu/flow_BTCUSDT_1h.csv). Chỉ chạy demo.",
+    ], {"InpStrategy": "10", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpUseTrailing": "false",
+        "InpRR": "2", "InpMaxSpreadPoints": "1500"}),
 ]
 
 

@@ -42,6 +42,7 @@ string FlowInterval()
 bool FlowIsBreakout()
 {
    return P_Strategy == STRAT_DONCHIAN || P_Strategy == STRAT_ORB || P_Strategy == STRAT_MACD || P_Strategy == STRAT_IMOM;
+   // STRAT_DIVCVD tu dung CVD ben trong tin hieu: bo loc dong tien xem no la chien luoc dao chieu (bat lai)
 }
 
 void FlowLoadFile()

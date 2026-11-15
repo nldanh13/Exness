@@ -20,6 +20,7 @@ string StrategyName()
       case STRAT_MACD:       return "MACD da khung";
       case STRAT_IMOM:       return "Quan tinh trong ngay";
       case STRAT_FIBVP:      return "Fibonacci + Volume Profile";
+      case STRAT_DIVCVD:     return "Phan ky RSI + CVD";
    }
    return "EMA pullback";
 }

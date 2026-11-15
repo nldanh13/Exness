@@ -15,6 +15,7 @@ STRATEGY_LABELS = {
     "STRAT_MACD":         "Thử nghiệm: MACD đa khung",
     "STRAT_IMOM":         "Thử nghiệm: quán tính trong ngày",
     "STRAT_FIBVP":        "Thử nghiệm: Fibonacci + Volume Profile",
+    "STRAT_DIVCVD":       "Thử nghiệm: phân kỳ RSI xác nhận bằng CVD",
 }
 
 GROUPS = [
@@ -52,6 +53,12 @@ GROUPS = [
         ("InpVPHighMult",     "Fib + VP: vùng dày khi số tick ≥ (× trung bình các ô)", "Mức Fibonacci rơi vào ô dày mới được chờ; rơi vào ô mỏng thì bỏ qua vì giá dễ trượt qua."),
         ("InpVPTFmin",        "Fib + VP: khung đếm tick (phút, 0 = khung chính)", "Khung nhỏ cho Volume Profile chi tiết hơn. Exness chỉ có số tick, không có khối lượng thật."),
         ("InpFibMinRR",       "Fib + VP: lãi tới đỉnh/đáy sóng tối thiểu (× SL)", "TP đặt ở đỉnh (đáy) con sóng; bỏ lệnh nếu khoảng lãi nhỏ hơn mức này nhân SL."),
+        ("InpDivRsiPeriod",   "RSI + CVD: chu kỳ RSI (số nến)", "RSI tính từ giá đóng cửa nên chỉ thấy giá mất đà (cảnh báo). CVD = tổng dồn mua chủ động − bán chủ động, thấy ai đang bấm nút (bằng chứng). Có cả hai mới vào lệnh."),
+        ("InpDivLookback",    "RSI + CVD: tìm đỉnh / đáy trong (số nến)", "Phân kỳ ở đỉnh: đỉnh sau cao hơn, RSI thấp hơn, VÀ CVD không cao hơn (người mua chủ động đã rút). RSI phân kỳ mà CVD vẫn lập đỉnh mới thì chờ."),
+        ("InpDivPivot",       "RSI + CVD: đỉnh / đáy cần thấp hơn / cao hơn (số nến mỗi bên)", "Đỉnh được xác nhận sau bấy nhiêu nến, nên tín hiệu đến chậm bấy nhiêu nến."),
+        ("InpDivRsiLow",      "RSI + CVD: quá bán dưới (quá mua = 100 − mức này)", "Dùng cho tín hiệu hấp thụ: RSI quá bán là cảnh báo, chưa phải tín hiệu mua."),
+        ("InpAbsorbBars",     "RSI + CVD: hấp thụ xét trong (số nến gần nhất)", "Hấp thụ ở đáy: lệnh bán chủ động đổ vào ồ ạt (CVD lao dốc) mà giá không giảm thêm = có người đỡ hết số hàng đó."),
+        ("InpAbsorbDelta",    "RSI + CVD: CVD đổ ít nhất (× tổng khối lượng các nến đó)", "0,15 = bán chủ động nhiều hơn mua chủ động ít nhất 15% tổng khối lượng."),
     ]),
     ("4. Bộ lọc xu hướng", [
         ("InpUseHTF",    "Chỉ giao dịch theo xu hướng khung lớn", "Chỉ mua khi giá khung lớn trên EMA, chỉ bán khi dưới."),

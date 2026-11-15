@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.12
+# Hướng dẫn bot BTC (MT5) v5.13
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 10 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 11 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -848,3 +848,17 @@ Chạy thật: thêm `https://fapi.binance.com` vào Tools > Options > Expert Ad
 (cột `DongTienThieuDuLieu` đếm số lần thiếu, `ChanDongTien` đếm số lần chặn).
 Lưu ý khi kiểm thử sau này: biến thể gần giống (vào khi phe chủ động cùng chiều phá vỡ, dữ liệu taker ratio Binance) đã thử ngày
 07/11 với Donchian H4 và làm tổng R giảm (49,3 / 8,3 so với 59,1 / 15,3). Phần "hấp thụ" (mua nhiều mà giá không giữ) chưa thử.
+
+## v5.13: chiến lược 10 – phân kỳ RSI xác nhận bằng CVD (16/11/2026) – CHƯA KIỂM THỬ
+Kiến thức: RSI và CVD cùng đo lực mua bán, nhưng RSI tính từ giá đóng cửa đã qua nên chỉ thấy giá **mất đà** (cảnh báo);
+CVD tính từ lệnh mua / bán chủ động lúc khớp nên thấy **ai đang bấm nút** (bằng chứng). Có cảnh báo mà chưa có bằng chứng thì chờ.
+Bộ `09-Phan-ky-RSI-CVD-H1-THU-NGHIEM.set` (`InpStrategy = 10`, H1, TP 2R):
+- **Phân kỳ ở đỉnh:** hai đỉnh gần nhất (đỉnh = cao hơn `InpDivPivot` nến mỗi bên), đỉnh sau cao hơn, RSI đỉnh sau thấp hơn (cảnh báo)
+  **và** CVD đỉnh sau không cao hơn (người mua chủ động đã rút) → bán khi đỉnh vừa được xác nhận và giá đóng dưới nến đỉnh.
+  RSI phân kỳ mà CVD vẫn lập đỉnh mới = người mua vẫn đổ tiền vào: không bán (đúng lúc người chỉ nhìn RSI bị quét). Đáy: ngược lại.
+- **Hấp thụ ở đáy:** RSI quá bán (`InpDivRsiLow`, cảnh báo) + trong `InpAbsorbBars` nến gần nhất bán chủ động đổ vào ≥ `InpAbsorbDelta`
+  tổng khối lượng (CVD lao dốc) mà giá không giảm thêm, giá ở 1/4 dưới của vùng `InpDivLookback` nến → có người hấp thụ, mua. Đỉnh: ngược lại.
+- SL qua đỉnh / đáy 0,25 ATR (tối thiểu 0,5 ATR). Đỉnh / đáy chỉ được xác nhận sau `InpDivPivot` nến nên tín hiệu (a) đến chậm bấy nhiêu nến.
+- CVD lấy từ nến Binance Futures cùng khung (như bộ lọc dòng tiền v5.12). Thiếu dữ liệu thì không vào lệnh. Backtest cần
+  `du-lieu/flow_BTCUSDT_1h.csv`; đã thêm vào nhóm xếp hạng (`XH-RSICVD-H1`), chưa có file thì nó không có lệnh nên không đủ điều kiện.
+- CVD tính trên cửa sổ `InpDivLookback` nến (chỉ cần so tương đối giữa hai đỉnh), không phải CVD tích lũy từ đầu.

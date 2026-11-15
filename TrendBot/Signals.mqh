@@ -263,6 +263,96 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          }
       }
    }
+   else if(P_Strategy == STRAT_DIVCVD)
+   {
+      // Phan ky RSI xac nhan bang CVD (v5.13, CHUA KIEM THU). RSI tinh tu gia dong cua: chi thay gia MAT DA (canh bao).
+      // CVD = tong don (mua chu dong - ban chu dong): thay AI DANG BAM NUT (bang chung). Co canh bao ma chua co bang chung
+      // thi cho; co ca hai moi vao lenh.
+      // (a) Phan ky o dinh: 2 dinh gan nhat (dinh = cao hon InpDivPivot nen moi ben), dinh sau cao hon dinh truoc,
+      //     RSI dinh sau THAP hon (canh bao) VA CVD dinh sau KHONG cao hon (nguoi mua chu dong da rut) -> Sell khi
+      //     dinh sau vua duoc xac nhan va gia dong duoi gia dong cua nen dinh. RSI phan ky ma CVD van lap dinh moi =
+      //     nguoi mua van do tien vao: KHONG ban (chinh la luc nguoi chi nhin RSI bi quet). Day: nguoc lai.
+      // (b) Hap thu o day: RSI qua ban (canh bao) + trong InpAbsorbBars nen gan nhat CVD do manh (ban chu dong >=
+      //     InpAbsorbDelta x tong khoi luong) MA gia khong giam them (dong cua giam < 0,25 ATR), gia dang o 1/4 duoi
+      //     cua vung InpDivLookback nen: co nguoi hap thu het hang ban -> Buy. Dinh: nguoc lai.
+      // SL: qua dinh / day + 0,25 ATR (toi thieu 0,5 ATR). TP theo InpRR (bo 09 dat 2R).
+      // CVD lay tu nen Binance Futures cung khung (OrderFlow.mqh): Exness khong co chieu mua / ban chu dong.
+      // Thieu du lieu Binance: khong vao lenh.
+      int L = P_DivLookback < 15 ? 15 : P_DivLookback, k = P_DivPivot < 1 ? 1 : P_DivPivot;
+      double rv[];
+      if(CopyBuffer(hRSI, 0, 1, L, rv) != L) return false;            // rv[0] = nen L, rv[L-1] = nen 1
+      double fv[], fb[];
+      datetime t1 = iTime(_Symbol, P_TF, 1);
+      bool got = MQLInfoInteger(MQL_TESTER) ? FlowFromFile(t1, L - 1, fv, fb) : FlowFromBinance(t1, L - 1, fv, fb);
+      if(!got || ArraySize(fv) != L) { g_flowNoData++; g_status = "RSI + CVD: chua co du lieu Binance, khong vao lenh"; return true; }
+      double cvd[], hi[], lo[];
+      ArrayResize(cvd, L); ArrayResize(hi, L); ArrayResize(lo, L);
+      double run = 0, rHi = 0, rLo = DBL_MAX;
+      for(int i = 0; i < L; i++)
+      {
+         run += 2.0 * fb[i] - fv[i];
+         cvd[i] = run;
+         hi[i] = iHigh(_Symbol, P_TF, L - i); lo[i] = iLow(_Symbol, P_TF, L - i);
+         if(hi[i] > rHi) rHi = hi[i];
+         if(lo[i] < rLo) rLo = lo[i];
+      }
+      // (a) dinh / day vua duoc xac nhan: chi so p = nen k + 1
+      int p = L - 1 - k;
+      datetime tp = iTime(_Symbol, P_TF, k + 1);
+      double cp = iClose(_Symbol, P_TF, k + 1);
+      if(tp > g_divUsed)
+      {
+         bool ph = true, pl = true;
+         for(int j = p - k; j <= p + k; j++)
+         {
+            if(j == p) continue;
+            if(hi[j] >= hi[p]) ph = false;
+            if(lo[j] <= lo[p]) pl = false;
+         }
+         for(int q = p - k - 1; q >= k && (ph || pl); q--)
+         {
+            bool qh = ph, ql = pl;
+            for(int j = q - k; j <= q + k; j++)
+            {
+               if(j == q) continue;
+               if(hi[j] >= hi[q]) qh = false;
+               if(lo[j] <= lo[q]) ql = false;
+            }
+            if(qh && hi[p] > hi[q] && rv[p] < rv[q])                    // RSI canh bao o dinh
+            {
+               if(cvd[p] <= cvd[q] && c1 < cp)
+               { sellBase = true; g_sigSL = MathMax((hi[p] + 0.25 * atr) - c1, 0.5 * atr); g_divUsed = tp; }
+               else g_status = "RSI phan ky o dinh nhung CVD van lap dinh moi: nguoi mua con o day, cho";
+            }
+            if(ql && lo[p] < lo[q] && rv[p] > rv[q])                    // RSI canh bao o day
+            {
+               if(cvd[p] >= cvd[q] && c1 > cp)
+               { buyBase = true; g_sigSL = MathMax(c1 - (lo[p] - 0.25 * atr), 0.5 * atr); g_divUsed = tp; }
+               else g_status = "RSI phan ky o day nhung CVD van lap day moi: nguoi ban con o day, cho";
+            }
+            if(qh || ql) break;                                          // chi so voi dinh / day lien truoc
+         }
+      }
+      // (b) Hap thu
+      int M = P_AbsorbBars < 2 ? 2 : (P_AbsorbBars > L - 2 ? L - 2 : P_AbsorbBars);
+      if(!buyBase && !sellBase && t1 - g_absUsed >= (long)M * PeriodSeconds(P_TF) && rHi > rLo)
+      {
+         double dv = 0, vv = 0, mLo = DBL_MAX, mHi = 0;
+         for(int i = L - M; i < L; i++)
+         {
+            dv += 2.0 * fb[i] - fv[i]; vv += fv[i];
+            if(lo[i] < mLo) mLo = lo[i];
+            if(hi[i] > mHi) mHi = hi[i];
+         }
+         double chg = c1 - iClose(_Symbol, P_TF, M + 1);
+         double pos = (c1 - rLo) / (rHi - rLo);
+         double rsiNow = rv[L - 1];
+         if(vv > 0 && dv <= -P_AbsorbDelta * vv && chg >= -0.25 * atr && pos <= 0.25 && rsiNow <= P_DivRsiLow)
+         { buyBase = true; g_sigSL = MathMax(c1 - (mLo - 0.25 * atr), 0.5 * atr); g_absUsed = t1; }
+         else if(vv > 0 && dv >= P_AbsorbDelta * vv && chg <= 0.25 * atr && pos >= 0.75 && rsiNow >= 100.0 - P_DivRsiLow)
+         { sellBase = true; g_sigSL = MathMax((mHi + 0.25 * atr) - c1, 0.5 * atr); g_absUsed = t1; }
+      }
+   }
    else
    {
       buyBase  = c1 > trend && fast > trend && l1 <= fast && c1 > fast;

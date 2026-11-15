@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.12"
-#property version   "5.1200"
+#define  BOT_VERSION "5.13"
+#property version   "5.1300"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -22,7 +22,8 @@ enum ENUM_STRATEGY
    STRAT_SPRING       = 6,   // Thử nghiệm: Wyckoff spring / upthrust
    STRAT_MACD         = 7,   // Thử nghiệm: MACD đa khung
    STRAT_IMOM         = 8,   // Thử nghiệm: quán tính trong ngày
-   STRAT_FIBVP        = 9    // Thử nghiệm: Fibonacci + Volume Profile
+   STRAT_FIBVP        = 9,   // Thử nghiệm: Fibonacci + Volume Profile
+   STRAT_DIVCVD       = 10   // Thử nghiệm: phân kỳ RSI xác nhận bằng CVD
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -59,6 +60,12 @@ input int             InpVPBins           = 40;         // Fib + VP: số ô gi�
 input double          InpVPHighMult       = 1.2;        // Fib + VP: vùng dày khi số tick ≥ (× trung bình các ô)
 input int             InpVPTFmin          = 5;          // Fib + VP: khung đếm tick (phút, 0 = khung chính)
 input double          InpFibMinRR         = 1.0;        // Fib + VP: lãi tới đỉnh/đáy sóng tối thiểu (× SL)
+input int             InpDivRsiPeriod     = 14;         // RSI + CVD: chu kỳ RSI (số nến)
+input int             InpDivLookback      = 40;         // RSI + CVD: tìm đỉnh / đáy trong (số nến)
+input int             InpDivPivot         = 3;          // RSI + CVD: đỉnh / đáy cần thấp hơn / cao hơn (số nến mỗi bên)
+input double          InpDivRsiLow        = 30.0;       // RSI + CVD: quá bán dưới (quá mua = 100 − mức này)
+input int             InpAbsorbBars       = 5;          // RSI + CVD: hấp thụ xét trong (số nến gần nhất)
+input double          InpAbsorbDelta      = 0.15;       // RSI + CVD: CVD đổ ít nhất (× tổng khối lượng các nến đó)
 
 input group "4. Bộ lọc xu hướng"
 input bool            InpUseHTF           = true;       // Chỉ giao dịch theo xu hướng khung lớn
@@ -258,6 +265,8 @@ int             P_RangeBars;
 double          P_RangeMaxATR;
 int             P_FibLookback, P_VPBins, P_VPTFmin;
 double          P_FibMinSwingATR, P_VPHighMult, P_FibMinRR;
+int             P_DivRsiPeriod, P_DivLookback, P_DivPivot, P_AbsorbBars;
+double          P_DivRsiLow, P_AbsorbDelta;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -370,6 +379,8 @@ void LoadParams()
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
    P_VPHighMult = InpVPHighMult; P_VPTFmin = InpVPTFmin; P_FibMinRR = InpFibMinRR;
+   P_DivRsiPeriod = InpDivRsiPeriod; P_DivLookback = InpDivLookback; P_DivPivot = InpDivPivot;
+   P_DivRsiLow = InpDivRsiLow; P_AbsorbBars = InpAbsorbBars; P_AbsorbDelta = InpAbsorbDelta;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -465,6 +476,12 @@ bool SetParam(const string k, const string v)
    if(k == "InpVPHighMult") { P_VPHighMult = StringToDouble(v); return true; }
    if(k == "InpVPTFmin") { P_VPTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpFibMinRR") { P_FibMinRR = StringToDouble(v); return true; }
+   if(k == "InpDivRsiPeriod") { P_DivRsiPeriod = (int)StringToInteger(v); return true; }
+   if(k == "InpDivLookback") { P_DivLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpDivPivot") { P_DivPivot = (int)StringToInteger(v); return true; }
+   if(k == "InpDivRsiLow") { P_DivRsiLow = StringToDouble(v); return true; }
+   if(k == "InpAbsorbBars") { P_AbsorbBars = (int)StringToInteger(v); return true; }
+   if(k == "InpAbsorbDelta") { P_AbsorbDelta = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
@@ -674,9 +691,9 @@ int OnInit()
    hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
    hATRSL = P_SLTFmin > 0 ? iATR(_Symbol, TFFromMin(P_SLTFmin), P_ATRPeriod) : hATR;
    hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
-   if(P_Strategy == STRAT_RSI_REVERT)
+   if(P_Strategy == STRAT_RSI_REVERT || P_Strategy == STRAT_DIVCVD)
    {
-      hRSI = iRSI(_Symbol, P_TF, P_RsiPeriod, PRICE_CLOSE);
+      hRSI = iRSI(_Symbol, P_TF, P_Strategy == STRAT_DIVCVD ? P_DivRsiPeriod : P_RsiPeriod, PRICE_CLOSE);
       if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return INIT_FAILED; }
    }
    if(P_Strategy == STRAT_MACD)
@@ -807,7 +824,7 @@ void OnDeinit(const int reason)
    IndicatorRelease(hATR);
    if(hATRSL != hATR && hATRSL != INVALID_HANDLE) IndicatorRelease(hATRSL);
    IndicatorRelease(hADX);
-   if(hRSI != INVALID_HANDLE) IndicatorRelease(hRSI);
+   if(hRSI != INVALID_HANDLE) { IndicatorRelease(hRSI); hRSI = INVALID_HANDLE; }
    if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
    if(hBB != INVALID_HANDLE) IndicatorRelease(hBB);
    if(hMACD != INVALID_HANDLE) IndicatorRelease(hMACD);
