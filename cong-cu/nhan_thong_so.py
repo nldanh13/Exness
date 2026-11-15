@@ -38,6 +38,11 @@ GROUPS = [
         ("InpBreakConfirm", "Chờ thêm 1 nến xác nhận", "Chỉ vào lệnh nếu sau 1 nến giá vẫn nằm ngoài kênh."),
         ("InpBreakMinVol",  "Khối lượng nến phá vỡ tối thiểu (× TB 20 nến, 0 = tắt)", "MT5 của Exness chỉ có số tick, không có khối lượng giao dịch thật."),
         ("InpBreakMaxATR",  "Bỏ nến phá vỡ dài hơn (× ATR, 0 = tắt)", "Tránh vào lệnh ngay sau các nến thanh lý dây chuyền."),
+        ("InpBreakRetest",  "Chỉ vào khi giá hồi về test lại vùng vừa phá và giữ được", "Phá vỡ thật đủ 3 điều: thân nến đóng cửa hẳn ngoài vùng (thân nến tối thiểu), volume tăng mạnh (khối lượng tối thiểu), và khi giá hồi về test lại thì vùng vừa phá giữ được. Bật thì bot không vào ngay khi phá mà chờ nến chạm lại mép kênh và vẫn đóng cửa ngoài kênh. Có nến đóng cửa quay lại trong kênh trước đó = phá vỡ thất bại, đứng ngoài."),
+        ("InpBreakRetestBars", "Chờ test lại tối đa (số nến)", "Quá bấy nhiêu nến mà giá chưa hồi về thì bỏ, không đuổi theo."),
+        ("InpBreakRetestATR", "Test lại: chạm trong (× ATR quanh mép kênh)", ""),
+        ("InpBreakSkipOpenMin", "Bỏ phá vỡ trong (phút) đầu phiên Á / London / New York (0 = tắt)", "Cú phá đầu tiên khi phiên mới vừa mở rất hay là cái bẫy. Phiên mở lúc 0, 7 và 13 giờ server (UTC) = 7, 14 và 20 giờ Việt Nam. Với khung H4 chỉ có nến 0 giờ bị ảnh hưởng."),
+        ("InpFakeoutFade",  "Phá vỡ giả (đóng cửa quay vào): đánh chiều ngược lại", "Một nến đóng cửa hẳn ngoài kênh nhưng ngay nến sau đóng cửa quay ngược vào trong: người vừa mua phá vỡ đang bị kẹt. Bot vào chiều ngược lại, SL ngoài đỉnh / đáy của 2 nến đó."),
     ]),
     ("3. Chiến lược thử nghiệm (chưa đạt kiểm thử)", [
         ("InpRsiPeriod",   "RSI: chu kỳ (số nến)", ""),

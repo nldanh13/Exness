@@ -192,6 +192,14 @@ PRESETS = [
         "Theo xu hướng D1 (EMA200). OB giảm: ngược lại. Chỉ chạy demo.",
     ], {"InpStrategy": "15", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2",
         "InpOBLookback": "60", "InpOBImpulseATR": "1.5", "InpOBMaxATR": "2.5", "InpOBStallBars": "6", "InpOBBreaker": "true"}),
+    ("20-Pha-vo-that-du-3-dieu-H4-THU-NGHIEM.set", [
+        "20. Phá vỡ thật đủ 3 điều (Donchian H4 + ADX): thân nến ≥ 50% biên độ, khối lượng ≥ 1,5 lần TB 20 nến, hồi về test lại",
+        "mép kênh (≤ 0,3 ATR, tối đa 6 nến) mà vẫn đóng cửa ngoài kênh. Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "Tránh 6 bẫy: chỉ tin giá đóng cửa; đóng cửa quay vào trước khi test = bỏ; volume thấp = bỏ; ±2 giờ quanh tin Mỹ = bỏ;",
+        "phá trong 60 phút đầu phiên Á / London / New York = bỏ; test lại mà đóng cửa thủng vào trong = bỏ.",
+        "Lưu ý: cấu hình C (đã kiểm thử) không lọc volume / thân nến. Vào khi test lại sẽ bỏ lỡ những cú phá chạy thẳng không hồi.",
+    ], {"InpBreakMinBody": "50", "InpBreakMinVol": "1.5", "InpBreakRetest": "true", "InpBreakRetestBars": "6",
+        "InpBreakRetestATR": "0.3", "InpBreakSkipOpenMin": "60", "InpAvoidUSNews": "true"}),
 ]
 
 

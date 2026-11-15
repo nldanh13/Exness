@@ -291,6 +291,43 @@ void KnifeAdd()
    SendEntry(buy, atr, false);
 }
 
+// Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
+// (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
+// 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
+// InpBreakConfirm (va InpFakeoutFade danh nguoc chieu); 3) khong co volume - InpBreakMinVol; 4) luc ra tin - InpAvoidUSNews;
+// 5) dau phien - InpBreakSkipOpenMin; 6) pha roi khong giu duoc - InpBreakRetest (dong cua lai trong vung truoc khi test = huy).
+// Nen shift j co phai nen pha vo kenh Donchian (than, khoi luong, do dai, gio dau phien) khong; lvl = mep kenh da pha.
+bool DonchBreakAt(const int j, const bool buy, const double atr, double &lvl)
+{
+   int ix = buy ? iHighest(_Symbol, P_TF, MODE_HIGH, P_DonchianPeriod, j + 1) : iLowest(_Symbol, P_TF, MODE_LOW, P_DonchianPeriod, j + 1);
+   if(ix < 0) return false;
+   lvl = buy ? iHigh(_Symbol, P_TF, ix) : iLow(_Symbol, P_TF, ix);
+   double cb = iClose(_Symbol, P_TF, j), ob = iOpen(_Symbol, P_TF, j), hb = iHigh(_Symbol, P_TF, j), lb = iLow(_Symbol, P_TF, j);
+   double margin = P_BreakMinATR * atr, range = hb - lb, body = MathAbs(cb - ob);
+   if(buy ? cb <= lvl + margin : cb >= lvl - margin) return false;
+   if(P_BreakMaxATR > 0 && range > P_BreakMaxATR * atr) return false;
+   if(P_BreakMinBody > 0 && !((buy ? cb > ob : cb < ob) && range > 0 && body >= range * P_BreakMinBody / 100.0)) return false;
+   if(P_BreakMinVol > 0)
+   {
+      double vs = 0; int vn = 0;
+      for(int q = j + 1; q <= j + 20; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vs += (double)v; vn++; } }
+      if(vn < 10 || (double)iTickVolume(_Symbol, P_TF, j) < P_BreakMinVol * vs / vn) return false;
+   }
+   if(BreakAtSessionOpen(iTime(_Symbol, P_TF, j))) return false;
+   return true;
+}
+// Pha vo dau phien (kieu 5): nen pha vo mo cua trong InpBreakSkipOpenMin phut dau cua phien A (0 gio), London (7 gio),
+// New York (13 gio) - gio server Exness = UTC. Cu pha dau tien trong phien rat hay la cai bay.
+bool BreakAtSessionOpen(const datetime t)
+{
+   if(P_BreakSkipOpenMin <= 0) return false;
+   MqlDateTime d; TimeToStruct(t, d);
+   int mins = d.hour * 60 + d.min;
+   int opens[] = {0, 7 * 60, 13 * 60};
+   for(int i = 0; i < 3; i++) if(mins >= opens[i] && mins < opens[i] + P_BreakSkipOpenMin) return true;
+   return false;
+}
+
 bool BaseSignals(const double atr, const double trend, const double fast,
                  const double c1, const double h1, const double l1,
                  bool &buyBase, bool &sellBase)
@@ -329,6 +366,40 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       buyBase  = volOk && cb > chHigh + margin && bodyBuy  && c1 > trend && (b == 1 || c1 > chHigh);
       sellBase = volOk && cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
       if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; return false; }
+      if((buyBase || sellBase) && BreakAtSessionOpen(iTime(_Symbol, P_TF, b))) { g_status = "Pha vo dau phien, bo qua"; return false; }
+      // Kieu 6: khong vao ngay khi vua pha. Cho gia hoi ve test lai mep kenh (trong InpBreakRetestATR ATR) va dong cua van
+      // ngoai kenh, trong InpBreakRetestBars nen. Co nen dong cua quay lai trong kenh truoc khi test = pha vo that bai, bo.
+      if(P_BreakRetest)
+      {
+         buyBase = false; sellBase = false;
+         double tol = P_BreakRetestATR * atr;
+         for(int j = 2; j <= 1 + P_BreakRetestBars && !buyBase && !sellBase; j++)
+            for(int d = 0; d < 2 && !buyBase && !sellBase; d++)
+            {
+               bool buy = d == 0;
+               double lvl = 0;
+               if(!DonchBreakAt(j, buy, atr, lvl)) continue;
+               bool ok = true;
+               for(int m = j - 1; m >= 2 && ok; m--)
+               {
+                  double cm = iClose(_Symbol, P_TF, m);
+                  if(buy ? (cm <= lvl || iLow(_Symbol, P_TF, m) <= lvl + tol) : (cm >= lvl || iHigh(_Symbol, P_TF, m) >= lvl - tol)) ok = false;
+               }
+               if(!ok) continue;                                          // da that bai, hoac da test (lan dau da xet)
+               if(buy  && l1 <= lvl + tol && c1 > lvl && c1 > trend) buyBase = true;
+               if(!buy && h1 >= lvl - tol && c1 < lvl && c1 < trend) sellBase = true;
+            }
+      }
+      // Kieu 2 danh nguoc (InpFakeoutFade): nen 2 dong cua pha kenh, nen 1 dong cua quay nguoc vao trong -> nguoi vua mua pha vo
+      // dang bi ket: vao chieu nguoc lai, SL ngoai dinh / day cua 2 nen + 0,25 ATR
+      if(P_FakeoutFade && !buyBase && !sellBase)
+      {
+         double lv = 0, o1 = iOpen(_Symbol, P_TF, 1), h2 = iHigh(_Symbol, P_TF, 2), l2 = iLow(_Symbol, P_TF, 2);
+         if(DonchBreakAt(2, true, atr, lv) && c1 < lv && c1 < o1)
+         { sellBase = true; g_sigSL = MathMax(MathMax(h1, h2) + 0.25 * atr - c1, 0.5 * atr); }
+         else if(DonchBreakAt(2, false, atr, lv) && c1 > lv && c1 > o1)
+         { buyBase = true; g_sigSL = MathMax(c1 - (MathMin(l1, l2) - 0.25 * atr), 0.5 * atr); }
+      }
    }
    else if(P_Strategy == STRAT_RSI_REVERT)
    {

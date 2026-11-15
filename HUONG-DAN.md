@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.20
+# Hướng dẫn bot BTC (MT5) v5.21
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -984,3 +984,16 @@ bộ `19-Order-block-5-phan-ung-H1-THU-NGHIEM`).
   → **Sell** (vùng thành kháng cự), SL trên nến đó + 0,25 ATR.
 - TP: đỉnh con sóng sau cú đẩy nếu xa hơn 1R, không thì theo `InpRR`. Order block giảm: làm ngược lại.
 - Đã thêm vào đợt xếp hạng (`XH-OrderBlock-H1`, nay là 16 chiến lược).
+
+## v5.21: 6 kiểu phá vỡ giả – phá vỡ thật phải đủ 3 điều (16/11/2026) – CHƯA KIỂM THỬ
+Áp dụng cho Donchian (chiến lược 1, cấu hình mặc định). Bộ `20-Pha-vo-that-du-3-dieu-H4-THU-NGHIEM`.
+| Kiểu phá vỡ giả | Bot tránh bằng |
+|---|---|
+| 1. Phá bằng râu | Có sẵn: Donchian chỉ tính giá đóng cửa, không tính râu |
+| 2. Đóng cửa qua rồi quay vào | Có sẵn `InpBreakConfirm`; mới `InpFakeoutFade`: đánh chiều ngược lại, SL ngoài 2 nến |
+| 3. Không có volume | Có sẵn `InpBreakMinVol` (số tick, Exness không có khối lượng thật) |
+| 4. Lúc ra tin | Có sẵn `InpAvoidUSNews` (± `InpNewsHours` giờ quanh tin Mỹ, mọi chiến lược) |
+| 5. Đầu phiên | Mới `InpBreakSkipOpenMin`: bỏ phá vỡ trong x phút đầu phiên 0 / 7 / 13 giờ UTC |
+| 6. Phá rồi không giữ được | Mới `InpBreakRetest`: chờ test lại mép kênh (≤ `InpBreakRetestATR` ATR, ≤ `InpBreakRetestBars` nến) và đóng cửa vẫn ngoài kênh; đóng cửa quay vào trước đó = bỏ |
+Phá vỡ thật = thân nến đóng cửa hẳn ngoài vùng (`InpBreakMinBody`) + volume tăng mạnh (`InpBreakMinVol`) + test lại giữ được
+(`InpBreakRetest`). Đánh đổi: vào khi test lại sẽ bỏ lỡ các cú phá chạy thẳng không hồi; cấu hình C đã kiểm thử không có các lọc này.

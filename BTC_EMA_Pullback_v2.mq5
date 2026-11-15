@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.20"
-#property version   "5.2000"
+#define  BOT_VERSION "5.21"
+#property version   "5.2100"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -45,6 +45,11 @@ input double          InpBreakMinBody     = 0.0;        // Thân nến phá vỡ
 input bool            InpBreakConfirm     = false;      // Chờ thêm 1 nến xác nhận
 input double          InpBreakMinVol      = 0.0;        // Khối lượng nến phá vỡ tối thiểu (× TB 20 nến, 0 = tắt)
 input double          InpBreakMaxATR      = 0.0;        // Bỏ nến phá vỡ dài hơn (× ATR, 0 = tắt)
+input bool            InpBreakRetest      = false;      // Chỉ vào khi giá hồi về test lại vùng vừa phá và giữ được
+input int             InpBreakRetestBars  = 6;          // Chờ test lại tối đa (số nến)
+input double          InpBreakRetestATR   = 0.3;        // Test lại: chạm trong (× ATR quanh mép kênh)
+input int             InpBreakSkipOpenMin = 0;          // Bỏ phá vỡ trong (phút) đầu phiên Á / London / New York (0 = tắt)
+input bool            InpFakeoutFade      = false;      // Phá vỡ giả (đóng cửa quay vào): đánh chiều ngược lại
 
 input group "3. Chiến lược thử nghiệm (chưa đạt kiểm thử)"
 input int             InpRsiPeriod        = 2;          // RSI: chu kỳ (số nến)
@@ -282,7 +287,9 @@ int             P_DonchianPeriod;
 double          P_BreakMinATR;
 double          P_BreakMinBody;
 bool            P_BreakConfirm;
-double          P_BreakMaxATR;
+double          P_BreakMaxATR, P_BreakRetestATR;
+bool            P_BreakRetest, P_FakeoutFade;
+int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
 int             P_RsiPeriod;
 double          P_RsiLow;
@@ -415,6 +422,8 @@ void LoadParams()
    P_BreakMinBody = InpBreakMinBody;
    P_BreakConfirm = InpBreakConfirm;
    P_BreakMaxATR = InpBreakMaxATR;
+   P_BreakRetest = InpBreakRetest; P_BreakRetestBars = InpBreakRetestBars; P_BreakRetestATR = InpBreakRetestATR;
+   P_BreakSkipOpenMin = InpBreakSkipOpenMin; P_FakeoutFade = InpFakeoutFade;
    P_BreakMinVol = InpBreakMinVol;
    P_RsiPeriod = InpRsiPeriod;
    P_RsiLow = InpRsiLow;
@@ -546,6 +555,11 @@ bool SetParam(const string k, const string v)
    if(k == "InpBreakMinBody") { P_BreakMinBody = StringToDouble(v); return true; }
    if(k == "InpBreakConfirm") { P_BreakConfirm = (v == "true" || v == "1"); return true; }
    if(k == "InpBreakMaxATR") { P_BreakMaxATR = StringToDouble(v); return true; }
+   if(k == "InpBreakRetest") { P_BreakRetest = (v == "true" || v == "1"); return true; }
+   if(k == "InpBreakRetestBars") { P_BreakRetestBars = (int)StringToInteger(v); return true; }
+   if(k == "InpBreakRetestATR") { P_BreakRetestATR = StringToDouble(v); return true; }
+   if(k == "InpBreakSkipOpenMin") { P_BreakSkipOpenMin = (int)StringToInteger(v); return true; }
+   if(k == "InpFakeoutFade") { P_FakeoutFade = (v == "true" || v == "1"); return true; }
    if(k == "InpBreakMinVol") { P_BreakMinVol = StringToDouble(v); return true; }
    if(k == "InpRsiPeriod") { P_RsiPeriod = (int)StringToInteger(v); return true; }
    if(k == "InpRsiLow") { P_RsiLow = StringToDouble(v); return true; }
