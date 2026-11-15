@@ -26,7 +26,7 @@ $MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu 
 # (PowerShell da nap vao bo nho) -> bao nguoi dung dong cua so va mo lai GiaoDien.cmd.
 $SelfFile  = $MyInvocation.MyCommand.Path
 $SelfStamp = (Get-Item $SelfFile).LastWriteTimeUtc.Ticks
-$ApiVer    = 4   # tang khi them API moi; trang web so voi so nay (3: bat buoc ma truy cap, 4: nhat ky quyet dinh)
+$ApiVer    = 5   # tang khi them API moi; trang web so voi so nay (3: ma truy cap, 4: nhat ky quyet dinh, 5: cham diem + dieu chinh kien thuc)
 $ErrFile    = Join-Path $WorkDir "loi.txt"
 $KeyFile    = Join-Path $WorkDir "khoa.txt"
 
@@ -219,6 +219,32 @@ function Send-Json($ctx, $obj, [int]$code = 200) {
     $json = $obj | ConvertTo-Json -Depth 6 -Compress
     Send-Bytes $ctx ([Text.Encoding]::UTF8.GetBytes($json)) "application/json; charset=utf-8" $code
 }
+# ---- Cham diem + dieu chinh kien thuc (v5.39) ----
+# Bot ghi Common\Files\TrendBot_hoc_<tai khoan>_<ma>.csv (moi lan ap dung kien thuc: boi canh, dien bien, ket qua, diem A-F).
+# Giao dien phan tich va de xuat dieu kien bo sung; ban bam Ap dung -> ghi TrendBot_dieuchinh_<tai khoan>_<ma>.csv, bot doc moi 10 phut.
+function Get-LearnData {
+    $dir = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files"
+    if (-not (Test-Path $dir)) { return @() }
+    return @(Get-ChildItem $dir -File -Filter "TrendBot_hoc_*.csv" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notlike "TrendBot_hoc_mo_*" } | ForEach-Object {
+            $key = $_.BaseName.Substring(13)
+            $rules = Join-Path $dir "TrendBot_dieuchinh_$key.csv"
+            @{ Khoa = $key; Dong = @((Read-Shared $_.FullName) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 5000);
+               Luat = @(if (Test-Path $rules) { (Read-Shared $rules) -split "\r?\n" | Where-Object { $_ } }) }
+        })
+}
+function Save-KnowRules($body) {
+    $key = [string]$body.khoa
+    if ($key -notmatch '^\d+_[\w.]+$') { return @{ Ok = $false; Loi = "Khoa khong hop le" } }
+    $lines = @($body.luat | ForEach-Object { [string]$_ })
+    foreach ($l in $lines) { if ($l -notmatch '^\d{1,2}\|-?\d\|[a-z]{2,6}\|(<=|>=)\|-?\d+(\.\d+)?\|[\x20-\x7E]{0,120}$') { return @{ Ok = $false; Loi = "Dong khong hop le: $l" } } }
+    $dir = Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files"
+    $f = Join-Path $dir "TrendBot_dieuchinh_$key.csv"
+    $head = "# Kien thuc da dieu chinh (giao dien ghi): chien luoc|tinh huong (-1 = moi)|dac trung|<= / >=|nguong|ghi chu"
+    @($head) + $lines | Set-Content -Path $f -Encoding ASCII
+    return @{ Ok = $true; File = $f }
+}
+
 function Read-Body($ctx) {
     $sr = New-Object IO.StreamReader($ctx.Request.InputStream, [Text.Encoding]::UTF8)
     $t = $sr.ReadToEnd()
@@ -306,6 +332,12 @@ try {
             elseif ($path -eq "/api/dung" -and $method -eq "POST") {
                 Stop-BotJob
                 Send-Json $ctx @{ Ok = $true }
+            }
+            elseif ($path -eq "/api/hoc") {
+                Send-Json $ctx @{ Hoc = @(Get-LearnData) }
+            }
+            elseif ($path -eq "/api/dieuchinh" -and $method -eq "POST") {
+                Send-Json $ctx (Save-KnowRules (Read-Body $ctx))
             }
             elseif ($path -eq "/api/thongso") {
                 $src = Join-Path $ProjectDir "$BotName.mq5"

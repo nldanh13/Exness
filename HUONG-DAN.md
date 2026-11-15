@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.38
+# Hướng dẫn bot BTC (MT5) v5.39
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1203,3 +1203,20 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
   đúng quy tắc của các bài học (vùng, nến xác nhận, cú quét, cấu trúc...), rủi ro theo số setup đồng ý (1 setup = `InpChainOneRisk`, ≥ 2 = đủ).
 - Lệnh giấy và lệnh thật vẫn được ghi (`InpLearn`), hiện trong bảng "Bot đã học được gì" và trong bằng chứng với nhãn "Thực chiến (tham khảo)",
   nhưng KHÔNG giảm rủi ro hay loại chiến lược nào. Bật `InpLearnApply` khi muốn để số liệu thực chiến can thiệp (như v5.36).
+
+## v5.39: Chấm điểm mỗi lần áp dụng kiến thức và điều chỉnh kiến thức (16/11/2026)
+**Dữ liệu = nhật ký áp dụng kiến thức.** Mỗi setup chế độ Theo tình huống thấy (lệnh giấy) được ghi vào `TrendBot_hoc_<tài khoản>_<mã>.csv`:
+- *Bối cảnh lúc vào* (`DacTrung`): `adx`, `slatr` (SL dài bao nhiêu ATR), `tpr` (lời / lỗ dự kiến), `than` (% thân nến), `vol` (khối lượng × TB 20 nến),
+  `hop` (vị trí trong hộp D1, 0 = rẻ nhất theo chiều lệnh), `gio`, `tin` (phút tới tin lớn), `xh` (+1 thuận / −1 ngược thủy triều),
+  `dong` / `trai` (số setup cùng đồng ý / có setup trái chiều), `luat=1` nếu bị kiến thức đã điều chỉnh chặn.
+- *Diễn biến*: `MFE` (đi đúng hướng xa nhất, R), `MAE` (đi ngược sâu nhất, R), `SoNen` (bao lâu có kết quả).
+- *Kết quả*: `R` (đã trừ spread) và *điểm*: **A** (4) chạm TP, chưa ngược quá 0,5R · **B** (3) lời > 0,3R · **C** (2) hòa ±0,3R ·
+  **D** (1) thua nhưng từng đi đúng ≥ 0,5R (đúng hướng, quản lý lệnh chưa tốt) · **F** (0) thua, chưa từng đi đúng 0,5R (điều kiện vào có vấn đề).
+
+**Điều chỉnh kiến thức (bạn duyệt)** – giao diện, khung "Chấm điểm & điều chỉnh kiến thức":
+- Bảng mỗi chiến lược: số lần, A / B / C / D / F, điểm TB, R TB, nhận xét (nhiều D → xem lại hòa vốn / chốt phần; nhiều F → điều kiện vào cần chặt hơn).
+- Đề xuất: với mỗi chiến lược (và từng tình huống nếu đủ mẫu), tìm ngưỡng của một đặc trưng chia các lần áp dụng thành 2 nhóm – nhóm kém
+  điểm TB ≤ 1,5, nhóm tốt hơn ≥ 1 điểm, mỗi nhóm ≥ 8 lần. Hiện bằng chứng (số lần, điểm, R mỗi nhóm). Bấm **Áp dụng** → thêm điều kiện bổ sung
+  vào `TrendBot_dieuchinh_<tài khoản>_<mã>.csv`; bot đọc mỗi 10 phút và không dùng chiến lược đó khi điều kiện không thỏa (vẫn ghi lệnh giấy với
+  `luat=1` để tiếp tục kiểm chứng). Bấm **Bỏ** để gỡ. Bot không tự sửa kiến thức.
+- Lưu ý: chia theo ngưỡng trên mẫu nhỏ dễ "khớp nhầm" – nên chờ nhiều lần áp dụng (càng nhiều càng chắc) trước khi duyệt.

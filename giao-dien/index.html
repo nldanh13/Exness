@@ -270,6 +270,18 @@ main { gap: 14px; padding-block: 14px 40px; }
     <div id="learn-box"></div>
   </section>
 
+  <section class="sec" id="sec-know">
+    <div class="sec-head"><h2>Chấm điểm &amp; điều chỉnh kiến thức</h2><button class="small ghost" id="know-reload">Phân tích lại</button>
+      <span class="hint">Mỗi lần bot áp dụng kiến thức được chấm A–F. Bạn duyệt điều kiện bổ sung, bot không tự sửa.</span></div>
+    <details class="ev"><summary>Thang điểm</summary><ul>
+      <li><b>A (4)</b> chạm TP, chưa bao giờ ngược quá 0,5R – đúng, vào đúng điểm</li>
+      <li><b>B (3)</b> có lời – đúng</li>
+      <li><b>C (2)</b> hòa (±0,3R) – chưa rõ</li>
+      <li><b>D (1)</b> thua nhưng đã từng đi đúng hướng ≥ 0,5R – đúng hướng, quản lý lệnh chưa tốt</li>
+      <li><b>F (0)</b> thua, chưa bao giờ đi đúng hướng 0,5R – điều kiện vào có vấn đề</li></ul></details>
+    <div id="know-box"><p class="muted" style="margin:0">Đang đọc…</p></div>
+  </section>
+
   <section class="sec" id="sec-journal">
     <div class="sec-head"><h2>Nhật ký quá trình</h2>
       <div class="chips" id="jr-filter" role="group" aria-label="Lọc nhật ký">
@@ -532,7 +544,7 @@ function renderOptions() {
   } else w.hidden = true;
 }
 
-var API_VER = 4;   // khớp $ApiVer trong GiaoDien.ps1
+var API_VER = 5;   // khớp $ApiVer trong GiaoDien.ps1
 function renderStatus(d) {
   S.last = d;
   $('reopen-note').hidden = !(d.CanMoLai || (d.ApiVer || 1) < API_VER);
@@ -648,6 +660,124 @@ function renderLearn(list) {
     }).join('') + '</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">' + open + ' lệnh giấy đang theo dõi. Đủ ' +
     'số lệnh giấy mới xếp loại. Đánh giá chỉ can thiệp quyết định khi bật InpLearnApply.</p>';
 }
+// ---- Chấm điểm & điều chỉnh kiến thức (v5.39) ----
+var KN = { data: [], key: '', minN: 8 };
+var FEAT_NAME = { adx: 'ADX', slatr: 'SL dài (× ATR)', tpr: 'Lời / lỗ dự kiến (R)', than: 'Thân nến xác nhận (%)', vol: 'Khối lượng (× TB 20 nến)',
+  hop: 'Vị trí trong hộp D1 (0 = rẻ nhất theo chiều lệnh)', tin: 'Phút tới tin lớn', dong: 'Số setup cùng đồng ý', xh: 'Thuận thủy triều (+1 / −1)', gio: 'Giờ server' };
+var GRADE_PT = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+function knowParse(lines) {
+  var rows = [];
+  (lines || []).forEach(function (l) {
+    var a = String(l).split(',');
+    if (a.length < 11 || a[0] === 'ThoiGian' || a[5] !== 'giay' || !(a[9] in GRADE_PT)) return;
+    var f = {};
+    String(a[10]).split(';').forEach(function (kv) { var e = kv.indexOf('='); if (e > 0) f[kv.slice(0, e)] = +kv.slice(e + 1); });
+    rows.push({ t: a[0], sit: +a[1], st: +a[2], r: +a[4], mfe: +a[6], mae: +a[7], g: a[9], pt: GRADE_PT[a[9]], f: f });
+  });
+  return rows;
+}
+function knowGroup(rows) {
+  var o = { n: rows.length, A: 0, B: 0, C: 0, D: 0, F: 0, pt: 0, r: 0, mfe: 0 };
+  rows.forEach(function (x) { o[x.g]++; o.pt += x.pt; o.r += x.r; o.mfe += x.mfe; });
+  if (o.n) { o.pt /= o.n; o.r /= o.n; o.mfe /= o.n; }
+  return o;
+}
+function knowSuggest(rows, st, sit) {
+  // Tìm ngưỡng của từng đặc trưng chia các lần áp dụng thành 2 nhóm chênh điểm rõ: nhóm kém (điểm TB ≤ 1,5) vs nhóm tốt (hơn ≥ 1 điểm)
+  var out = [], MIN = KN.minN;
+  Object.keys(FEAT_NAME).forEach(function (k) {
+    if (k === 'gio') return;
+    var v = rows.filter(function (x) { return k in x.f; }).sort(function (a, b) { return a.f[k] - b.f[k]; });
+    if (v.length < 2 * MIN) return;
+    var best = null;
+    [0.25, 0.33, 0.4, 0.5, 0.6, 0.67, 0.75].forEach(function (q) {
+      var i = Math.floor(v.length * q), t = v[i - 1].f[k], u = v[i].f[k];
+      if (t === u) return;
+      var lo = v.filter(function (x) { return x.f[k] <= t; }), hi = v.filter(function (x) { return x.f[k] > t; });
+      if (lo.length < MIN || hi.length < MIN) return;
+      var gl = knowGroup(lo), gh = knowGroup(hi), mid = Math.round((t + u) / 2 * 100) / 100;
+      var c = null;
+      if (gh.pt - gl.pt >= 1 && gl.pt <= 1.5) c = { op: '>=', val: mid, bad: gl, good: gh };
+      if (gl.pt - gh.pt >= 1 && gh.pt <= 1.5) c = { op: '<=', val: mid, bad: gh, good: gl };
+      // Chọn ngưỡng có chênh điểm lớn và đủ mẫu ở cả 2 nhóm (chênh × căn số mẫu nhóm nhỏ hơn), tránh ngưỡng cắt quá sát
+      if (c) c.sc = (c.good.pt - c.bad.pt) * Math.sqrt(Math.min(c.good.n, c.bad.n));
+      if (c && (!best || c.sc > best.sc)) best = c;
+    });
+    if (best) { best.k = k; best.st = st; best.sit = sit; out.push(best); }
+  });
+  return out;
+}
+function knowLoad() {
+  if (NHUNG) { $('know-box').innerHTML = '<p class="muted" style="margin:0">Chỉ có khi mở bằng GiaoDien.cmd.</p>'; return; }
+  api('/api/hoc').then(function (d) { KN.data = d.Hoc || []; renderKnow(); })
+    .catch(function (e) { $('know-box').innerHTML = '<p class="muted" style="margin:0">' + esc(/Khong thay trang|404/.test(e.message) ? 'Cần mở lại GiaoDien.cmd (bản giao diện cũ).' : e.message) + '</p>'; });
+}
+function knowRules(entry) { return (entry.Luat || []).filter(function (l) { return l && l.charAt(0) !== '#'; }); }
+function knowSave(entry, rules) {
+  return api('/api/dieuchinh', { khoa: entry.Khoa, luat: rules }).then(function (r) { if (!r.Ok) throw new Error(r.Loi || 'Lỗi'); knowLoad(); })
+    .catch(function (e) { alert('Không lưu được: ' + e.message); });
+}
+function renderKnow() {
+  var box = $('know-box');
+  if (!KN.data.length) { box.innerHTML = '<p class="muted" style="margin:0">Chưa có dữ liệu. Bot (chế độ Theo tình huống, bản 5.39+) ghi lại mỗi lần áp dụng kiến thức khi lệnh giấy có kết quả.</p>'; return; }
+  var entry = KN.data.filter(function (e) { return e.Khoa === KN.key; })[0] || KN.data[0];
+  KN.key = entry.Khoa;
+  var rows = knowParse(entry.Dong), rules = knowRules(entry), html = '';
+  if (KN.data.length > 1) html += '<div class="field"><label>Tài khoản / mã:</label> <select id="know-key">' + KN.data.map(function (e) { return '<option' + (e.Khoa === KN.key ? ' selected' : '') + '>' + esc(e.Khoa) + '</option>'; }).join('') + '</select></div>';
+  // Bảng điểm theo chiến lược
+  var byS = {};
+  rows.forEach(function (x) { (byS[x.st] = byS[x.st] || []).push(x); });
+  var sts = Object.keys(byS).sort(function (a, b) { return byS[b].length - byS[a].length; });
+  html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Chiến lược</th><th class="r">Lần áp dụng</th><th class="r">A</th><th class="r">B</th><th class="r">C</th><th class="r">D</th><th class="r">F</th><th class="r">Điểm TB</th><th class="r">R TB</th><th class="r">Đi đúng hướng TB</th><th class="l">Nhận xét</th></tr></thead><tbody>' +
+    (sts.length ? sts.map(function (k) {
+      var g = knowGroup(byS[k]), note = '';
+      if (g.n >= KN.minN && g.D / g.n >= 0.3) note = 'Nhiều D: đúng hướng nhưng không giữ được → xem lại dời hòa vốn / chốt phần sớm hơn';
+      else if (g.n >= KN.minN && g.F / g.n >= 0.5) note = 'Nhiều F: điều kiện vào cần chặt hơn';
+      else if (g.n < KN.minN) note = 'Chưa đủ ' + KN.minN + ' lần để nhận xét';
+      return '<tr><td>' + esc(STR_NAME[k] || ('S' + k)) + '</td><td class="r num">' + g.n + '</td><td class="r num">' + g.A + '</td><td class="r num">' + g.B + '</td><td class="r num">' + g.C +
+        '</td><td class="r num">' + g.D + '</td><td class="r num">' + g.F + '</td><td class="r num"><b>' + g.pt.toFixed(2) + '</b></td><td class="r num">' + (g.r >= 0 ? '+' : '') + g.r.toFixed(2) +
+        'R</td><td class="r num">' + g.mfe.toFixed(2) + 'R</td><td class="l" style="white-space:normal">' + esc(note) + '</td></tr>';
+    }).join('') : '<tr><td colspan="11" class="l muted">Chưa có lần áp dụng nào có kết quả.</td></tr>') + '</tbody></table></div>';
+  // Đề xuất
+  var sug = [];
+  sts.forEach(function (k) {
+    sug = sug.concat(knowSuggest(byS[k], +k, -1));
+    var bySit = {};
+    byS[k].forEach(function (x) { (bySit[x.sit] = bySit[x.sit] || []).push(x); });
+    Object.keys(bySit).forEach(function (si) { if (bySit[si].length < byS[k].length) sug = sug.concat(knowSuggest(bySit[si], +k, +si)); });
+  });
+  sug = sug.filter(function (x) { return !rules.some(function (l) { var a = l.split('|'); return +a[0] === x.st && +a[1] === x.sit && a[2] === x.k; }); });
+  html += '<h3 style="font-size:13px;margin:12px 0 6px">Đề xuất điều chỉnh kiến thức</h3>';
+  html += sug.length ? sug.map(function (x, i) {
+    var sitTxt = x.sit >= 0 ? ' (tình huống ' + (SIT_NAME[x.sit] || x.sit) + ')' : '';
+    return '<div class="dcard" style="margin-bottom:8px"><div><b>' + esc(STR_NAME[x.st] || ('S' + x.st)) + esc(sitTxt) + '</b>: chỉ dùng khi <b>' + esc(FEAT_NAME[x.k]) + ' ' + (x.op === '<=' ? '≤' : '≥') + ' ' + x.val + '</b></div>' +
+      '<div class="dwhy">Bằng chứng: khi ngược điều kiện này ' + x.bad.n + ' lần, điểm TB ' + x.bad.pt.toFixed(2) + ' (' + (x.bad.r >= 0 ? '+' : '') + x.bad.r.toFixed(2) + 'R); khi thỏa ' + x.good.n + ' lần, điểm TB ' + x.good.pt.toFixed(2) +
+      ' (' + (x.good.r >= 0 ? '+' : '') + x.good.r.toFixed(2) + 'R).</div><div><button class="small" data-sug="' + i + '">Áp dụng</button></div></div>';
+  }).join('') : '<p class="muted" style="margin:0">Chưa có đề xuất (cần ít nhất ' + (2 * KN.minN) + ' lần áp dụng của một chiến lược và chênh điểm rõ giữa 2 nhóm).</p>';
+  html += '<h3 style="font-size:13px;margin:12px 0 6px">Kiến thức đã điều chỉnh (bot đang tuân theo)</h3>';
+  html += rules.length ? rules.map(function (l, i) {
+    var a = l.split('|');
+    return '<div class="acct-row" style="margin-bottom:6px"><span><b>' + esc(STR_NAME[a[0]] || ('S' + a[0])) + '</b>' + (+a[1] >= 0 ? ' (' + esc(SIT_NAME[a[1]] || a[1]) + ')' : '') + ': chỉ dùng khi ' + esc(FEAT_NAME[a[2]] || a[2]) + ' ' + (a[3] === '<=' ? '≤' : '≥') + ' ' + esc(a[4]) +
+      '</span><span class="muted">' + esc(a[5] || '') + '</span><button class="small ghost" data-rm="' + i + '">Bỏ</button></div>';
+  }).join('') : '<p class="muted" style="margin:0">Chưa có. Bot đang dùng kiến thức gốc.</p>';
+  box.innerHTML = html;
+  box.querySelectorAll('[data-sug]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var x = sug[+b.dataset.sug], d = new Date();
+      var note = 'duyet ' + d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + ' kem ' + x.bad.n + ' lan ' + x.bad.pt.toFixed(2) + ' tot ' + x.good.n + ' lan ' + x.good.pt.toFixed(2);
+      knowSave(entry, rules.concat([x.st + '|' + x.sit + '|' + x.k + '|' + x.op + '|' + x.val + '|' + note]));
+    });
+  });
+  box.querySelectorAll('[data-rm]').forEach(function (b) {
+    b.addEventListener('click', function () { var r = rules.slice(); r.splice(+b.dataset.rm, 1); knowSave(entry, r); });
+  });
+  var ks = $('know-key'); if (ks) ks.addEventListener('change', function () { KN.key = ks.value; renderKnow(); });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var b = $('know-reload'); if (b) b.addEventListener('click', knowLoad);
+  setTimeout(knowLoad, 800); setInterval(knowLoad, 300000);
+});
+
 function renderJournal(list) {
   var rows = [];
   (list || []).forEach(function (x) {

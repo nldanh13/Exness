@@ -780,6 +780,17 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    int n = StringSplit(list, ',', ls);
    ENUM_STRATEGY keep = P_Strategy;
    bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest; int kVw = P_VwapMode;
+   // Dac trung boi canh (v5.39): ghi kem moi lan ap dung kien thuc (lenh giay) de cham diem va dieu chinh kien thuc sau nay
+   double o1b = iOpen(_Symbol, P_TF, 1), r1b = h1 - l1, vS = 0; int vN = 0;
+   for(int q = 2; q <= 21; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vS += (double)v; vN++; } }
+   double volR = vN > 0 && vS > 0 ? (double)iTickVolume(_Symbol, P_TF, 1) / (vS / vN) : 0;
+   int dHi = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dLo = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
+   double bxH = dHi >= 0 ? iHigh(_Symbol, PERIOD_D1, dHi) : 0, bxL = dLo >= 0 ? iLow(_Symbol, PERIOD_D1, dLo) : 0;
+   MqlDateTime fdt; TimeToStruct(TimeCurrent(), fdt);
+   string nmF = "";
+   double toNews = MinutesToNews(999, nmF);
+   string featBase = StringFormat("adx=%.1f;than=%.0f;vol=%.2f;gio=%d;tin=%.0f", adx, r1b > 0 ? MathAbs(c1 - o1b) / r1b * 100.0 : 0, volR,
+                                  fdt.hour, toNews < 0 ? 999 : toNews);
    int nb = 0, ns = 0, bMem = -1, sMem = -1;
    double bSL = 0, bTP = 0, bPX = 0, bM = 1, sSL = 0, sTP = 0, sPX = 0, sM = 1, bF = 0, sF = 0;
    string bN = "", sN = "", useN = "", outN = "";
@@ -798,7 +809,16 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       // Hoc tu thuc chien (Learn.mqh): moi setup thay duoc la 1 lenh giay; ket qua da tich luy quyet dinh co dung chien luoc nay
       // trong tinh huong nay hay khong va voi bao nhieu rui ro
       double sd = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
-      LearnRegister(g_smartSit, m, b ? 1 : -1, c1, sd, g_sigTP);
+      int dm = b ? 1 : -1;
+      double hop = bxH > bxL ? (dm > 0 ? (c1 - bxL) / (bxH - bxL) : (bxH - c1) / (bxH - bxL)) : 0.5;
+      double tpr = g_sigTP > 0 ? MathAbs(g_sigTP - c1) / sd : 2.0;
+      string feat = featBase + StringFormat(";slatr=%.2f;tpr=%.2f;hop=%.2f;xh=%d", sd / atr, tpr, hop,
+                                            !tideOk || t.trend == 0 ? 0 : (t.trend == dm ? 1 : -1));
+      // Kien thuc da dieu chinh (ban duyet tren giao dien): setup khong thoa dieu kien bo sung thi khong dung, van ghi lenh giay
+      string ruleWhy = "";
+      bool ruleOk = KnowRulesOk(m, g_smartSit, feat, ruleWhy);
+      LearnRegister(g_smartSit, m, dm, c1, sd, g_sigTP, feat + (ruleOk ? "" : ";luat=1"));
+      if(!ruleOk) { EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
       double lf; string lt;
       int lv = LearnVerdict(g_smartSit, m, lf, lt);
       // Mac dinh (InpLearnApply = false) quyet dinh hoan toan theo KIEN THUC: ket qua thuc chien chi ghi vao bang chung de tham khao
@@ -813,7 +833,8 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    }
    g_sigSL = 0; g_sigTP = 0; g_sigPartialPx = 0; g_sigRiskMult = 1;
    head += " | Dung: " + useN;
-   if(outN != "") head += " | Da loai (thuc chien lo): " + outN;
+   if(outN != "") head += " | Khong dung: " + outN;
+   LearnSetAgree(g_smartSit, nb, ns);                                // ghi so setup dong y / trai chieu vao lenh giay nen nay
    if(dir > 0) ns = 0; if(dir < 0) nb = 0;                          // xu huong: bo setup nguoc chieu thuy trieu (khong tinh la trai chieu)
    if(nb == 0 && ns == 0) { g_status = head + " | chua co setup"; return true; }
    if(nb > 0 && ns > 0) { g_chainConflicts++; g_status = head + " | setup trai chieu (mua: " + bN + " / ban: " + sN + "), dung ngoai"; return true; }
