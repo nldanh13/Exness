@@ -361,7 +361,7 @@ double OnTester()
                    "LoiNhuan_BoTop5", "PF_BoTop5", "TyTrongTop5%",
                    "E_R", "tStat", "TyLeThang_CanDuoi95%", "MC_ChuoiThua95", "GiamCoDD", "NhoiLenh",
                    "SoDot", "ChoHoi_ChamGia", "ChoHoi_HetNen", "ChoHoi_BiHuy", "ChoHoi_Khop", "RuiRoMoMax%", "NhoiBiBoVoiRuiRo", "VaoLai",
-                   "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot");
+                   "SkewR", "KurtR", "SoLanThu", "SR0", "DSR%", "MinTRL_dot", "ChanDongTien", "DongTienThieuDuLieu");
       FileWrite(h,
                 P_TestLabel == "" ? "khong-ten" : P_TestLabel,
                 DoubleToString(TesterStatistics(STAT_PROFIT), 2),
@@ -391,7 +391,8 @@ double OnTester()
                 nC, g_pendHit, g_pendMissed, g_pendBlocked, g_pendFilled,
                 DoubleToString(g_maxOpenRiskPct, 2), g_chainSkips, g_reEntries,
                 DoubleToString(skR, 2), DoubleToString(kuR, 2), InpTrials > 1 ? InpTrials : 1, DoubleToString(sr0, 3),
-                DoubleToString(dsr, 1), minTRL > 0 ? IntegerToString((int)MathCeil(minTRL)) : "-1");
+                DoubleToString(dsr, 1), minTRL > 0 ? IntegerToString((int)MathCeil(minTRL)) : "-1",
+                g_flowBlocked, g_flowNoData);
       FileClose(h);
    }
    else

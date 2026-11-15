@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.11"
-#property version   "5.1100"
+#define  BOT_VERSION "5.12"
+#property version   "5.1200"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -85,6 +85,10 @@ input bool            InpUseMarketFilter  = false;      // Theo xu hướng Nasd
 input string          InpMarketSymbol     = "USTEC";    // Mã Nasdaq trên sàn
 input bool            InpAvoidUSNews      = false;      // Tránh tin kinh tế Mỹ quan trọng
 input int             InpNewsHours        = 2;          // Khoảng tránh tin (giờ trước và sau)
+input bool            InpUseFlow          = false;      // Xác nhận bằng dòng tiền Binance (chưa kiểm thử)
+input double          InpFlowMinDelta     = 0.10;       // Dòng tiền: phá vỡ cần delta chủ động ≥
+input double          InpFlowBigMult      = 1.5;        // Dòng tiền: khối lượng nến ≥ (× TB 20 nến, 0 = tắt)
+input double          InpFlowHoldPos      = 0.6;        // Dòng tiền: nến giữ được ≥ (phần biên độ theo chiều lệnh)
 
 input group "6. Cách vào lệnh"
 input bool            InpManualEntry      = false;      // Tự bấm BUY / SELL trên chart (bot không tự vào)
@@ -234,6 +238,8 @@ int             P_SLTFmin;
 int             P_ReEntryMax;
 int             P_ReEntryBars;
 bool            P_AutoSelect;
+bool            P_UseFlow;
+double          P_FlowMinDelta, P_FlowBigMult, P_FlowHoldPos;
 int             P_SelectMaxAgeDays;
 int             P_MTFAlign;
 int             P_ExportTFmin;
@@ -346,6 +352,7 @@ void LoadParams()
    P_ReEntryMax = InpReEntryMax;
    P_ReEntryBars = InpReEntryBars;
    P_AutoSelect = InpAutoSelect; P_SelectMaxAgeDays = InpSelectMaxAgeDays;
+   P_UseFlow = InpUseFlow; P_FlowMinDelta = InpFlowMinDelta; P_FlowBigMult = InpFlowBigMult; P_FlowHoldPos = InpFlowHoldPos;
    P_MTFAlign = InpMTFAlign;
    P_ExportTFmin = InpExportTFmin;
    P_ManualEntry = InpManualEntry;
@@ -471,6 +478,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpReEntryBars") { P_ReEntryBars = (int)StringToInteger(v); return true; }
    if(k == "InpAutoSelect") { P_AutoSelect = (v == "true" || v == "1"); return true; }
    if(k == "InpSelectMaxAgeDays") { P_SelectMaxAgeDays = (int)StringToInteger(v); return true; }
+   if(k == "InpUseFlow") { P_UseFlow = (v == "true" || v == "1"); return true; }
+   if(k == "InpFlowMinDelta") { P_FlowMinDelta = StringToDouble(v); return true; }
+   if(k == "InpFlowBigMult") { P_FlowBigMult = StringToDouble(v); return true; }
+   if(k == "InpFlowHoldPos") { P_FlowHoldPos = StringToDouble(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
    if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
@@ -599,6 +610,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Ledger.mqh"
 #include "TrendBot/Protection.mqh"
 #include "TrendBot/Filters.mqh"
+#include "TrendBot/OrderFlow.mqh"
 #include "TrendBot/Signals.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
@@ -1049,6 +1061,8 @@ void OnTickBody()
    if((buySignal || sellSignal) && !FundingOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
 
    if((buySignal || sellSignal) && !MarketFiltersOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
+   // Duong ho tro / khang cu dat cau hoi, dong tien tra loi: xac nhan cay nen tin hieu (mac dinh tat, OrderFlow.mqh)
+   if((buySignal || sellSignal) && !FlowOk(buySignal, h1, l1, c1)) return;
 
    g_status = "Cho tin hieu";
    if(!buySignal && !sellSignal) return;

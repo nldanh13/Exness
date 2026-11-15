@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.11
+# Hướng dẫn bot BTC (MT5) v5.12
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -831,3 +831,20 @@ Backtest bỏ qua tự chọn; tự bấm lệnh không bị chặn.
 **Kiểm chứng bộ chọn trước khi tin:** `python cong-cu/danh_gia_bo_chon.py ket-qua/<ngày>-nhanh-lenh.csv` mô phỏng bộ chọn kiểu walk-forward
 (mỗi tháng chỉ nhìn quá khứ, cùng luật như trên). Tiêu chí đặt trước: tổng R của bộ chọn phải cao hơn "luôn Donchian H4" ở CẢ HAI nửa giai đoạn.
 Chưa đạt thì để `InpAutoSelect = false` và chỉ chạy Donchian H4.
+
+## v5.12: xác nhận bằng dòng tiền (16/11/2026) – mặc định TẮT, CHƯA KIỂM THỬ
+Kiến thức: đường hỗ trợ / kháng cự chỉ đặt câu hỏi (giá từng quay đầu ở đây), dòng tiền mới trả lời lần này ra sao.
+Kẻ vùng trước, khi giá tới mới nhìn dòng tiền. Bot làm việc đó ở cây nến tín hiệu, sau khi mọi điều kiện khác đã đạt (`TrendBot/OrderFlow.mqh`, bật `InpUseFlow`):
+- **Chiến lược phá vỡ** (Donchian, ORB, MACD, quán tính): cần phe theo chiều lệnh chủ động áp đảo (delta ≥ `InpFlowMinDelta`),
+  khối lượng lớn bất thường (≥ `InpFlowBigMult` × trung bình 20 nến, thay cho "big trades") và nến giữ được giá (đóng ở phần
+  ≥ `InpFlowHoldPos` của biên độ theo chiều lệnh). Mua rất nhiều mà nến đóng thấp = lệnh bán lớn chặn sẵn nuốt hết lực mua
+  (bị hấp thụ), người mua phá vỡ bị kẹt trên đỉnh: bỏ tín hiệu.
+- **Chiến lược bật lại ở vùng giá** (EMA pullback, RSI, đảo chiều, FVG, spring, Fib + VP): cần khối lượng lớn bất thường và bên kia
+  chủ động đổ vào (Buy: bán chủ động nhiều hơn mua) mà nến vẫn đóng theo chiều lệnh: có người đỡ, vùng giá sẽ giữ.
+Giới hạn dữ liệu: Exness (CFD) không có chiều mua/bán chủ động hay kích thước từng lệnh, nên bot lấy nến cùng khung của Binance Futures
+(khối lượng + khối lượng mua chủ động). Đây là "footprint" rút gọn của cả cây nến, không phải từng mức giá; không có bong bóng từng lệnh lớn.
+Chạy thật: thêm `https://fapi.binance.com` vào Tools > Options > Expert Advisors > Allow WebRequest. Backtest: cần file
+`du-lieu/flow_BTCUSDT_<khung>.csv` (`openTime_ms,volume,takerBuyVolume`), chưa có thì bộ lọc không chặn lệnh nào
+(cột `DongTienThieuDuLieu` đếm số lần thiếu, `ChanDongTien` đếm số lần chặn).
+Lưu ý khi kiểm thử sau này: biến thể gần giống (vào khi phe chủ động cùng chiều phá vỡ, dữ liệu taker ratio Binance) đã thử ngày
+07/11 với Donchian H4 và làm tổng R giảm (49,3 / 8,3 so với 59,1 / 15,3). Phần "hấp thụ" (mua nhiều mà giá không giữ) chưa thử.

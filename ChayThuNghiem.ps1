@@ -396,6 +396,10 @@ try {
     Update-FundingData $mt5 @("BTCUSDT", "ETHUSDT")
     Update-SentimentData $mt5
     Copy-Item (Join-Path $ProjectDir "du-lieu\tin_my.csv") (Join-Path $mt5.CommonFiles "tin_my.csv") -Force   # lich FOMC + CPI
+    # Nen Binance co khoi luong mua chu dong cho bo loc dong tien (InpUseFlow): du-lieu\flow_<CAP>_<khung>.csv neu co
+    foreach ($ff in @(Get-ChildItem (Join-Path $ProjectDir "du-lieu") -File -Filter "flow_*.csv" -ErrorAction SilentlyContinue)) {
+        Copy-Item $ff.FullName (Join-Path $mt5.CommonFiles $ff.Name) -Force
+    }
 } catch { Write-Host "LOI: $_" -ForegroundColor Red; exit 1 }
 $dataDir    = $mt5.DataDir
 $compileLog = $r.Log

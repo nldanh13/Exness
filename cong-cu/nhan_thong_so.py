@@ -78,6 +78,10 @@ GROUPS = [
         ("InpMarketSymbol",    "Mã Nasdaq trên sàn", "Bot tự thử thêm đuôi \"m\" nếu không tìm thấy."),
         ("InpAvoidUSNews",     "Tránh tin kinh tế Mỹ quan trọng", "Dùng lịch kinh tế của MT5, chỉ có tác dụng khi chạy thật hoặc demo. Áp dụng cho cả chế độ tự vào lệnh."),
         ("InpNewsHours",       "Khoảng tránh tin (giờ trước và sau)", ""),
+        ("InpUseFlow",         "Xác nhận bằng dòng tiền Binance (chưa kiểm thử)", "Hỗ trợ / kháng cự đặt câu hỏi, dòng tiền trả lời. Phá vỡ: phe theo chiều lệnh chủ động áp đảo, khối lượng lớn bất thường, nến giữ được giá; mua nhiều mà nến đóng thấp = bị hấp thụ, bỏ. Bật lại ở vùng giá: bên kia chủ động đổ vào nhưng nến vẫn đóng theo chiều lệnh = có người đỡ. Dùng nến Binance Futures cùng khung (Exness không có chiều mua/bán chủ động)."),
+        ("InpFlowMinDelta",    "Dòng tiền: phá vỡ cần delta chủ động ≥", "Delta = (mua chủ động − bán chủ động) / tổng khối lượng của cây nến, từ −1 đến +1."),
+        ("InpFlowBigMult",     "Dòng tiền: khối lượng nến ≥ (× TB 20 nến, 0 = tắt)", "Thay cho \"big trades\": cây nến tín hiệu phải có khối lượng lớn bất thường."),
+        ("InpFlowHoldPos",     "Dòng tiền: nến giữ được ≥ (phần biên độ theo chiều lệnh)", "0,6 = Buy thì nến phải đóng ở 40% phía trên của biên độ."),
     ]),
     ("6. Cách vào lệnh", [
         ("InpManualEntry",    "Tự bấm BUY / SELL trên chart (bot không tự vào)", "Bot vẫn tính lot, đặt SL, dời hòa vốn, nhồi lệnh và trailing cho lệnh bạn bấm."),
