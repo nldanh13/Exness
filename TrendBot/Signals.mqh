@@ -291,6 +291,39 @@ void KnifeAdd()
    SendEntry(buy, atr, false);
 }
 
+// Nen xac nhan tai vung (v5.22, FVG InpFvgCandle). Cham vung moi chi la den dung cho; cay nen xuat hien o do moi cho biet
+// co nen vao hay khong. Mang theo shift (o[1] = nen vua dong). Chieu mua; chieu ban goi voi gia doi dau.
+// edge = mep vung phia gia di toi (dinh FVG tang), maxSh = nen cu nhat duoc dung (phai sau khi FVG hinh thanh).
+// Tra ve: 3 nhan chim, 4 sao mai, 1 nen bua, 2 harami + 1 nen tang xac nhan, 5 ba linh trang roi hoi nhe; 0 = chua co.
+int ZoneCandle(const double &o[], const double &h[], const double &l[], const double &c[], const int maxSh,
+               const double edge, const double inval, const double atr, double &patLow)
+{
+   double b1 = MathAbs(c[1] - o[1]), r1 = h[1] - l[1];
+   // 3) Nhan chim tang: nen tang lon nuot tron than nen giam truoc - manh nhat, mua khi nen dong cua
+   if(maxSh >= 2 && c[2] < o[2] && c[1] > o[1] && o[1] <= c[2] && c[1] >= o[2] && b1 > MathAbs(o[2] - c[2]) &&
+      MathMin(l[1], l[2]) <= edge)
+   { patLow = MathMin(l[1], l[2]); return 3; }
+   // 4) Sao mai: nen giam, nen rat nho, nen tang manh dong cua qua giua than nen giam - mua khi nen thu 3 dong cua
+   if(maxSh >= 3)
+   {
+      double b3 = o[3] - c[3], b2 = MathAbs(c[2] - o[2]);
+      if(b3 >= 0.5 * atr && b2 <= 0.3 * b3 && c[1] > o[1] && c[1] >= (o[3] + c[3]) / 2.0 && MathMin(l[1], MathMin(l[2], l[3])) <= edge)
+      { patLow = MathMin(l[1], MathMin(l[2], l[3])); return 4; }
+   }
+   // 1) Nen bua: dam sau vao vung nhung bi mua nguoc len, rau duoi dai (>= 2 than, >= 1/2 bien do), dong cua o nua tren
+   if(r1 > 0 && l[1] <= edge && MathMin(o[1], c[1]) - l[1] >= MathMax(2.0 * b1, 0.5 * r1) && c[1] >= l[1] + 0.6 * r1)
+   { patLow = l[1]; return 1; }
+   // 2) Harami tang + xac nhan: nen tang nho nam gon trong than nen giam truoc (luc ban chung lai, con yeu), nen sau tang tiep
+   if(maxSh >= 3 && c[3] < o[3] && c[2] > o[2] && o[2] >= c[3] && c[2] <= o[3] && c[1] > o[1] && c[1] > h[2] &&
+      MathMin(l[2], l[3]) <= edge)
+   { patLow = MathMin(l[1], MathMin(l[2], l[3])); return 2; }
+   // 5) Ba linh trang tu vung roi hoi nhe: gia da chay xa, chi mua o nen hoi (giam, lui >= 1/4 quang 3 nen, van tren vung)
+   if(maxSh >= 4 && c[4] > o[4] && c[3] > o[3] && c[2] > o[2] && c[3] > c[4] && c[2] > c[3] && l[4] <= edge &&
+      c[1] < o[1] && l[1] <= c[2] - 0.25 * (c[2] - l[4]) && l[1] > inval && c[1] > edge)
+   { patLow = MathMin(l[1], l[4]); return 5; }
+   return 0;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -477,7 +510,55 @@ bool BaseSignals(const double atr, const double trend, const double fast,
    {
       // FVG tang: nen giua (k) dai >= x ATR, tick >= 1,5 lan TB, va day nen k-1 > dinh nen k+1 (khoang trong).
       // Lan dau gia quay lai cham khoang trong (nen 1 cham, dong van tren day khoang trong) -> Buy. Giam thi nguoc lai.
-      for(int k = 3; k <= P_FvgLookback + 2 && !buyBase && !sellBase; k++)
+      // InpFvgCandle (v5.22): khong vao ngay khi cham. Cho 1 trong 5 mau nen xac nhan tai FVG (ZoneCandle); co nen dong cua
+      // thung han qua FVG (duoi day FVG tang / tren dinh FVG giam) thi vung da hong, bo qua.
+      if(P_FvgCandle)
+      {
+         double o[7], h[7], l[7], c[7], no[7], nh[7], nl[7], nc[7];
+         for(int q = 1; q <= 6; q++)
+         {
+            o[q] = iOpen(_Symbol, P_TF, q); h[q] = iHigh(_Symbol, P_TF, q); l[q] = iLow(_Symbol, P_TF, q); c[q] = iClose(_Symbol, P_TF, q);
+            no[q] = -o[q]; nh[q] = -l[q]; nl[q] = -h[q]; nc[q] = -c[q];
+         }
+         o[0] = h[0] = l[0] = c[0] = no[0] = nh[0] = nl[0] = nc[0] = 0;
+         for(int k = 4; k <= P_FvgLookback + 2 && !buyBase && !sellBase; k++)
+         {
+            datetime tk = iTime(_Symbol, P_TF, k);
+            if(tk <= g_fvgUsed) break;
+            double hk = iHigh(_Symbol, P_TF, k), lk = iLow(_Symbol, P_TF, k);
+            if(hk - lk < P_FvgBigATR * atr) continue;
+            double vs = 0; int vn = 0;
+            for(int q = k + 1; q <= k + 20; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vs += (double)v; vn++; } }
+            if(vn < 10 || (double)iTickVolume(_Symbol, P_TF, k) < 1.5 * vs / vn) continue;
+            double gbU = iHigh(_Symbol, P_TF, k + 1), gtU = iLow(_Symbol, P_TF, k - 1);     // FVG tang: day / dinh
+            double gtD = iLow(_Symbol, P_TF, k + 1),  gbD = iHigh(_Symbol, P_TF, k - 1);    // FVG giam: dinh / day
+            bool isUp = iClose(_Symbol, P_TF, k) > iOpen(_Symbol, P_TF, k) && gtU > gbU;
+            bool isDn = iClose(_Symbol, P_TF, k) < iOpen(_Symbol, P_TF, k) && gbD < gtD;
+            if(!isUp && !isDn) continue;
+            // Lan ve dau tien: khong nen nao cu hon cua so mau nen (shift >= 7) cham vung; khong nen nao dong cua thung vung
+            bool old = false, broken = false;
+            for(int q = k - 2; q >= 1; q--)
+            {
+               if(q >= 7 && (isUp ? iLow(_Symbol, P_TF, q) <= gtU : iHigh(_Symbol, P_TF, q) >= gbD)) old = true;
+               double cq = iClose(_Symbol, P_TF, q);
+               if(isUp ? cq < gbU : cq > gtD) broken = true;
+            }
+            if(old || broken) continue;
+            int maxSh = MathMin(5, k - 2);
+            double pl = 0;
+            if(isUp)
+            {
+               int pat = ZoneCandle(o, h, l, c, maxSh, gtU, gbU, atr, pl);
+               if(pat > 0) { buyBase = true; g_sigSL = MathMax(c1 - (MathMin(pl, gbU) - 0.25 * atr), 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat; }
+            }
+            else
+            {
+               int pat = ZoneCandle(no, nh, nl, nc, maxSh, -gbD, -gtD, atr, pl);
+               if(pat > 0) { sellBase = true; g_sigSL = MathMax((MathMax(-pl, gtD) + 0.25 * atr) - c1, 0.5 * atr); g_fvgUsed = tk; g_fvgPat = pat; }
+            }
+         }
+      }
+      for(int k = 3; k <= P_FvgLookback + 2 && !buyBase && !sellBase && !P_FvgCandle; k++)
       {
          datetime tk = iTime(_Symbol, P_TF, k);
          if(tk <= g_fvgUsed) break;

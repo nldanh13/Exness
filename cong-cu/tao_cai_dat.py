@@ -200,6 +200,13 @@ PRESETS = [
         "Lưu ý: cấu hình C (đã kiểm thử) không lọc volume / thân nến. Vào khi test lại sẽ bỏ lỡ những cú phá chạy thẳng không hồi.",
     ], {"InpBreakMinBody": "50", "InpBreakMinVol": "1.5", "InpBreakRetest": "true", "InpBreakRetestBars": "6",
         "InpBreakRetestATR": "0.3", "InpBreakSkipOpenMin": "60", "InpAvoidUSNews": "true"}),
+    ("21-FVG-nen-xac-nhan-H1-THU-NGHIEM.set", [
+        "21. FVG + nến xác nhận (chiến lược 5, H1): chạm FVG chưa vào, chờ 1 trong 5 mẫu nến tại vùng. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "Mua: nhấn chìm tăng, sao mai, nến búa, harami tăng + 1 nến tăng xác nhận, ba lính trắng rồi hồi nhẹ.",
+        "Bán: nhấn chìm giảm, sao hôm, nến râu trên dài, harami giảm + xác nhận, ba con quạ đen rồi hồi nhẹ.",
+        "SL dưới đáy mẫu nến / đáy FVG − 0,25 ATR, TP 2R. Nến đóng cửa thủng hẳn qua FVG: vùng hỏng, bỏ. Theo xu hướng D1.",
+        "Chỉ chạy demo.",
+    ], {"InpStrategy": "5", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2", "InpFvgCandle": "true"}),
 ]
 
 

@@ -314,6 +314,7 @@ $XhRuns = @(
     @{ N = "XH-ORB-M5";       I = (Cfg $Brk $Scalp @{ InpStrategy = 3; InpTF = 5; InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 }) },
     @{ N = "XH-DaoChieu-M5";  I = (Cfg $Brk $Scalp @{ InpStrategy = 4; InpTF = 5; InpExhaustATR = 0.75 }) },
     @{ N = "XH-FVG-H1";       I = (Cfg $Brk $Scalp @{ InpStrategy = 5; InpTF = 16385; InpRR = 2 }) },
+    @{ N = "XH-FVGNen-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 5; InpTF = 16385; InpRR = 2; InpFvgCandle = "true" }) },
     @{ N = "XH-Spring-M15";   I = (Cfg $Brk $Scalp @{ InpStrategy = 6; InpTF = 15 }) },
     @{ N = "XH-MACD-H1";      I = (Cfg $Brk $Qp) },
     @{ N = "XH-IMOM-M5";      I = (Cfg $Brk $Qi) },

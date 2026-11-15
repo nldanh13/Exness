@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.21
+# Hướng dẫn bot BTC (MT5) v5.22
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 16 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 17 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -997,3 +997,17 @@ bộ `19-Order-block-5-phan-ung-H1-THU-NGHIEM`).
 | 6. Phá rồi không giữ được | Mới `InpBreakRetest`: chờ test lại mép kênh (≤ `InpBreakRetestATR` ATR, ≤ `InpBreakRetestBars` nến) và đóng cửa vẫn ngoài kênh; đóng cửa quay vào trước đó = bỏ |
 Phá vỡ thật = thân nến đóng cửa hẳn ngoài vùng (`InpBreakMinBody`) + volume tăng mạnh (`InpBreakMinVol`) + test lại giữ được
 (`InpBreakRetest`). Đánh đổi: vào khi test lại sẽ bỏ lỡ các cú phá chạy thẳng không hồi; cấu hình C đã kiểm thử không có các lọc này.
+
+## v5.22: FVG – chờ nến xác nhận (16/11/2026) – CHƯA KIỂM THỬ
+Chạm FVG mới chỉ là đến đúng chỗ; cây nến xuất hiện ở đó mới cho biết có nên vào hay không. `InpFvgCandle = true` (chiến lược 5,
+bộ `21-FVG-nen-xac-nhan-H1-THU-NGHIEM`, xếp hạng `XH-FVGNen-H1`):
+| FVG tăng – mua | FVG giảm – bán | Vào khi |
+|---|---|---|
+| Nhấn chìm tăng (mạnh nhất) | Nhấn chìm giảm | Nến nuốt trọn thân nến trước đóng cửa |
+| Sao mai | Sao hôm | Nến thứ 3 đóng cửa qua giữa thân nến đầu (nến đầu ≥ 0,5 ATR, nến giữa ≤ 30% thân nến đầu) |
+| Nến búa | Nến râu trên dài | Râu ≥ 2 lần thân và ≥ 1/2 biên độ, đóng cửa ở 40% phía đầu nến |
+| Harami tăng | Harami giảm | Tín hiệu yếu: chờ thêm 1 nến cùng chiều đóng cửa vượt đỉnh (đáy) nến harami |
+| Ba lính trắng | Ba con quạ đen | Giá đã chạy xa: chỉ vào ở nến hồi nhẹ (lùi ≥ 1/4 quãng 3 nến, vẫn ngoài vùng) |
+- Ít nhất một nến của mẫu phải chạm vào FVG. Lần về đầu tiên: không nến nào cũ hơn 6 nến chạm vùng trước đó.
+- Không có nến xác nhận thì không vào. Có nến đóng cửa thủng hẳn qua FVG (dưới đáy FVG tăng / trên đỉnh FVG giảm): vùng hỏng, bỏ.
+- SL dưới đáy mẫu nến hoặc đáy FVG (lấy mức thấp hơn) − 0,25 ATR, tối thiểu 0,5 ATR.

@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.21"
-#property version   "5.2100"
+#define  BOT_VERSION "5.22"
+#property version   "5.2200"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -61,6 +61,7 @@ input int             InpOrbMinutes       = 30;         // ORB: độ dài vùng
 input double          InpExhaustATR       = 0.75;       // Đảo chiều: cú chạy trong ngày tối thiểu (× ATR ngày)
 input double          InpFvgBigATR        = 2.0;        // FVG: nến lớn tối thiểu (× ATR)
 input int             InpFvgLookback      = 20;         // FVG: tìm khoảng trống trong (số nến)
+input bool            InpFvgCandle        = false;      // FVG: chờ nến xác nhận (búa, nhấn chìm, sao mai...)
 input int             InpRangeBars        = 20;         // Spring: độ dài vùng đi ngang (số nến)
 input double          InpRangeMaxATR      = 4.0;        // Spring: vùng đi ngang rộng tối đa (× ATR)
 input int             InpImomMode         = 0;          // Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối
@@ -288,7 +289,7 @@ double          P_BreakMinATR;
 double          P_BreakMinBody;
 bool            P_BreakConfirm;
 double          P_BreakMaxATR, P_BreakRetestATR;
-bool            P_BreakRetest, P_FakeoutFade;
+bool            P_BreakRetest, P_FakeoutFade, P_FvgCandle;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
 int             P_RsiPeriod;
@@ -452,7 +453,7 @@ void LoadParams()
    P_HTFMacd = InpHTFMacd;
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
-   P_FvgLookback = InpFvgLookback;
+   P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
@@ -567,6 +568,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpFvgCandle") { P_FvgCandle = (v == "true" || v == "1"); return true; }
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpFibLookback") { P_FibLookback = (int)StringToInteger(v); return true; }

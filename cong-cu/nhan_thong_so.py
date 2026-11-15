@@ -54,6 +54,7 @@ GROUPS = [
         ("InpExhaustATR",  "Đảo chiều: cú chạy trong ngày tối thiểu (× ATR ngày)", ""),
         ("InpFvgBigATR",   "FVG: nến lớn tối thiểu (× ATR)", "Nến lớn cũng phải có số tick ≥ 1,5 lần trung bình 20 nến."),
         ("InpFvgLookback", "FVG: tìm khoảng trống trong (số nến)", ""),
+        ("InpFvgCandle",   "FVG: chờ nến xác nhận (búa, nhấn chìm, sao mai...)", "Chạm FVG mới chỉ là đến đúng chỗ. Bật thì không vào ngay mà chờ 1 trong 5 mẫu nến tại vùng: nhấn chìm (mạnh nhất), sao mai (vào khi nến thứ 3 đóng), nến búa (râu dưới dài), harami + thêm 1 nến tăng xác nhận, ba lính trắng rồi chờ nhịp hồi nhẹ. FVG giảm: nến râu trên dài, nhấn chìm giảm, sao hôm, harami giảm + xác nhận, ba con quạ đen rồi hồi nhẹ. Nến đóng cửa thủng hẳn qua FVG thì vùng hỏng, bỏ qua."),
         ("InpRangeBars",   "Spring: độ dài vùng đi ngang (số nến)", ""),
         ("InpRangeMaxATR", "Spring: vùng đi ngang rộng tối đa (× ATR)", ""),
         ("InpImomMode",    "Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối", ""),
