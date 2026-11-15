@@ -123,7 +123,8 @@ void UpdatePanel()
    bool guardOnly = InpGuardManual && !P_AllowBuy && !P_AllowSell && !P_ManualEntry;
    string strat = P_Strategy == STRAT_DONCHIAN ? "Donchian" : P_Strategy == STRAT_RSI_REVERT ? "RSI lướt sóng" : P_Strategy == STRAT_ORB ? "ORB phiên Mỹ" :
                   P_Strategy == STRAT_EXHAUST ? "Đảo chiều" : P_Strategy == STRAT_FVG ? "FVG" : P_Strategy == STRAT_SPRING ? "Spring/Upthrust" :
-                  P_Strategy == STRAT_MACD ? "MACD đa khung" : P_Strategy == STRAT_IMOM ? "Quán tính trong ngày" : "EMA pullback";
+                  P_Strategy == STRAT_MACD ? "MACD đa khung" : P_Strategy == STRAT_IMOM ? "Quán tính trong ngày" :
+                  P_Strategy == STRAT_FIBVP ? "Fibonacci + Volume Profile" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)

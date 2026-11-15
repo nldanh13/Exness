@@ -109,7 +109,7 @@ function Start-BotJob($body) {
     if ($viec -notin @('sosanh', 'sosanh-chinhxac', 'capnhat', 'backtest', 'nhatky', 'thanhly')) { throw "Viec khong hop le: $viec" }
     $nhom = [string]$body.nhom
     if (-not $nhom) { $nhom = 'file' }
-    if ($nhom -notin @('file', 'h4', 'luotsong', 'von1tr', 'tatca')) { throw "Nhom khong hop le: $nhom" }
+    if ($nhom -notin @('file', 'h4', 'luotsong', 'von1tr', 'tatca', 'xephang')) { throw "Nhom khong hop le: $nhom" }
     # Tra loi san cho cac cau hoi y/n cua script (Chay.ps1 va Stop-MT5 doc 2 bien nay thay vi Read-Host)
     $env:TRENDBOT_LAYCODE = if ($body.layCodeMoi) { "y" } else { "n" }
     $env:TRENDBOT_DONGMT5 = if ($body.dongMT5) { "y" } else { "n" }

@@ -14,11 +14,12 @@ STRATEGY_LABELS = {
     "STRAT_SPRING":       "Thử nghiệm: Wyckoff spring / upthrust",
     "STRAT_MACD":         "Thử nghiệm: MACD đa khung",
     "STRAT_IMOM":         "Thử nghiệm: quán tính trong ngày",
+    "STRAT_FIBVP":        "Thử nghiệm: Fibonacci + Volume Profile",
 }
 
 GROUPS = [
     ("1. Chiến lược và khung thời gian", [
-        ("InpStrategy",   "Chiến lược vào lệnh", "Phá vỡ Donchian là chiến lược chính đã kiểm thử. Các chiến lược còn lại đều chưa đạt khi backtest."),
+        ("InpStrategy",   "Chiến lược vào lệnh", "Phá vỡ Donchian là chiến lược chính đã kiểm thử. Các chiến lược khác chưa đạt hoặc chưa có kết quả backtest."),
         ("InpTF",         "Khung thời gian tín hiệu", "Cấu hình đã kiểm thử: H4. Mọi khung nhỏ hơn đều lỗ ở giai đoạn 2020–2023."),
         ("InpFastEMA",    "EMA nhanh (số nến)", "Dùng cho vùng hồi, thoát theo EMA và điều kiện nhồi lệnh."),
         ("InpTrendEMA",   "EMA xu hướng (số nến)", "Chiến lược Hồi về EMA và RSI chỉ vào lệnh theo phía của đường này."),
@@ -45,6 +46,12 @@ GROUPS = [
         ("InpRangeBars",   "Spring: độ dài vùng đi ngang (số nến)", ""),
         ("InpRangeMaxATR", "Spring: vùng đi ngang rộng tối đa (× ATR)", ""),
         ("InpImomMode",    "Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối", ""),
+        ("InpFibLookback",    "Fib + VP: tìm con sóng trong (số nến)", "Sóng tăng = đáy thấp nhất xuất hiện trước đỉnh cao nhất trong khoảng này; giá đang hồi xuống."),
+        ("InpFibMinSwingATR", "Fib + VP: con sóng tối thiểu (× ATR)", "Sóng nhỏ hơn mức này không đủ làm khung Fibonacci."),
+        ("InpVPBins",         "Fib + VP: số ô giá của Volume Profile", "Chia biên độ con sóng thành bấy nhiêu ô để đếm tick ở mỗi mức giá."),
+        ("InpVPHighMult",     "Fib + VP: vùng dày khi số tick ≥ (× trung bình các ô)", "Mức Fibonacci rơi vào ô dày mới được chờ; rơi vào ô mỏng thì bỏ qua vì giá dễ trượt qua."),
+        ("InpVPTFmin",        "Fib + VP: khung đếm tick (phút, 0 = khung chính)", "Khung nhỏ cho Volume Profile chi tiết hơn. Exness chỉ có số tick, không có khối lượng thật."),
+        ("InpFibMinRR",       "Fib + VP: lãi tới đỉnh/đáy sóng tối thiểu (× SL)", "TP đặt ở đỉnh (đáy) con sóng; bỏ lệnh nếu khoảng lãi nhỏ hơn mức này nhân SL."),
     ]),
     ("4. Bộ lọc xu hướng", [
         ("InpUseHTF",    "Chỉ giao dịch theo xu hướng khung lớn", "Chỉ mua khi giá khung lớn trên EMA, chỉ bán khi dưới."),
@@ -78,6 +85,8 @@ GROUPS = [
         ("InpEntryPullMode",  "Hết nến mà giá chưa hồi: 0 = bỏ, 1 = vào giá thị trường", ""),
         ("InpReEntryMax",     "Vào lại sau khi dính SL: tối đa (lần, 0 = tắt)", "Chỉ vào lại khi giá vượt lại mức của nến tín hiệu."),
         ("InpReEntryBars",    "Chỉ vào lại trong vòng (số nến khung chính)", ""),
+        ("InpAutoSelect",     "Tự chọn chiến lược: chỉ vào lệnh khi chiến lược này đứng đầu", "Gắn mỗi chiến lược lên một chart, bật ở tất cả. Bảng xếp hạng do nút 1 > Xếp hạng chiến lược tạo; chỉ chart có chiến lược đứng đầu được vào lệnh mới."),
+        ("InpSelectMaxAgeDays", "Bảng xếp hạng cũ hơn (ngày) thì chỉ Donchian H4 được vào", "Nên chạy lại xếp hạng mỗi tuần."),
         ("InpPyramidLotFactor", "Hệ số giảm lot mỗi lớp nhồi chính (0–1)", "Lớp sau giảm theo cấp số nhân. Nếu làm tròn xuống dưới lot tối thiểu thì bỏ nhồi, không tự tăng lot."),
         ("InpPyramidMax",     "Nhồi lệnh: tổng số lớp tối đa (1 = tắt)", "Đã thử ngày 07/11/2026: ở cùng mức sụt giảm không hơn cấu hình C."),
         ("InpPyramidStepATR", "Nhồi thêm khi giá đi tiếp (× ATR)", "Trước khi nhồi, các lớp cũ được dời SL về hòa vốn."),

@@ -94,6 +94,12 @@ PRESETS = [
         "InpGuardAutoEntry": "true", "InpGuardAutoTrend": "5", "InpGuardAutoTFmin": "3",
         "InpGuardAutoMaxDay": "20", "InpGuardAutoCooldownMin": "15",
         "InpGuardTrailTFmin": "0", "InpGuardTPR": "0.0", "InpGuardMaxBars": "12"}),
+    ("08-Fib-Volume-Profile-H1-THU-NGHIEM.set", [
+        "08. Thử nghiệm: Fibonacci + Volume Profile, khung H1",
+        "Trạng thái: CHƯA CÓ KẾT QUẢ BACKTEST. Mua khi giá hồi về mức Fibonacci nằm trong vùng giao dịch dày, theo xu hướng D1.",
+        "Con sóng 100 nến H1 (≥ 4 ATR), Volume Profile đếm tick M5, SL dưới vùng dày, TP ở đỉnh / đáy con sóng.",
+        "Exness chỉ có số tick, không có khối lượng thật. Chỉ chạy demo.",
+    ], {"InpStrategy": "9", "InpTF": "16385", "InpUseADX": "false", "InpUseTrailing": "false", "InpMaxSpreadPoints": "1500"}),
 ]
 
 

@@ -300,12 +300,42 @@ foreach ($v in $SLn) {
     $Runs += @{ Name = "$($v.N)-1tr";       Inputs = $i1;         Deposit = $Von1tr }
     $Runs += @{ Name = "$($v.N)-1tr-truoc"; Inputs = $i1.Clone(); Deposit = $Von1tr; From = $OOSFrom; To = $FromDate }
 }
+# ---- Xep hang chien luoc (nhom "xephang", v5.11) ----
+# Moi chien luoc 1 cau hinh dai dien (lay tu cac lan thu truoc, khong do tim), chay $XhNam nam gan nhat, von 30000
+# (khong bo lenh vi lot toi thieu). Xong thi tinh diem tung chien luoc tu ket qua tung lenh va ghi
+# TrendBot_xephang.csv vao Common\Files: bot bat InpAutoSelect chi vao lenh khi chien luoc cua no dung dau.
+$XhNam   = 6       # do dai lich su (nam)
+$XhThang = 12      # cua so "gan day" de xep hang (thang)
+$XhMinDot = 8      # it nhat bay nhieu dot trong cua so gan day moi duoc xep hang
+$XhRuns = @(
+    @{ N = "XH-Donchian-H4";  I = (Cfg $Brk $Q) },
+    @{ N = "XH-EMA-H4";       I = (Cfg $Ema) },
+    @{ N = "XH-RSI-M15";      I = (Cfg $Brk $Scalp @{ InpStrategy = 2; InpTF = 15; InpATRMult = 1.5; InpRR = 1; InpUseHTF = "true" }) },
+    @{ N = "XH-ORB-M5";       I = (Cfg $Brk $Scalp @{ InpStrategy = 3; InpTF = 5; InpATRMult = 1.0; InpRR = 2; InpMaxTradesPerDay = 1 }) },
+    @{ N = "XH-DaoChieu-M5";  I = (Cfg $Brk $Scalp @{ InpStrategy = 4; InpTF = 5; InpExhaustATR = 0.75 }) },
+    @{ N = "XH-FVG-H1";       I = (Cfg $Brk $Scalp @{ InpStrategy = 5; InpTF = 16385; InpRR = 2 }) },
+    @{ N = "XH-Spring-M15";   I = (Cfg $Brk $Scalp @{ InpStrategy = 6; InpTF = 15 }) },
+    @{ N = "XH-MACD-H1";      I = (Cfg $Brk $Qp) },
+    @{ N = "XH-IMOM-M5";      I = (Cfg $Brk $Qi) },
+    @{ N = "XH-FibVP-H1";     I = (Cfg $Brk $Scalp @{ InpStrategy = 9; InpTF = 16385; InpUseHTF = "true" }) }
+)
+foreach ($x in $XhRuns) {
+    $Runs += @{ Name = $x.N; Inputs = $x.I; Deposit = 30000; From = (Get-Date).AddYears(-$XhNam).ToString("yyyy.MM.dd") }
+}
+# Ma cua chien luoc trong bang xep hang: S<chien luoc>-<so phut cua khung>, vd. S1-240 = Donchian H4. Bot tu tinh ma cua no.
+function Get-XhKey($inputs) {
+    $tf = [int]$inputs["InpTF"]
+    $min = switch ($tf) { 16385 { 60 } 16386 { 120 } 16388 { 240 } 16408 { 1440 } default { $tf } }
+    return "S$([int]$inputs['InpStrategy'])-$min"
+}
+
 # Chi chay mot phan: file chi-chay.txt (moi dong 1 mau ten, cho phep *), Claude cap nhat khi chi can vai cau hinh.
-# Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / file (theo chi-chay.txt, mac dinh)
+# Nhom chon tu menu cua nut 1: h4 / luotsong / von1tr / tatca / xephang / file (theo chi-chay.txt, mac dinh)
 $nhomPats = switch ($Nhom) {
-    'h4'       { @($Runs | Where-Object { -not $_.Name.StartsWith("Ngan-") } | ForEach-Object { $_.Name }) }
+    'h4'       { @($Runs | Where-Object { -not $_.Name.StartsWith("Ngan-") -and -not $_.Name.StartsWith("XH-") } | ForEach-Object { $_.Name }) }
     'luotsong' { @("Ngan-*", "C-Donchian20-H4-ADX") | Where-Object { $_ } }
     'von1tr'   { @("*-von1tr", "*-von1tr-rr5", "C-Donchian20-H4-ADX") }
+    'xephang'  { @("XH-*") }
     default    { @() }
 }
 if (-not $ChinhXac -and $Nhom -eq 'luotsong') {
@@ -455,6 +485,61 @@ foreach ($run in $Runs) {
     if (Test-Path $f) { foreach ($r in @(Import-Csv $f)) { [void]$tradeRows.Add($r) } }
 }
 
+# ---- Xep hang chien luoc tu ket qua tung lenh (chi khi dot chay du cac cau hinh XH-*) ----
+# Gom cac lenh nhoi chong nhau cung chieu thanh 1 dot (thang thua cung nhau). Moi dot: R = tong R cac lenh trong dot.
+# Du dieu kien: R trung binh tren CA lich su ($XhNam nam) > 0 -> chien luoc khong co loi the lau dai khong bao gio duoc chon,
+#   du vai thang gan day gap may.
+# Diem = can duoi 90% cua R trung binh trong $XhThang thang gan nhat = TB - 1,28 x do lech chuan / can(so dot); can >= $XhMinDot dot.
+# Khong chien luoc nao du dieu kien -> khong ai duoc vao lenh (ChonDung = KHONG).
+$xhList = @($Runs | Where-Object { $_.Name.StartsWith("XH-") })
+$xhFile = $null
+if ($xhList.Count -gt 0 -and -not $incomplete) {
+    $inv = [Globalization.CultureInfo]::InvariantCulture
+    $cut = (Get-Date).AddMonths(-$XhThang)
+    $rank = @()
+    foreach ($run in $xhList) {
+        $tr = @($tradeRows | Where-Object { $_.Lan -eq $run.Name } | Sort-Object { $_.ThoiGianVao })
+        $camps = New-Object System.Collections.ArrayList
+        $end = [datetime]::MinValue; $dir = ""
+        foreach ($t in $tr) {
+            $tin = [datetime]::ParseExact($t.ThoiGianVao, "yyyy.MM.dd HH:mm", $inv)
+            $tout = $tin.AddHours([double]::Parse($t.GioGiu, $inv))
+            $r = [double]::Parse($t.R, $inv)
+            if ($camps.Count -gt 0 -and $tin -lt $end -and $t.Chieu -eq $dir) {
+                $c = $camps[$camps.Count - 1]; $c.R += $r; if ($tout -gt $c.Ra) { $c.Ra = $tout }
+            } else {
+                [void]$camps.Add(@{ R = $r; Ra = $tout }); $dir = $t.Chieu
+            }
+            if ($tout -gt $end) { $end = $tout }
+        }
+        $all = @($camps | ForEach-Object { $_.R })
+        $rec = @($camps | Where-Object { $_.Ra -ge $cut } | ForEach-Object { $_.R })
+        $mAll = if ($all.Count) { ($all | Measure-Object -Average).Average } else { 0 }
+        $mRec = 0; $sd = 0; $score = $null
+        if ($rec.Count -gt 0) { $mRec = ($rec | Measure-Object -Average).Average }
+        if ($rec.Count -ge 2) {
+            $sd = [math]::Sqrt((($rec | ForEach-Object { ($_ - $mRec) * ($_ - $mRec) }) | Measure-Object -Sum).Sum / ($rec.Count - 1))
+        }
+        $ok = $all.Count -ge 20 -and $mAll -gt 0
+        if ($ok -and $rec.Count -ge $XhMinDot) { $score = $mRec - 1.28 * $sd / [math]::Sqrt($rec.Count) }
+        $rank += [pscustomobject]@{ Ten = $run.Name; Ma = (Get-XhKey $run.Inputs); DuDieuKien = [int]($ok -and $score -ne $null);
+            Diem = $(if ($score -ne $null) { [math]::Round($score, 4) } else { "" });
+            ER_GanDay = [math]::Round($mRec, 4); Dot_GanDay = $rec.Count; ER_CaKy = [math]::Round($mAll, 4); Dot_CaKy = $all.Count }
+    }
+    $sorted = @($rank | Sort-Object @{ E = { $_.DuDieuKien }; Descending = $true }, @{ E = { if ([string]$_.Diem -eq "") { -99 } else { [double]$_.Diem } }; Descending = $true })
+    $top = @($sorted | Where-Object { $_.DuDieuKien -eq 1 } | Select-Object -First 1)
+    $pick = if ($top.Count -gt 0) { $top[0].Ma } else { "KHONG" }
+    $lines = @("CapNhat," + (Get-Date -Format "yyyy.MM.dd HH:mm"), "ChonDung,$pick", "CuaSoThang,$XhThang", "Hang,Ten,Ma,DuDieuKien,Diem,ER_GanDay,Dot_GanDay,ER_CaKy,Dot_CaKy")
+    $h = 0
+    foreach ($x in $sorted) { $h++; $lines += "$h,$($x.Ten),$($x.Ma),$($x.DuDieuKien),$($x.Diem),$($x.ER_GanDay),$($x.Dot_GanDay),$($x.ER_CaKy),$($x.Dot_CaKy)" }
+    $xhFile = Join-Path $mt5.CommonFiles "TrendBot_xephang.csv"
+    $lines | Set-Content -Path $xhFile -Encoding ASCII
+    Write-Host ""
+    Write-Host "XEP HANG CHIEN LUOC ($XhThang thang gan nhat, R theo dot):" -ForegroundColor Cyan
+    $sorted | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+    Write-Host "Chien luoc duoc vao lenh: $pick  (ghi vao $xhFile)" -ForegroundColor Green
+}
+
 Write-Host ""
 $summary = Join-Path $ProjectDir "ket-qua-so-sanh.csv"
 if (Test-Path $resultFile) {
@@ -513,6 +598,8 @@ if ($summary) {
     $resName = (Get-Date -Format "yyyyMMdd-HHmm") + "-$tag.csv"
     Copy-Item $summary (Join-Path $resDir $resName) -Force
     $tradeName = $resName -replace '\.csv$', '-lenh.csv'
+    $xhName = ($resName -replace '\.csv$', '') + "-xephang.csv"
+    if ($xhFile -and (Test-Path $xhFile)) { Copy-Item $xhFile (Join-Path $resDir $xhName) -Force }
     if ($tradeRows.Count -gt 0) { $tradeRows | Export-Csv -Path (Join-Path $resDir $tradeName) -NoTypeInformation -Encoding ASCII }
     # Du lieu gia bot xuat ra (lan chay XuatDuLieu-*): nen zip vao ket-qua\ de Claude phan tich
     $barsZips = @()
@@ -526,9 +613,9 @@ if ($summary) {
     # Don ket qua cu cung che do (nhanh / chinhxac): chi giu lan moi nhat trong ket-qua/.
     # Ban cu van xem lai duoc trong lich su git. Lan chay CHUA DU chi xoa cac ban CHUA DU cu, khong dung toi ket qua day du.
     $modeTag  = if ($ChinhXac) { "chinhxac" } else { "nhanh" }
-    $oldRegex = if ($incomplete) { "^\d{8}-\d{4}-$modeTag-CHUADU(-lenh)?\.csv$" } else { "^\d{8}-\d{4}-$modeTag(-CHUADU)?(-lenh)?\.csv$" }
+    $oldRegex = if ($incomplete) { "^\d{8}-\d{4}-$modeTag-CHUADU(-lenh|-xephang)?\.csv$" } else { "^\d{8}-\d{4}-$modeTag(-CHUADU)?(-lenh|-xephang)?\.csv$" }
     $oldFiles = @(Get-ChildItem $resDir -File -Filter "*.csv" -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match $oldRegex -and $_.Name -ne $resName -and $_.Name -ne $tradeName })
+        Where-Object { $_.Name -match $oldRegex -and $_.Name -ne $resName -and $_.Name -ne $tradeName -and $_.Name -ne $xhName })
     if ($oldFiles.Count -gt 0) {
         $oldFiles | Remove-Item -Force -ErrorAction SilentlyContinue
         Write-Host ("Da xoa {0} file ket qua cu ({1}) trong ket-qua\" -f $oldFiles.Count, $modeTag) -ForegroundColor DarkGray
@@ -539,6 +626,7 @@ if ($summary) {
         $rel = "ket-qua/$resName"
         $relT = "ket-qua/$tradeName"
         $paths = @($rel); if (Test-Path (Join-Path $ProjectDir $relT)) { $paths += $relT }
+        if (Test-Path (Join-Path $resDir $xhName)) { $paths += "ket-qua/$xhName" }
         $paths += $barsZips
         # File cu da xoa o tren (ca file con sot tu lan truoc khong day duoc): dua viec xoa vao cung commit
         foreach ($t in @(& git -C $ProjectDir ls-files -- "ket-qua" 2>$null)) {

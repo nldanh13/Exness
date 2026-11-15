@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.10.23
+# Hướng dẫn bot BTC (MT5) v5.11
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -805,3 +805,29 @@ Xem [tài liệu kiểm tra riêng v5.10.22](RA-SOAT-RUI-RO-5.10.22.md). Bản m
 ## Rà soát chuyên sâu v5.10.23
 
 Xem [kiểm toán và các bài kiểm thử v5.10.23](RA-SOAT-RUI-RO-5.10.23.md): hạch toán human/algo theo vị thế mở; bucket lỗ chung toàn account, trần rủi ro nhóm áp dụng cho cả lệnh đầu tiên; OrderCalcMargin/OrderCheck; BTCUSDc trên MT5 Standard Cent (đơn vị USC); drawdown mark-to-market riêng; xác minh lịch CPI và block bootstrap. Nhánh chưa được biên dịch/Strategy Tester trên MT5 thật. 
+
+## v5.11: chiến lược Fibonacci + Volume Profile và bot tự chọn chiến lược (16/11/2026)
+
+**Chiến lược 9 – Fibonacci + Volume Profile** (`InpStrategy = 9`, bộ `08-Fib-Volume-Profile-H1-THU-NGHIEM.set`):
+1. Tìm con sóng gần nhất trong `InpFibLookback` nến (≥ `InpFibMinSwingATR` ATR). Sóng tăng: đáy thấp nhất xuất hiện trước đỉnh cao nhất.
+2. Dựng Volume Profile của con sóng: chia biên độ thành `InpVPBins` ô, rải số tick của từng nến khung `InpVPTFmin` (mặc định M5) lên các ô nến đó đi qua. Ô "dày" khi số tick ≥ `InpVPHighMult` × trung bình.
+3. Xét các mức 0,382 / 0,5 / 0,618 / 0,786 từ nông tới sâu: mức rơi vào ô mỏng bỏ qua; mức trong ô dày là vùng chờ.
+4. Xác nhận: nến vừa đóng cùng chiều, râu chạm vùng, không xuyên quá 0,5 ATR, đóng lại phía trên mức. SL ngoài vùng dày 0,25 ATR; TP ở đỉnh (đáy) con sóng; bỏ nếu lãi tới TP < `InpFibMinRR` × SL. Mỗi con sóng chỉ vào 1 lần.
+Exness chỉ có số tick, không có khối lượng thật, nên đây là ước lượng của "dấu chân tiền".
+Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
+PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
+
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 10 chiến lược (mỗi cái 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
+- Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
+- Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
+- Ghi `TrendBot_xephang.csv` vào Common\Files (bot đọc) và `ket-qua/<ngày>-nhanh-xephang.csv` (đưa lên GitHub).
+
+**Bot tự chọn:** gắn mỗi chiến lược lên một chart BTCUSDm riêng, bật `InpAutoSelect` ở tất cả. Bot đọc bảng mỗi 10 phút; chỉ chart có
+chiến lược đứng đầu (mã `S<chiến lược>-<số phút khung>`, vd. `S1-240` = Donchian H4) được vào lệnh mới, lệnh đang mở vẫn quản lý bình thường.
+Bảng thiếu hoặc cũ hơn `InpSelectMaxAgeDays` ngày: chỉ Donchian H4 được vào. Nên chạy lại xếp hạng mỗi tuần.
+Backtest bỏ qua tự chọn; tự bấm lệnh không bị chặn.
+
+**Kiểm chứng bộ chọn trước khi tin:** `python cong-cu/danh_gia_bo_chon.py ket-qua/<ngày>-nhanh-lenh.csv` mô phỏng bộ chọn kiểu walk-forward
+(mỗi tháng chỉ nhìn quá khứ, cùng luật như trên). Tiêu chí đặt trước: tổng R của bộ chọn phải cao hơn "luôn Donchian H4" ở CẢ HAI nửa giai đoạn.
+Chưa đạt thì để `InpAutoSelect = false` và chỉ chạy Donchian H4.

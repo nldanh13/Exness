@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.10.23"
-#property version   "5.1023"
+#define  BOT_VERSION "5.11"
+#property version   "5.1100"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -21,7 +21,8 @@ enum ENUM_STRATEGY
    STRAT_FVG          = 5,   // Thử nghiệm: khoảng trống giá (FVG)
    STRAT_SPRING       = 6,   // Thử nghiệm: Wyckoff spring / upthrust
    STRAT_MACD         = 7,   // Thử nghiệm: MACD đa khung
-   STRAT_IMOM         = 8    // Thử nghiệm: quán tính trong ngày
+   STRAT_IMOM         = 8,   // Thử nghiệm: quán tính trong ngày
+   STRAT_FIBVP        = 9    // Thử nghiệm: Fibonacci + Volume Profile
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -52,6 +53,12 @@ input int             InpFvgLookback      = 20;         // FVG: tìm khoảng tr
 input int             InpRangeBars        = 20;         // Spring: độ dài vùng đi ngang (số nến)
 input double          InpRangeMaxATR      = 4.0;        // Spring: vùng đi ngang rộng tối đa (× ATR)
 input int             InpImomMode         = 0;          // Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối
+input int             InpFibLookback      = 100;        // Fib + VP: tìm con sóng trong (số nến)
+input double          InpFibMinSwingATR   = 4.0;        // Fib + VP: con sóng tối thiểu (× ATR)
+input int             InpVPBins           = 40;         // Fib + VP: số ô giá của Volume Profile
+input double          InpVPHighMult       = 1.2;        // Fib + VP: vùng dày khi số tick ≥ (× trung bình các ô)
+input int             InpVPTFmin          = 5;          // Fib + VP: khung đếm tick (phút, 0 = khung chính)
+input double          InpFibMinRR         = 1.0;        // Fib + VP: lãi tới đỉnh/đáy sóng tối thiểu (× SL)
 
 input group "4. Bộ lọc xu hướng"
 input bool            InpUseHTF           = true;       // Chỉ giao dịch theo xu hướng khung lớn
@@ -85,6 +92,8 @@ input double          InpEntryPullATR     = 0;          // Chờ giá hồi trư
 input int             InpEntryPullMode    = 0;          // Hết nến mà giá chưa hồi: 0 = bỏ, 1 = vào giá thị trường
 input int             InpReEntryMax       = 0;          // Vào lại sau khi dính SL: tối đa (lần, 0 = tắt)
 input int             InpReEntryBars      = 6;          // Chỉ vào lại trong vòng (số nến khung chính)
+input bool            InpAutoSelect       = false;      // Tự chọn chiến lược: chỉ vào lệnh khi chiến lược này đứng đầu
+input int             InpSelectMaxAgeDays = 10;         // Bảng xếp hạng cũ hơn (ngày) thì chỉ Donchian H4 được vào
 input double          InpPyramidLotFactor = 0.5;        // Hệ số giảm lot mỗi lớp nhồi chính (0–1)
 input int             InpPyramidMax       = 1;          // Nhồi lệnh: tổng số lớp tối đa (1 = tắt)
 input double          InpPyramidStepATR   = 1.0;        // Nhồi thêm khi giá đi tiếp (× ATR)
@@ -224,6 +233,8 @@ int             P_PyramidTFmin;
 int             P_SLTFmin;
 int             P_ReEntryMax;
 int             P_ReEntryBars;
+bool            P_AutoSelect;
+int             P_SelectMaxAgeDays;
 int             P_MTFAlign;
 int             P_ExportTFmin;
 bool            P_ManualEntry;
@@ -239,6 +250,8 @@ double          P_FvgBigATR;
 int             P_FvgLookback;
 int             P_RangeBars;
 double          P_RangeMaxATR;
+int             P_FibLookback, P_VPBins, P_VPTFmin;
+double          P_FibMinSwingATR, P_VPHighMult, P_FibMinRR;
 int             P_OrbMinutes;
 ENUM_TIMEFRAMES P_TF;
 int             P_FastEMA;
@@ -332,6 +345,7 @@ void LoadParams()
    P_SLTFmin = InpSLTFmin;
    P_ReEntryMax = InpReEntryMax;
    P_ReEntryBars = InpReEntryBars;
+   P_AutoSelect = InpAutoSelect; P_SelectMaxAgeDays = InpSelectMaxAgeDays;
    P_MTFAlign = InpMTFAlign;
    P_ExportTFmin = InpExportTFmin;
    P_ManualEntry = InpManualEntry;
@@ -347,6 +361,8 @@ void LoadParams()
    P_FvgLookback = InpFvgLookback;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
+   P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
+   P_VPHighMult = InpVPHighMult; P_VPTFmin = InpVPTFmin; P_FibMinRR = InpFibMinRR;
    P_OrbMinutes = InpOrbMinutes;
    P_TF = InpTF;
    P_FastEMA = InpFastEMA;
@@ -436,6 +452,12 @@ bool SetParam(const string k, const string v)
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
    if(k == "InpRangeBars") { P_RangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpRangeMaxATR") { P_RangeMaxATR = StringToDouble(v); return true; }
+   if(k == "InpFibLookback") { P_FibLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpFibMinSwingATR") { P_FibMinSwingATR = StringToDouble(v); return true; }
+   if(k == "InpVPBins") { P_VPBins = (int)StringToInteger(v); return true; }
+   if(k == "InpVPHighMult") { P_VPHighMult = StringToDouble(v); return true; }
+   if(k == "InpVPTFmin") { P_VPTFmin = (int)StringToInteger(v); return true; }
+   if(k == "InpFibMinRR") { P_FibMinRR = StringToDouble(v); return true; }
    if(k == "InpPyramidMax") { P_PyramidMax = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidLotFactor") { P_PyramidLotFactor = StringToDouble(v); return true; }
    if(k == "InpEntryPullATR") { P_EntryPullATR = StringToDouble(v); return true; }
@@ -447,6 +469,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpSLTFmin") { P_SLTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpReEntryMax") { P_ReEntryMax = (int)StringToInteger(v); return true; }
    if(k == "InpReEntryBars") { P_ReEntryBars = (int)StringToInteger(v); return true; }
+   if(k == "InpAutoSelect") { P_AutoSelect = (v == "true" || v == "1"); return true; }
+   if(k == "InpSelectMaxAgeDays") { P_SelectMaxAgeDays = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidTFmin") { P_PyramidTFmin = (int)StringToInteger(v); return true; }
    if(k == "InpPyramidStepATR") { P_PyramidStepATR = StringToDouble(v); return true; }
    if(k == "InpImomMode") { P_ImomMode = (int)StringToInteger(v); return true; }
@@ -818,8 +842,51 @@ void CheckPendingEntry()
    if(r > 0) g_pendFilled++;        // chi dem khi server da khop that
 }
 // Dieu kien bat buoc truoc moi lan vao lenh moi (dung chung cho vao ngay va vao khi gia hoi ve)
+// ---- Tu chon chien luoc (v5.11) ----
+// Bang xep hang Common\Files\TrendBot_xephang.csv do nut 1 > "Xep hang chien luoc" ghi (ChayThuNghiem.ps1):
+//   CapNhat,yyyy.MM.dd HH:mm  /  ChonDung,S<chien luoc>-<so phut khung>  (vd. S1-240 = Donchian H4; KHONG = khong ai)
+// Gan nhieu chart, moi chart 1 chien luoc, cung bat InpAutoSelect: chi chart co ma trung ChonDung duoc vao lenh MOI.
+// Lenh dang mo van duoc quan ly binh thuong. Bang thieu / cu hon InpSelectMaxAgeDays: chi Donchian H4 (da kiem thu) duoc vao.
+// Khi backtest: bo qua (luon cho vao) de ket qua tung chien luoc khong phu thuoc bang xep hang.
+string   g_xhTop = "";
+datetime g_xhUpd = 0, g_xhRead = 0;
+string SelfStrategyKey() { return StringFormat("S%d-%d", (int)P_Strategy, PeriodSeconds(P_TF) / 60); }
+void ReadRanking()
+{
+   g_xhRead = TimeCurrent(); g_xhTop = ""; g_xhUpd = 0;
+   if(!FileIsExist("TrendBot_xephang.csv", FILE_COMMON)) return;
+   int h = OpenCommonRead("TrendBot_xephang.csv", FILE_TXT | FILE_ANSI);
+   if(h == INVALID_HANDLE) return;
+   while(!FileIsEnding(h))
+   {
+      string line = FileReadString(h), part[];
+      if(StringSplit(line, ',', part) < 2) continue;
+      if(part[0] == "CapNhat")  g_xhUpd = StringToTime(part[1]);
+      if(part[0] == "ChonDung") g_xhTop = part[1];
+   }
+   FileClose(h);
+}
+bool AutoSelectAllowed()
+{
+   if(!P_AutoSelect || P_ManualEntry || MQLInfoInteger(MQL_TESTER)) return true;   // ban tu bam lenh: khong chan
+   if(g_xhRead == 0 || TimeCurrent() - g_xhRead >= 600) ReadRanking();   // doc lai moi 10 phut
+   string me = SelfStrategyKey();
+   bool fresh = g_xhUpd > 0 && g_xhTop != "" && TimeCurrent() - g_xhUpd <= (long)P_SelectMaxAgeDays * 86400;
+   if(!fresh)
+   {
+      if(me == "S1-240") return true;
+      g_status = "Tu chon: chua co bang xep hang moi (nut 1 > Xep hang), chi Donchian H4 duoc vao";
+      return false;
+   }
+   if(g_xhTop == me) return true;
+   g_status = g_xhTop == "KHONG" ? "Tu chon: khong chien luoc nao du dieu kien, tam dung vao lenh"
+                                  : "Tu chon: dang uu tien " + g_xhTop + ", chien luoc nay (" + me + ") cho";
+   return false;
+}
+
 bool EntryGatesOk()
 {
+   if(!AutoSelectAllowed()) return false;
    if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { g_status = "Da khoa bucket thuat toan trong ngay"; return false; }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
    // Khoa sut giam ca tai khoan cua bo bao ve (InpGuardMaxDDPct) chan ca chien luoc chinh (v5.10.16)

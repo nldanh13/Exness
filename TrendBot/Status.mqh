@@ -19,6 +19,7 @@ string StrategyName()
       case STRAT_SPRING:     return "Spring/Upthrust";
       case STRAT_MACD:       return "MACD da khung";
       case STRAT_IMOM:       return "Quan tinh trong ngay";
+      case STRAT_FIBVP:      return "Fibonacci + Volume Profile";
    }
    return "EMA pullback";
 }

@@ -191,6 +191,78 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       if(buyBase)  { g_sigSL = c1 - (l1 - 0.2 * atr); g_sigTP = rh; }
       if(sellBase) { g_sigSL = (h1 + 0.2 * atr) - c1; g_sigTP = rl; }
    }
+   else if(P_Strategy == STRAT_FIBVP)
+   {
+      // Fibonacci + Volume Profile (v5.11). Fibonacci cho biet gia CO THE dung o dau, Volume Profile cho biet o do co
+      // giao dich that hay khong: chi cho mua/ban o muc Fibonacci nam trong vung giao dich day.
+      // 1) Con song gan nhat trong InpFibLookback nen (bo nen 1): song tang = day thap nhat xuat hien TRUOC dinh cao nhat,
+      //    bien do >= InpFibMinSwingATR x ATR. Song giam nguoc lai. Moi con song chi vao lenh 1 lan.
+      // 2) Volume Profile cua con song: chia [day, dinh] thanh InpVPBins o, rai so tick cua tung nen (khung InpVPTFmin)
+      //    deu len cac o ma nen do di qua. O "day" = so tick >= InpVPHighMult x trung binh cac o.
+      //    Exness chi co so tick (so lan bao gia), khong co khoi luong that: day la uoc luong cua "dau chan tien".
+      // 3) Xet cac muc 0,382 / 0,5 / 0,618 / 0,786 tu nong toi sau. Muc roi vao o mong: bo qua. Muc trong o day:
+      //    vung = cac o day lien nhau quanh muc do.
+      // 4) Xac nhan (song tang): nen 1 la nen tang, rau duoi cham vung, khong xuyen qua day vung qua 0,5 ATR, dong tren muc.
+      //    SL = duoi day vung (hoac rau nen) 0,25 ATR, toi thieu 0,5 ATR. TP = dinh con song; bo neu TP < InpFibMinRR x SL.
+      int lb = P_FibLookback < 10 ? 10 : P_FibLookback;
+      int hiI = iHighest(_Symbol, P_TF, MODE_HIGH, lb, 2), loI = iLowest(_Symbol, P_TF, MODE_LOW, lb, 2);
+      if(hiI < 0 || loI < 0 || atr <= 0) return false;
+      double sH = iHigh(_Symbol, P_TF, hiI), sL = iLow(_Symbol, P_TF, loI), swing = sH - sL;
+      if(hiI == loI || swing < P_FibMinSwingATR * atr) return true;
+      bool up = loI > hiI;                                   // shift lon hon = cu hon: day truoc dinh -> song tang
+      int iOld = hiI > loI ? hiI : loI, iNew = hiI < loI ? hiI : loI;
+      datetime tExt = iTime(_Symbol, P_TF, iNew);            // thoi diem dinh (song tang) / day (song giam)
+      if(tExt <= g_fibUsed) return true;
+      if(up ? h1 > sH : l1 < sL) return true;                // nen 1 da vuot qua dinh/day: khong con la nhip hoi
+      ENUM_TIMEFRAMES vtf = P_VPTFmin > 0 ? TFFromMin(P_VPTFmin) : P_TF;
+      if(vtf == PERIOD_CURRENT) vtf = P_TF;
+      datetime tFrom = iTime(_Symbol, P_TF, iOld), tTo = iTime(_Symbol, P_TF, iNew) + PeriodSeconds(P_TF) - 1;
+      MqlRates vr[];
+      int nv = CopyRates(_Symbol, vtf, tFrom, tTo, vr);
+      if(nv < 10) return false;                              // chua du du lieu khung dem tick
+      int nb = P_VPBins < 10 ? 10 : (P_VPBins > 200 ? 200 : P_VPBins);
+      double bin = swing / nb;
+      double vp[];
+      ArrayResize(vp, nb); ArrayInitialize(vp, 0.0);
+      double tot = 0;
+      for(int i = 0; i < nv; i++)
+      {
+         double lo = MathMax(vr[i].low, sL), hi = MathMin(vr[i].high, sH);
+         if(hi < lo || vr[i].tick_volume <= 0) continue;
+         int ka = (int)MathFloor((lo - sL) / bin), kb = (int)MathFloor((hi - sL) / bin);
+         if(ka < 0) ka = 0; if(ka > nb - 1) ka = nb - 1; if(kb < 0) kb = 0; if(kb > nb - 1) kb = nb - 1;
+         double per = (double)vr[i].tick_volume / (kb - ka + 1);
+         for(int k = ka; k <= kb; k++) vp[k] += per;
+         tot += (double)vr[i].tick_volume;
+      }
+      if(tot <= 0) return false;
+      double thr = P_VPHighMult * tot / nb;
+      double o1 = iOpen(_Symbol, P_TF, 1);
+      double fib[4] = { 0.382, 0.5, 0.618, 0.786 };
+      for(int f = 0; f < 4 && !buyBase && !sellBase; f++)
+      {
+         double lvl = up ? sH - fib[f] * swing : sL + fib[f] * swing;
+         int k = (int)MathFloor((lvl - sL) / bin);
+         if(k < 0) k = 0; if(k > nb - 1) k = nb - 1;
+         if(vp[k] < thr) continue;                           // muc Fibonacci nam trong vung mong: gia de truot qua
+         int za = k, zb = k;
+         while(za > 0 && vp[za - 1] >= thr) za--;
+         while(zb < nb - 1 && vp[zb + 1] >= thr) zb++;
+         double zLo = sL + za * bin, zHi = sL + (zb + 1) * bin;
+         if(up && c1 > o1 && l1 <= zHi && l1 >= zLo - 0.5 * atr && c1 > lvl)
+         {
+            double sl = MathMax(c1 - (MathMin(l1, zLo) - 0.25 * atr), 0.5 * atr);
+            if(sH - c1 < P_FibMinRR * sl) continue;
+            buyBase = true; g_sigSL = sl; g_sigTP = sH; g_fibUsed = tExt;
+         }
+         if(!up && c1 < o1 && h1 >= zLo && h1 <= zHi + 0.5 * atr && c1 < lvl)
+         {
+            double sl = MathMax((MathMax(h1, zHi) + 0.25 * atr) - c1, 0.5 * atr);
+            if(c1 - sL < P_FibMinRR * sl) continue;
+            sellBase = true; g_sigSL = sl; g_sigTP = sL; g_fibUsed = tExt;
+         }
+      }
+   }
    else
    {
       buyBase  = c1 > trend && fast > trend && l1 <= fast && c1 > fast;
