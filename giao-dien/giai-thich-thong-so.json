@@ -20,6 +20,8 @@
  "InpOrbStartMin": "Chỉ dùng khi tắt tự tính giờ. Ví dụ 810 = 13:30.",
  "InpFvgBigATR": "Nến lớn cũng phải có số tick ≥ 1,5 lần trung bình 20 nến.",
  "InpFvgCandle": "Chạm FVG mới chỉ là đến đúng chỗ. Bật thì không vào ngay mà chờ 1 trong 5 mẫu nến tại vùng: nhấn chìm (mạnh nhất), sao mai (vào khi nến thứ 3 đóng), nến búa (râu dưới dài), harami + thêm 1 nến tăng xác nhận, ba lính trắng rồi chờ nhịp hồi nhẹ. FVG giảm: nến râu trên dài, nhấn chìm giảm, sao hôm, harami giảm + xác nhận, ba con quạ đen rồi hồi nhẹ. Nến đóng cửa thủng hẳn qua FVG thì vùng hỏng, bỏ qua.",
+ "InpSpringFull": "Không vào ở cây nến spring. Spring thật: (1) thủng đáy hộp nhưng không đi xa và đóng cửa quay lại trong hộp trong 3 nến; (2) về gần đáy thêm 1 lần, nến nhỏ, volume thấp, không thủng nổi (người bán cạn hàng). Thủng rồi nằm luôn bên dưới = giảm tiếp. Vào: nến tăng mạnh phá nắp hộp, rồi mua khi giá hồi về chạm lại nắp mà vẫn đóng cửa trên. SL dưới đáy cú spring, TP ở nơi cú giảm bắt đầu. Upthrust ở đỉnh: ngược lại.",
+ "InpSpringDropATR": "Đo từ đỉnh cao nhất 40 nến trước hộp tới đáy hộp: đây cũng là mục tiêu chốt lời đầu tiên.",
  "InpFibLookback": "Sóng tăng = đáy thấp nhất xuất hiện trước đỉnh cao nhất trong khoảng này; giá đang hồi xuống.",
  "InpFibMinSwingATR": "Sóng nhỏ hơn mức này không đủ làm khung Fibonacci.",
  "InpVPBins": "Chia biên độ con sóng thành bấy nhiêu ô để đếm tick ở mỗi mức giá.",

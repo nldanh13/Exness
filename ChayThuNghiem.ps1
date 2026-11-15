@@ -330,6 +330,7 @@ $XhRuns = @(
     @{ N = "XH-KeyVol-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 18; InpTF = 16385; InpRR = 2 }) },
     @{ N = "XH-3CauHoi-H4";   I = (Cfg $Brk @{ InpStrategy = 19; InpUseADX = "false"; InpUseHTF = "false"; InpRR = 2 }) },
     @{ N = "XH-QuetTin-M15";  I = (Cfg $Brk $Scalp @{ InpStrategy = 20; InpTF = 15; InpRR = 2; InpNewsNFP = "true" }) },
+    @{ N = "XH-SpringDu-H1";  I = (Cfg $Brk $Scalp @{ InpStrategy = 6; InpTF = 16385; InpRR = 2; InpSpringFull = "true" }) },
     @{ N = "XH-DaoRoi-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 14; InpTF = 16385; InpRR = 0; InpUsePartial = "true"; InpPartialPct = 50; InpPartialR = 99; InpTrailSwingBars = 10 }) }
 )
 foreach ($x in $XhRuns) {

@@ -257,6 +257,14 @@ PRESETS = [
     ], {"InpScaleParts": "3", "InpScaleStepATR": "0.5", "InpScaleBars": "6", "InpUseBreakeven": "true", "InpBreakevenR": "1.0",
         "InpBESwingBars": "10", "InpTrailSwingBars": "10", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
         "InpRR": "0", "InpUseTrailing": "false"}),
+    ("28-Wyckoff-Spring-day-du-H1-THU-NGHIEM.set", [
+        "28. Wyckoff Spring đầy đủ (chiến lược 6, H1): không vào ở cây nến spring. CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "Cú giảm ≥ 4 ATR → hộp đi ngang 20 nến (≤ 4 ATR, chạm đỉnh / đáy ≥ 2 lần) → spring thủng đáy ≤ 1,5 ATR, quay lại trong 3 nến",
+        "→ test gần đáy (nến nhỏ, volume thấp, không thủng) → nến tăng mạnh phá nắp → hồi về chạm nắp mà vẫn giữ được → MUA.",
+        "SL dưới đáy spring − 0,25 ATR, TP ở nơi cú giảm bắt đầu (hoặc 2R). Upthrust ở đỉnh: ngược lại.",
+        "Thủng đáy rồi nằm luôn bên dưới = giảm tiếp, không vào.",
+    ], {"InpStrategy": "6", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
+        "InpSpringFull": "true", "InpRangeBars": "20", "InpRangeMaxATR": "4", "InpSpringDepthATR": "1.5", "InpSpringDropATR": "4"}),
 ]
 
 

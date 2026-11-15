@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.28"
-#property version   "5.2800"
+#define  BOT_VERSION "5.29"
+#property version   "5.2900"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -69,6 +69,9 @@ input int             InpFvgLookback      = 20;         // FVG: tìm khoảng tr
 input bool            InpFvgCandle        = false;      // FVG: chờ nến xác nhận (búa, nhấn chìm, sao mai...)
 input int             InpRangeBars        = 20;         // Spring: độ dài vùng đi ngang (số nến)
 input double          InpRangeMaxATR      = 4.0;        // Spring: vùng đi ngang rộng tối đa (× ATR)
+input bool            InpSpringFull       = false;      // Spring: chờ đủ chuỗi spring – test – phá nắp – hồi về
+input double          InpSpringDepthATR   = 1.5;        // Spring: thủng đáy hộp không quá (× ATR)
+input double          InpSpringDropATR    = 4.0;        // Spring: cú giảm trước hộp ít nhất (× ATR)
 input int             InpImomMode         = 0;          // Quán tính: 0 = kết hợp, 1 = nửa giờ đầu, 2 = nửa giờ kế cuối
 input int             InpFibLookback      = 100;        // Fib + VP: tìm con sóng trong (số nến)
 input double          InpFibMinSwingATR   = 4.0;        // Fib + VP: con sóng tối thiểu (× ATR)
@@ -332,6 +335,8 @@ int             P_KVLookback, P_KVBins, P_KVMinBars, P_KVMinReact, P_SimpleLevel
 int             P_NewsPreMin, P_NewsProtect, P_NewsWindowMin, P_NewsRangeMin;
 bool            P_NewsWeekly, P_NewsNFP;
 int             P_ScaleParts, P_ScaleBars, P_BESwingBars;
+bool            P_SpringFull;
+double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
@@ -498,6 +503,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
    P_ScaleParts = InpScaleParts; P_ScaleStepATR = InpScaleStepATR; P_ScaleBars = InpScaleBars; P_BESwingBars = InpBESwingBars;
    P_NewsPreMin = InpNewsPreMin; P_NewsProtect = InpNewsProtect; P_NewsWeekly = InpNewsWeekly; P_NewsNFP = InpNewsNFP;
    P_NewsWindowMin = InpNewsWindowMin; P_NewsRangeMin = InpNewsRangeMin; P_NewsRangeMaxATR = InpNewsRangeMaxATR;
@@ -620,6 +626,9 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpSpringFull") { P_SpringFull = (v == "true" || v == "1"); return true; }
+   if(k == "InpSpringDepthATR") { P_SpringDepthATR = StringToDouble(v); return true; }
+   if(k == "InpSpringDropATR") { P_SpringDropATR = StringToDouble(v); return true; }
    if(k == "InpScaleParts") { P_ScaleParts = (int)StringToInteger(v); return true; }
    if(k == "InpScaleStepATR") { P_ScaleStepATR = StringToDouble(v); return true; }
    if(k == "InpScaleBars") { P_ScaleBars = (int)StringToInteger(v); return true; }

@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.28
+# Hướng dẫn bot BTC (MT5) v5.29
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 22 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 23 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1080,3 +1080,12 @@ Bộ `27-Bon-ky-thuat-danh-H4-THU-NGHIEM` ghép đủ 4 kỹ thuật trên Donch
 3. **Rời SL theo giá**: có sẵn từ v5.19 (`InpTrailSwingBars`, dưới mỗi đáy mới cao hơn).
 4. **Chốt từng phần**: có sẵn (`InpUsePartial`, `InpPartialR`, `InpPartialPct`).
 Lưu ý: mỗi phần giải vốn là một lệnh riêng nên 1R (để hòa vốn / chốt phần) của phần sau tính theo khoảng cách tới SL chung, nhỏ hơn phần đầu.
+
+## v5.29: Wyckoff Spring đầy đủ – giá có quay lại không? (16/11/2026) – CHƯA KIỂM THỬ
+Chiến lược 6 trước đây vào ngay ở cây nến spring (thủng đáy rồi đóng cửa lại trong vùng). `InpSpringFull = true` chờ đủ chuỗi
+(bộ `28-Wyckoff-Spring-day-du-H1-THU-NGHIEM`, xếp hạng `XH-SpringDu-H1`):
+1. Cú giảm mạnh (≥ `InpSpringDropATR` ATR từ đỉnh 40 nến trước hộp) rồi hộp đi ngang `InpRangeBars` nến (≤ `InpRangeMaxATR` ATR, chạm đỉnh / đáy ≥ 2 lần).
+2. Spring: thủng đáy hộp ≤ `InpSpringDepthATR` ATR và đóng cửa quay lại trong hộp trong 3 nến. Thủng rồi nằm luôn bên dưới = không phải spring.
+3. Test: về gần đáy (≤ 0,5 ATR) với nến nhỏ (≤ 70% biên độ TB trong hộp) và volume thấp (< TB hộp), không thủng đáy spring.
+4. Nến tăng mạnh (thân ≥ 60%) đóng cửa trên nắp hộp; lần đầu giá hồi về chạm nắp (≤ 0,3 ATR) mà vẫn đóng cửa trên → Buy.
+5. SL dưới đáy spring − 0,25 ATR; TP ở nơi cú giảm bắt đầu (nếu ≥ 1R, không thì `InpRR`). Upthrust ở đỉnh: ngược lại.

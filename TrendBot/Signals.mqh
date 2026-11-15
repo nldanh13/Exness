@@ -490,6 +490,61 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
    return false;
 }
 
+// Wyckoff Spring day du (v5.29, InpSpringFull). Sau cu giam manh gia di ngang trong hop: nguoi gom mua moi lan gia roi, chua muon
+// gia chay vi chua gom du. Phan hang con lai lay tu dung lo duoi day hop: gia bi day thung day (rung cay cho qua rung), dung lo kich
+// hoat, nguoi hoang ban thao -> roi vao tay nguoi gom. Spring = lo xo bi nen thap nhat truoc khi bat len. Phan biet voi giam that:
+//  1) thung day nhung KHONG di xa (<= InpSpringDepthATR ATR) va quay lai trong hop rat nhanh (dong cua tren day trong 3 nen);
+//  2) sau do ve gan day them 1 lan (test): nen nho, volume thap, khong thung noi day spring -> nguoi ban da can hang.
+//  Thung day roi nam luon ben duoi, khong quay lai = giam tiep (khong phai spring).
+// Vao lenh: cho nen tang manh pha len khoi nap hop (than >= 60% bien do), roi mua khi gia hoi ve cham lai nap (<= 0,3 ATR) va dong cua
+// van tren nap. SL duoi day cu spring - 0,25 ATR. TP dau tien o noi cu giam manh bat dau. Upthrust o dinh: nguoc lai (doi dau gia).
+bool SpringFullPattern(const double &hi[], const double &lo[], const double &op[], const double &cl[], const double &tv[],
+                       const int last, const double atr, double &slDist, double &tp)
+{
+   int R = P_RangeBars < 8 ? 8 : P_RangeBars;
+   for(int s = last - 3; s >= R + 41; s--)                               // s = nen spring (thung day)
+   {
+      // Hop = R nen truoc spring: rong 1..InpRangeMaxATR ATR, cham dinh / day moi phia >= 2 lan
+      double rh = hi[s - R], rl = lo[s - R], vAvg = 0, rAvg = 0;
+      for(int q = s - R; q < s; q++) { rh = MathMax(rh, hi[q]); rl = MathMin(rl, lo[q]); vAvg += tv[q]; rAvg += hi[q] - lo[q]; }
+      vAvg /= R; rAvg /= R;
+      if(rh - rl > P_RangeMaxATR * atr || rh - rl < atr || lo[s] >= rl) continue;
+      int tH = 0, tL = 0;
+      for(int q = s - R; q < s; q++)
+      {
+         if(hi[q] >= rh - 0.25 * atr && (q == s - R || hi[q - 1] < rh - 0.25 * atr)) tH++;
+         if(lo[q] <= rl + 0.25 * atr && (q == s - R || lo[q - 1] > rl + 0.25 * atr)) tL++;
+      }
+      if(tH < 2 || tL < 2) continue;
+      // Cu giam manh truoc hop
+      double top = 0;
+      for(int q = s - R - 40; q < s - R; q++) top = MathMax(top, hi[q]);
+      if(top - rl < P_SpringDropATR * atr) continue;
+      // 1) Khong di xa, quay lai nhanh
+      int ret = -1; double spLow = lo[s];
+      for(int q = s; q <= MathMin(s + 2, last - 2) && ret < 0; q++) { spLow = MathMin(spLow, lo[q]); if(cl[q] > rl) ret = q; }
+      if(ret < 0 || rl - spLow > P_SpringDepthATR * atr) continue;
+      // 2) Test: ve gan day, nen nho, volume thap, khong thung day spring; 3) roi nen tang manh pha nap
+      bool test = false; int brk = -1;
+      for(int q = ret + 1; q < last && brk < 0; q++)
+      {
+         if(lo[q] < spLow || cl[q] < rl - P_SpringDepthATR * atr) { test = false; break; }   // thung lai: khong phai spring
+         if(!test && lo[q] <= rl + 0.5 * atr && hi[q] - lo[q] <= 0.7 * rAvg && tv[q] < vAvg) test = true;
+         double rq = hi[q] - lo[q];
+         if(test && cl[q] > rh && cl[q] > op[q] && rq > 0 && cl[q] - op[q] >= 0.6 * rq) brk = q;
+      }
+      if(brk < 0) continue;
+      // 4) Hoi ve cham lai nap va giu duoc (lan cham dau tien sau khi pha)
+      bool ok = true;
+      for(int q = brk + 1; q < last && ok; q++) if(cl[q] <= rh || lo[q] <= rh + 0.3 * atr) ok = false;
+      if(!ok || !(lo[last] <= rh + 0.3 * atr && cl[last] > rh)) continue;
+      slDist = MathMax(cl[last] - (spLow - 0.25 * atr), 0.5 * atr);
+      tp = top - cl[last] >= slDist ? top : 0;
+      return true;
+   }
+   return false;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -753,6 +808,26 @@ bool BaseSignals(const double atr, const double trend, const double fast,
    {
       // Vung di ngang = N nen truoc nen 1, rong <= x ATR, dinh va day moi phia duoc cham it nhat 2 lan (trong 0,25 ATR).
       // Spring: nen 1 thung day vung roi dong lai ben trong -> Buy, TP = dinh vung. Upthrust: nguoc lai.
+      // InpSpringFull (v5.29): khong vao o cay nen spring; cho du chuoi spring - test - pha nap - hoi ve (SpringFullPattern).
+      if(P_SpringFull)
+      {
+         int L = (P_RangeBars < 8 ? 8 : P_RangeBars) + 140;
+         double hi[], lo[], op[], cl[], tv[], nh[], nl[], no[], nc[];
+         ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(op, L); ArrayResize(cl, L); ArrayResize(tv, L);
+         ArrayResize(nh, L); ArrayResize(nl, L); ArrayResize(no, L); ArrayResize(nc, L);
+         for(int i = 0; i < L; i++)
+         {
+            int sh = L - i;
+            hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh); op[i] = iOpen(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh);
+            tv[i] = (double)iTickVolume(_Symbol, P_TF, sh);
+            if(hi[i] <= 0 || lo[i] <= 0) return false;
+            nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
+         }
+         double sd = 0, tp = 0;
+         if(SpringFullPattern(hi, lo, op, cl, tv, L - 1, atr, sd, tp)) { buyBase = true; g_sigSL = sd; g_sigTP = tp; }
+         else if(SpringFullPattern(nh, nl, no, nc, tv, L - 1, atr, sd, tp)) { sellBase = true; g_sigSL = sd; g_sigTP = -tp; }
+         return true;
+      }
       int hiI = iHighest(_Symbol, P_TF, MODE_HIGH, P_RangeBars, 2), loI = iLowest(_Symbol, P_TF, MODE_LOW, P_RangeBars, 2);
       if(hiI < 0 || loI < 0) return false;
       double rh = iHigh(_Symbol, P_TF, hiI), rl = iLow(_Symbol, P_TF, loI);
