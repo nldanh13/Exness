@@ -434,6 +434,62 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
    return false;
 }
 
+// 3 cau hoi cua nguoi di cau (v5.26): bieu do gan nhu trong tron - nen, vai duong ke va 3 cau hoi.
+//  1) Dang la mua gi? Cau truc dinh / day khung chinh (DowCalc): dinh sau cao hon = mua tang, chi tim mua; thap hon = mua giam,
+//     chi tim ban. Dang canh bao doi chieu / chua ro = lon xon -> dung ngoai (khong phai mua nao cung nen di cau).
+//  2) Ca tu o dau? Ke InpSimpleLevels duong ngang o nhung cho gia tung quay dau ro rang nhat: dinh / day lon (+-InpSimplePivot nen)
+//     trong InpSimpleLookback nen, gom cac dinh / day cach nhau < 0,5 ATR; diem = tong do dai cu quay dau (ATR, 10 nen sau do).
+//     Gia lo lung o giua cac duong: khong lam gi.
+//  3) Phao da dong chua? Gia ve dung duong ke (nen truoc dong cua phia tren, nen vua dong cham trong 0,25 ATR) roi mot cay nen
+//     tang bat len manh (than >= 60% bien do, dong cua tren duong) -> moi giat can. SL duoi duong / day nen - 0,25 ATR.
+bool SimpleSignal(const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist)
+{
+   DowState s;
+   if(!DowCalc(P_TF, 300, P_DowPivot, s) || s.trend == 0 || s.pend != 0) { g_status = "Mua lon xon: dung ngoai"; return false; }
+   int L = P_SimpleLookback < 50 ? 50 : P_SimpleLookback, P = P_SimplePivot < 2 ? 2 : P_SimplePivot;
+   double lv[], sc[]; int nl = 0;
+   ArrayResize(lv, 0); ArrayResize(sc, 0);
+   for(int q = P + 11; q <= L; q++)
+   {
+      double hq = iHigh(_Symbol, P_TF, q), lq = iLow(_Symbol, P_TF, q);
+      bool isH = true, isL = true;
+      for(int m = q - P; m <= q + P; m++)
+      {
+         if(m == q) continue;
+         if(iHigh(_Symbol, P_TF, m) >= hq) isH = false;
+         if(iLow(_Symbol, P_TF, m) <= lq) isL = false;
+      }
+      for(int side = 0; side < 2; side++)
+      {
+         if(side == 0 ? !isH : !isL) continue;
+         double px = side == 0 ? hq : lq, mv = 0;
+         for(int m = q - 1; m >= q - 10; m--)
+            mv = MathMax(mv, side == 0 ? px - iLow(_Symbol, P_TF, m) : iHigh(_Symbol, P_TF, m) - px);
+         double strength = mv / atr;
+         int f = -1;
+         for(int j = 0; j < nl && f < 0; j++) if(MathAbs(lv[j] - px) < 0.5 * atr) f = j;
+         if(f < 0) { nl++; ArrayResize(lv, nl); ArrayResize(sc, nl); lv[nl - 1] = px; sc[nl - 1] = strength; }
+         else { lv[f] = (lv[f] * sc[f] + px * strength) / MathMax(sc[f] + strength, 1e-9); sc[f] += strength; }
+      }
+   }
+   // Chi giu InpSimpleLevels duong manh nhat
+   int keep = MathMin(nl, P_SimpleLevels < 1 ? 1 : P_SimpleLevels);
+   double c2 = iClose(_Symbol, P_TF, 2), o1 = iOpen(_Symbol, P_TF, 1), r1 = h1 - l1, body = MathAbs(c1 - o1);
+   bool strong = r1 > 0 && body >= 0.6 * r1;
+   for(int t = 0; t < keep; t++)
+   {
+      int best = t;
+      for(int j = t + 1; j < nl; j++) if(sc[j] > sc[best]) best = j;
+      double tl = lv[t], ts = sc[t]; lv[t] = lv[best]; sc[t] = sc[best]; lv[best] = tl; sc[best] = ts;
+      double lvl = lv[t];
+      if(s.trend == 1 && strong && c2 > lvl && l1 <= lvl + 0.25 * atr && l1 >= lvl - 1.0 * atr && c1 > o1 && c1 > lvl)
+      { buy = true; slDist = MathMax(c1 - (MathMin(l1, lvl) - 0.25 * atr), 0.5 * atr); return true; }
+      if(s.trend == -1 && strong && c2 < lvl && h1 >= lvl - 0.25 * atr && h1 <= lvl + 1.0 * atr && c1 < o1 && c1 < lvl)
+      { buy = false; slDist = MathMax((MathMax(h1, lvl) + 0.25 * atr) - c1, 0.5 * atr); return true; }
+   }
+   return false;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -991,6 +1047,11 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
       }
+   }
+   else if(P_Strategy == STRAT_SIMPLE)
+   {
+      bool sb; double ss;
+      if(SimpleSignal(atr, c1, h1, l1, sb, ss)) { if(sb) buyBase = true; else sellBase = true; g_sigSL = ss; }
    }
    else if(P_Strategy == STRAT_KEYVOL)
    {

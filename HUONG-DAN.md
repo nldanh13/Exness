@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.25
+# Hướng dẫn bot BTC (MT5) v5.26
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 20 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 21 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1043,3 +1043,16 @@ xếp hạng `XH-VWAP-M15`).
   mạnh ra); (2) volume cao (bước trên); (3) đã quay về phản ứng ≥ `InpKVMinReact` lần (từ xa ≥ 1 ATR về chạm, rồi rời ≥ 1 ATR trong 5 nến).
 - Đổi vai: nến trước đóng cửa trên vùng → hỗ trợ; dưới → kháng cự. Nến vừa đóng chạm vùng và phản ứng rõ (đóng cửa lại ngoài vùng cùng
   chiều, râu ≥ 40% biên độ hoặc vượt đỉnh / đáy nến trước) → vào lệnh, SL bên kia vùng − 0,25 ATR.
+
+## v5.26: 3 câu hỏi – nhìn ít mà rõ (chiến lược 19, 16/11/2026) – CHƯA KIỂM THỬ
+Không phải biết quá ít, mà là nhìn quá nhiều (bộ `25-Ba-cau-hoi-don-gian-H4-THU-NGHIEM`, xếp hạng `XH-3CauHoi-H4`):
+1. Đang là mùa gì? Cấu trúc đỉnh / đáy khung chính (cùng thuật toán với Dow, `InpDowPivot`). Đang cảnh báo đổi chiều hoặc chưa rõ = đứng ngoài.
+2. Cá tụ ở đâu? `InpSimpleLevels` đường ngang ở chỗ giá từng quay đầu rõ nhất: đỉnh / đáy ± `InpSimplePivot` nến trong
+   `InpSimpleLookback` nến, gộp những chỗ cách nhau < 0,5 ATR, xếp theo tổng độ dài cú quay đầu. Giá ở giữa các đường: không làm gì.
+3. Phao đã động chưa? Nến trước ở phía trên đường, nến vừa đóng chạm đường (± 0,25 ATR) và là nến tăng mạnh (thân ≥ 60% biên độ)
+   đóng cửa trên đường → Buy, SL dưới đường / đáy nến − 0,25 ATR. Mùa giảm: ngược lại.
+
+**Ghi chú thẳng thắn về chính bot này:** từ 15/11 tới nay bot đã có thêm 11 chiến lược và rất nhiều bộ lọc, tất cả chưa kiểm thử.
+Đó đúng là cái bẫy bài này nói: bật hết lên thì mỗi cái nói một kiểu. Cách dùng đúng: chạy xếp hạng, chọn **một** chiến lược đứng đầu
+(cộng tối đa **một** bộ lọc hỗ trợ), chạy demo đủ lâu cho thật thành thạo, rồi mới tính cái khác. Đừng bật nhiều bộ lọc cùng lúc
+chỉ vì chúng có sẵn – mỗi bộ lọc thêm vào là một lần "chọn cái nói đúng điều mình muốn nghe" trong backtest.

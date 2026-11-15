@@ -29,6 +29,7 @@ string StrategyName()
       case STRAT_DOW:        return "Dow: thuy trieu + con song";
       case STRAT_VWAP:       return "VWAP trong ngay + 3 cap dai";
       case STRAT_KEYVOL:     return "Vung Key Volume";
+      case STRAT_SIMPLE:     return "3 cau hoi: mua - cho ca - phao";
    }
    return "EMA pullback";
 }

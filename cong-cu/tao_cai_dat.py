@@ -231,6 +231,14 @@ PRESETS = [
         "SL bên kia vùng − 0,25 ATR, TP 2R. Theo xu hướng D1.",
     ], {"InpStrategy": "18", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2",
         "InpKVLookback": "200", "InpKVBins": "50", "InpKVHighMult": "1.5", "InpKVMaxATR": "2.0", "InpKVMinBars": "8", "InpKVMinReact": "1"}),
+    ("25-Ba-cau-hoi-don-gian-H4-THU-NGHIEM.set", [
+        "25. 3 câu hỏi (chiến lược 19, H4): chỉ nến, vài đường kẻ ngang và 3 câu hỏi. CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "1) Mùa gì: cấu trúc đỉnh / đáy H4 – tăng chỉ mua, giảm chỉ bán, lộn xộn đứng ngoài.",
+        "2) Cá tụ ở đâu: 3 đường ngang ở chỗ giá từng quay đầu mạnh nhất trong 200 nến (đỉnh / đáy ±5 nến).",
+        "3) Phao động chưa: giá về đúng đường, nến mạnh cùng chiều mùa (thân ≥ 60%) đóng cửa → vào. SL dưới đường − 0,25 ATR, TP 2R.",
+        "Không thêm bộ lọc nào khác (không ADX, không EMA khung lớn).",
+    ], {"InpStrategy": "19", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
+        "InpSimpleLevels": "3", "InpSimpleLookback": "200", "InpSimplePivot": "5", "InpDowPivot": "3"}),
 ]
 
 
