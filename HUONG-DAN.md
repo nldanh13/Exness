@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.37
+# Hướng dẫn bot BTC (MT5) v5.38
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1197,3 +1197,9 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
   vào giờ cao điểm (phiên New York 19:30–23:00 giờ VN) và cân nhắc VPS (MT5 > Virtual Hosting, hoặc VPS của Exness) để bot chạy 24/7.
 - Lệnh thật khi tắt máy: SL / TP nằm trên máy chủ Exness nên vẫn bảo vệ; dời hòa vốn, chốt từng phần, trailing, khóa lệnh dừng lại tới
   khi mở máy. Không bật khóa lệnh (hedging) nếu không treo máy: lúc khóa, 2 lệnh không có SL.
+
+## v5.38: Quyết định theo kiến thức, kết quả thực chiến chỉ để tham khảo (16/11/2026)
+- Mặc định `InpLearnApply = false`: chế độ Theo tình huống quyết định **hoàn toàn theo kiến thức đã học** – chẩn đoán tình huống rồi áp dụng
+  đúng quy tắc của các bài học (vùng, nến xác nhận, cú quét, cấu trúc...), rủi ro theo số setup đồng ý (1 setup = `InpChainOneRisk`, ≥ 2 = đủ).
+- Lệnh giấy và lệnh thật vẫn được ghi (`InpLearn`), hiện trong bảng "Bot đã học được gì" và trong bằng chứng với nhãn "Thực chiến (tham khảo)",
+  nhưng KHÔNG giảm rủi ro hay loại chiến lược nào. Bật `InpLearnApply` khi muốn để số liệu thực chiến can thiệp (như v5.36).

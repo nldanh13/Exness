@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.37"
-#property version   "5.3700"
+#define  BOT_VERSION "5.38"
+#property version   "5.3800"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -213,7 +213,8 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
-input bool            InpLearn            = true;       // Học từ thực chiến: lưu kết quả và dùng cho quyết định sau
+input bool            InpLearnApply       = false;      // Cho kết quả thực chiến can thiệp quyết định (tắt = chỉ theo kiến thức)
+input bool            InpLearn            = true;       // Ghi lại kết quả thực chiến (lệnh giấy + lệnh thật) để tham khảo
 input int             InpLearnMinN        = 20;         // Học: đánh giá sau (số lệnh giấy mỗi cặp tình huống / chiến lược)
 input double          InpLearnTryRisk     = 0.5;        // Học: rủi ro khi chưa đủ dữ liệu (× rủi ro chuẩn)
 input int             InpLearnMaxBars     = 48;         // Học: lệnh giấy hết hạn sau (số nến)
@@ -359,7 +360,7 @@ int             P_PDDays, P_PDLookback, P_ChainFullCount;
 string          P_ChainList;
 bool            P_ChainPD;
 double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR, P_LearnTryRisk;
-bool            P_Learn;
+bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin;
 double          P_SpringDepthATR, P_SpringDropATR;
@@ -529,7 +530,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
-   P_Learn = InpLearn; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
+   P_Learn = InpLearn; P_LearnApply = InpLearnApply; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
    P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
    P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
@@ -657,6 +658,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpLearnApply") { P_LearnApply = (v == "true" || v == "1"); return true; }
    if(k == "InpLearn") { P_Learn = (v == "true" || v == "1"); return true; }
    if(k == "InpLearnMinN") { P_LearnMinN = (int)StringToInteger(v); return true; }
    if(k == "InpLearnTryRisk") { P_LearnTryRisk = StringToDouble(v); return true; }

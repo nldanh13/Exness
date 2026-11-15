@@ -266,7 +266,7 @@ main { gap: 14px; padding-block: 14px 40px; }
   </section>
 
   <section class="sec" id="sec-learn" hidden>
-    <div class="sec-head"><h2>Bot đã học được gì từ thực chiến</h2><span class="hint">Lệnh giấy = mọi setup bot thấy, theo dõi tới SL / TP. Không dùng dữ liệu backtest.</span></div>
+    <div class="sec-head"><h2>Bot đã học được gì từ thực chiến</h2><span class="hint">Chỉ để tham khảo: bot quyết định theo kiến thức. Lệnh giấy = mọi setup bot thấy, theo dõi tới SL / TP.</span></div>
     <div id="learn-box"></div>
   </section>
 
@@ -646,7 +646,7 @@ function renderLearn(list) {
         '<td class="r num">' + (r.n ? r2(r.m) : '–') + '</td><td class="r num">' + (r.n ? r.w.toFixed(0) + '%' : '–') + '</td>' +
         '<td class="l"><span class="pill ' + v[1] + '">' + v[0] + '</span></td><td class="r num">' + (r.rn ? r.rn + ' · ' + r2(r.rm) : '–') + '</td></tr>';
     }).join('') + '</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">' + open + ' lệnh giấy đang theo dõi. Đủ ' +
-    'số lệnh giấy mới xếp loại: TB ≤ 0 → loại; chắc chắn có lời → tin dùng; còn lại → chưa chắc.</p>';
+    'số lệnh giấy mới xếp loại. Đánh giá chỉ can thiệp quyết định khi bật InpLearnApply.</p>';
 }
 function renderJournal(list) {
   var rows = [];

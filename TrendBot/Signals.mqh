@@ -801,8 +801,13 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       LearnRegister(g_smartSit, m, b ? 1 : -1, c1, sd, g_sigTP);
       double lf; string lt;
       int lv = LearnVerdict(g_smartSit, m, lf, lt);
-      EvAdd("Hoc - " + ChainName(m) + " (" + g_smartName + "): " + lt);
-      if(lv == 3) { outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
+      // Mac dinh (InpLearnApply = false) quyet dinh hoan toan theo KIEN THUC: ket qua thuc chien chi ghi vao bang chung de tham khao
+      if(!P_LearnApply) { lf = 1.0; EvAdd("Thuc chien (tham khao) - " + ChainName(m) + ": " + lt); }
+      else
+      {
+         EvAdd("Hoc - " + ChainName(m) + " (" + g_smartName + "): " + lt);
+         if(lv == 3) { outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
+      }
       if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; bMem = m; } nb++; bF = MathMax(bF, lf); bN += (bN == "" ? "" : " + ") + ChainName(m); }
       if(s) { if(ns == 0) { sSL = g_sigSL; sTP = g_sigTP; sPX = g_sigPartialPx; sM = g_sigRiskMult; sMem = m; } ns++; sF = MathMax(sF, lf); sN += (sN == "" ? "" : " + ") + ChainName(m); }
    }
