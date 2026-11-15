@@ -301,6 +301,17 @@ PRESETS = [
         "InpDowLateLegs": "4", "InpChainFullCount": "2", "InpChainOneRisk": "0.5", "InpNewsNFP": "true",
         "InpUseBreakeven": "true", "InpBreakevenR": "1.0", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
         "InpTrailSwingBars": "10"}),
+    ("33-Theo-tinh-huong-von-770-nghin-M15-THU-NGHIEM.set", [
+        "33. Theo tình huống (chiến lược 24) cho vốn khoảng 770 nghìn VND (~29 USD). THỬ NGHIỆM, RỦI RO CAO.",
+        "0,01 lot BTC là lot nhỏ nhất: mỗi 1 USD giá chạy = 0,01 USD. Bộ này chỉ vào 0,01 lot khi lệnh dính SL mất ≤ 6% vốn",
+        "(SL cách giá vào ≤ ~175 USD); setup nào SL xa hơn thì BỎ, không bao giờ tăng rủi ro. Phân tích trên M15 để SL đủ ngắn.",
+        "Mỗi lệnh thua mất tới ~6% vốn: thua 1 lệnh là khóa tới hết ngày (giới hạn lỗ ngày 3%); sụt 15% từ đỉnh thì bot dừng hẳn.",
+        "Không chốt từng phần được (0,01 lot không chia đôi): dời hòa vốn ở 1R, SL theo đáy mới. Quyết định theo kiến thức, kết quả chỉ tham khảo.",
+    ], {"InpStrategy": "24", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2", "InpDowTF": "16408",
+        "InpDowLateLegs": "4", "InpChainFullCount": "2", "InpChainOneRisk": "0.5", "InpNewsNFP": "true",
+        "InpRiskPercent": "1.0", "InpMaxRiskRoundUp": "6.0", "InpMaxDailyLossPct": "3.0", "InpMaxDrawdownPct": "15.0",
+        "InpUseBreakeven": "true", "InpBreakevenR": "1.0", "InpUsePartial": "false", "InpTrailSwingBars": "10",
+        "InpMaxSpreadPoints": "1500", "InpNewsPreMin": "30"}),
 ]
 
 

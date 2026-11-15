@@ -1220,3 +1220,9 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
   vào `TrendBot_dieuchinh_<tài khoản>_<mã>.csv`; bot đọc mỗi 10 phút và không dùng chiến lược đó khi điều kiện không thỏa (vẫn ghi lệnh giấy với
   `luat=1` để tiếp tục kiểm chứng). Bấm **Bỏ** để gỡ. Bot không tự sửa kiến thức.
 - Lưu ý: chia theo ngưỡng trên mẫu nhỏ dễ "khớp nhầm" – nên chờ nhiều lần áp dụng (càng nhiều càng chắc) trước khi duyệt.
+
+### Bộ 33: Theo tình huống cho vốn ~770 nghìn VND (16/11/2026) – rủi ro cao
+0,01 lot BTC là lot nhỏ nhất (1 USD giá = 0,01 USD). Với ~29 USD vốn, SL H1 (500–900 USD giá) mất 17–30% vốn mỗi lệnh nên bị bỏ.
+Bộ `33-Theo-tinh-huong-von-770-nghin-M15-THU-NGHIEM`: phân tích M15 (SL ngắn hơn), `InpMaxRiskRoundUp = 6` – chỉ vào 0,01 lot khi dính SL
+mất ≤ 6% vốn (SL ≤ ~175 USD giá), còn lại bỏ; lỗ ngày 3% (thua 1 lệnh là nghỉ tới hết ngày), dừng hẳn khi sụt 15%; không chốt từng phần
+(không chia được 0,01 lot). Spread ~6,4 USD / BTC ≈ 3–4% của 1R mỗi lệnh. Khung nhỏ chưa có lợi thế khi backtest Donchian vì phí.
