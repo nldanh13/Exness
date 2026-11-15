@@ -28,6 +28,7 @@ string StrategyName()
       case STRAT_OB:         return "Order block: phan ung tai vung";
       case STRAT_DOW:        return "Dow: thuy trieu + con song";
       case STRAT_VWAP:       return "VWAP trong ngay + 3 cap dai";
+      case STRAT_KEYVOL:     return "Vung Key Volume";
    }
    return "EMA pullback";
 }

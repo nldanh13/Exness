@@ -223,6 +223,14 @@ PRESETS = [
         "Khung M15 tốn phí nhiều so với biên độ (Donchian M1–M30 đều lỗ khi backtest vì phí): cần xem kết quả trước khi dùng.",
     ], {"InpStrategy": "17", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "0",
         "InpVwapMode": "0", "InpVwapBand2": "2.0", "InpVwapBand3": "3.0", "InpVwapMinRR": "1.0"}),
+    ("24-Vung-Key-Volume-H1-THU-NGHIEM.set", [
+        "24. Vùng Key Volume (chiến lược 18, H1): nơi thị trường đã giao dịch nhiều nhất. CHƯA CÓ KẾT QUẢ BACKTEST. Chỉ chạy demo.",
+        "Vùng = các ô Volume Profile 200 nến có số tick ≥ 1,5 lần trung bình, rộng ≤ 2 ATR; giá từng đi ngang trong vùng ≥ 8 nến",
+        "rồi chạy mạnh ra (≥ 2 ATR), và đã quay về phản ứng ít nhất 1 lần. Giá trên vùng = hỗ trợ, dưới = kháng cự (đổi vai).",
+        "Chờ giá quay về + nến phản ứng rõ (đóng cửa lại ngoài vùng, râu ≥ 40% hoặc vượt đỉnh / đáy nến trước).",
+        "SL bên kia vùng − 0,25 ATR, TP 2R. Theo xu hướng D1.",
+    ], {"InpStrategy": "18", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "true", "InpRR": "2",
+        "InpKVLookback": "200", "InpKVBins": "50", "InpKVHighMult": "1.5", "InpKVMaxATR": "2.0", "InpKVMinBars": "8", "InpKVMinReact": "1"}),
 ]
 
 

@@ -351,6 +351,89 @@ bool VwapAt(const int shift, double &vwap, double &sd)
    return sd > 0;
 }
 
+// Vung Key Volume (v5.25): vung gia thi truong da giao dich nhieu nhat - "ben xe". Rat nhieu nguoi co vi the o day (gia von cua ho):
+// nguoi dang loi mua them bao ve lenh, nguoi dang lo ban ra thoat hoa von -> gia ve la phan ung manh. 3 dau hieu:
+//  1) gia tung di ngang o do kha lau (>= InpKVMinBars nen dong cua trong vung) roi chay manh ra (dong cua cach vung >= 2 ATR);
+//  2) volume cao hon han: Volume Profile InpKVLookback nen (so tick rai deu tren cac o nen di qua), o >= InpKVHighMult x TB;
+//  3) gia da tung quay ve va phan ung ro (rot >= 1 ATR khoi vung trong 5 nen) it nhat InpKVMinReact lan.
+// Doi vai: gia nam tren -> ho tro (cho Buy), nam duoi -> khang cu (cho Sell). Danh dau roi CHO: gia quay ve, co nen phan ung ro
+// (dong cua lai ngoai vung, cung chieu, rau >= 40% bien do hoac vuot dinh nen truoc) moi vao. SL ben kia vung - 0,25 ATR.
+int KVReactions(const double bot, const double top, const int L, const double atr)
+{
+   int react = 0; bool away = false;
+   for(int q = L + 1; q >= 7; q--)
+   {
+      double hq = iHigh(_Symbol, P_TF, q), lq = iLow(_Symbol, P_TF, q), cq = iClose(_Symbol, P_TF, q);
+      if(cq > top + atr || cq < bot - atr) { away = true; continue; }
+      if(!away || lq > top || hq < bot) continue;
+      for(int m = q - 1; m >= q - 5; m--)
+      {
+         double cm = iClose(_Symbol, P_TF, m);
+         if(cm > top + atr || cm < bot - atr) { react++; break; }
+      }
+      away = false;
+   }
+   return react;
+}
+bool KeyVolSignal(const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist)
+{
+   int L = P_KVLookback < 50 ? 50 : P_KVLookback, nb = P_KVBins < 10 ? 10 : (P_KVBins > 200 ? 200 : P_KVBins);
+   int iH = iHighest(_Symbol, P_TF, MODE_HIGH, L, 2), iL = iLowest(_Symbol, P_TF, MODE_LOW, L, 2);
+   if(iH < 0 || iL < 0) return false;
+   double pHi = iHigh(_Symbol, P_TF, iH), pLo = iLow(_Symbol, P_TF, iL), w = (pHi - pLo) / nb;
+   if(w <= 0) return false;
+   double vb[];
+   ArrayResize(vb, nb); ArrayInitialize(vb, 0);
+   double tot = 0;
+   for(int q = 2; q <= L + 1; q++)
+   {
+      double hq = iHigh(_Symbol, P_TF, q), lq = iLow(_Symbol, P_TF, q), v = (double)iTickVolume(_Symbol, P_TF, q);
+      if(v <= 0) continue;
+      int a = (int)MathMax(0, MathFloor((lq - pLo) / w)), b = (int)MathMin(nb - 1, MathFloor((hq - pLo) / w));
+      if(b < a) continue;
+      for(int k = a; k <= b; k++) vb[k] += v / (b - a + 1);
+      tot += v;
+   }
+   if(tot <= 0) return false;
+   double thr = P_KVHighMult * tot / nb, o1 = iOpen(_Symbol, P_TF, 1), h2 = iHigh(_Symbol, P_TF, 2), l2 = iLow(_Symbol, P_TF, 2);
+   double c2 = iClose(_Symbol, P_TF, 2), r1 = h1 - l1;
+   int maxBins = (int)MathMax(1, MathFloor(P_KVMaxATR * atr / w));
+   for(int k = 0; k < nb; k++)
+   {
+      if(vb[k] < thr) continue;
+      int a = k, b = k;
+      while(b + 1 < nb && vb[b + 1] >= thr) b++;
+      k = b;                                                            // vung tiep theo bat dau sau doan nay
+      // Doan qua rong: giu cua so quanh o dinh (volume lon nhat)
+      if(b - a + 1 > maxBins)
+      {
+         int pk = a;
+         for(int j = a; j <= b; j++) if(vb[j] > vb[pk]) pk = j;
+         a = MathMax(a, pk - maxBins / 2); b = MathMin(b, a + maxBins - 1);
+      }
+      double bot = pLo + a * w, top = pLo + (b + 1) * w;
+      if(l1 > top + 0.1 * atr || h1 < bot - 0.1 * atr) continue;       // nen vua dong khong ve vung nay
+      // Dau hieu 1: di ngang trong vung lau roi chay manh ra
+      int inside = 0; bool exitStrong = false;
+      for(int q = 2; q <= L + 1; q++)
+      {
+         double cq = iClose(_Symbol, P_TF, q);
+         if(cq >= bot && cq <= top) inside++;
+         if(cq > top + 2.0 * atr || cq < bot - 2.0 * atr) exitStrong = true;
+      }
+      if(inside < P_KVMinBars || !exitStrong) continue;
+      // Dau hieu 3: da tung phan ung
+      if(KVReactions(bot, top, L, atr) < P_KVMinReact) continue;
+      // Doi vai + nen phan ung ro
+      bool fromAbove = c2 > top, fromBelow = c2 < bot;
+      if(fromAbove && c1 > top && c1 > o1 && (MathMin(o1, c1) - l1 >= 0.4 * r1 || c1 > h2))
+      { buy = true; slDist = MathMax(c1 - (bot - 0.25 * atr), 0.5 * atr); return true; }
+      if(fromBelow && c1 < bot && c1 < o1 && (h1 - MathMax(o1, c1) >= 0.4 * r1 || c1 < l2))
+      { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); return true; }
+   }
+   return false;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -908,6 +991,11 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
       }
+   }
+   else if(P_Strategy == STRAT_KEYVOL)
+   {
+      bool kb; double ks;
+      if(KeyVolSignal(atr, c1, h1, l1, kb, ks)) { if(kb) buyBase = true; else sellBase = true; g_sigSL = ks; }
    }
    else if(P_Strategy == STRAT_VWAP)
    {

@@ -23,6 +23,7 @@ STRATEGY_LABELS = {
     "STRAT_OB":           "Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng",
     "STRAT_DOW":          "Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều",
     "STRAT_VWAP":         "Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về",
+    "STRAT_KEYVOL":       "Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất",
 }
 
 GROUPS = [
@@ -179,6 +180,12 @@ GROUPS = [
         ("InpVwapBand2",      "VWAP: cặp đường 2 – chốt lời cách 1 (× độ lệch chuẩn)", "Dây đã căng: giá ở đường trên là đang đắt, chỗ để chốt lời, không phải để mua đuổi."),
         ("InpVwapBand3",      "VWAP: cặp đường 3 – bắt nhịp kéo về (× độ lệch chuẩn)", "Dây căng hết cỡ: giá rất hiếm khi chạm tới, chạm thường bị kéo ngược về VWAP. Ngày xu hướng rất mạnh giá có thể bám đường xa rất lâu: luôn chờ nến bị từ chối."),
         ("InpVwapMinRR",      "VWAP: bỏ nếu lời tới mục tiêu nhỏ hơn (× SL)", ""),
+        ("InpKVLookback",     "Key Volume: Volume Profile trong (số nến)", "Chiến lược 18. Vùng Key Volume = nơi thị trường đã giao dịch nhiều nhất, giá vốn của rất nhiều người: người đang lời mua thêm bảo vệ lệnh, người đang lỗ bán ra thoát hòa vốn, nên giá về là phản ứng mạnh. Khối lượng = số tick Exness."),
+        ("InpKVBins",         "Key Volume: số ô giá của Volume Profile", ""),
+        ("InpKVHighMult",     "Key Volume: ô volume cao ≥ (× trung bình)", "Dấu hiệu 2: thanh ngang dài nhất của Volume Profile. Các ô cao liền nhau gộp thành 1 vùng."),
+        ("InpKVMaxATR",       "Key Volume: vùng rộng tối đa (× ATR)", "Vùng rộng hơn thì chỉ giữ phần quanh ô volume lớn nhất (SL đặt bên kia vùng nên vùng quá rộng thì SL quá xa)."),
+        ("InpKVMinBars",      "Key Volume: giá từng đi ngang trong vùng ít nhất (số nến)", "Dấu hiệu 1: đi ngang ở đó khá lâu (đếm nến đóng cửa trong vùng) rồi chạy mạnh ra (có nến đóng cửa cách vùng ≥ 2 ATR)."),
+        ("InpKVMinReact",     "Key Volume: giá đã quay về và phản ứng ít nhất (lần)", "Dấu hiệu 3: giá từng ở xa ≥ 1 ATR, quay về chạm vùng, rồi rời đi ≥ 1 ATR trong 5 nến. Càng nhiều lần vùng càng đáng tin. Vào lệnh: giá nằm trên vùng (hỗ trợ) quay về, nến tăng đóng cửa lại trên vùng (râu dưới ≥ 40% biên độ hoặc vượt đỉnh nến trước) → mua, SL dưới đáy vùng. Nằm dưới (kháng cự): ngược lại."),
         ("InpHedgeLockLossR", "Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)", "THỬ NGHIỆM. Lệnh đang lỗ bấy nhiêu R (nhỏ hơn 1, trước khi chạm SL): mở lệnh ngược chiều cùng khối lượng, bỏ SL / TP lệnh gốc, chờ thị trường lộ hướng. Chỉ khóa khi bot giữ đúng 1 lệnh. Giữ 2 lệnh tốn phí gấp đôi."),
         ("InpHedgeLockProfitR", "Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)", "THỬ NGHIỆM. Lệnh đang lời từ bấy nhiêu R mà sắp có tin Mỹ hoặc sắp cuối tuần: mở lệnh ngược chiều để giữ nguyên phần lời. Chỉ mở khóa sau khi tin / cuối tuần đã qua."),
         ("InpHedgeNews",      "Khóa lời trước tin Mỹ", "Dùng cùng khoảng giờ với bộ lọc tin (InpNewsHours). Backtest cần file tin_my.csv."),

@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.24
+# Hướng dẫn bot BTC (MT5) v5.25
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 19 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 20 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1034,3 +1034,12 @@ xếp hạng `XH-VWAP-M15`).
 - Cách 2 – bắt nhịp kéo về (`InpVwapMode` 0 hoặc 2): nến chạm đường +3, là nến giảm có râu trên ≥ 40% biên độ và đóng cửa lại dưới
   đường +3 → Sell, SL trên râu, TP = VWAP. Ngày xu hướng mạnh giá bám đường xa rất lâu: không bao giờ bán chỉ vì chạm.
 - Bỏ lệnh nếu lời tới mục tiêu < `InpVwapMinRR` × SL. Cần ≥ 4 nến trong ngày mới tính.
+
+## v5.25: Vùng Key Volume (chiến lược 18, 16/11/2026) – CHƯA KIỂM THỬ
+Đừng đoán giá dừng ở đâu, hãy tìm nơi thị trường đã để lại nhiều tiền nhất (bộ `24-Vung-Key-Volume-H1-THU-NGHIEM`, xếp hạng `XH-KeyVol-H1`).
+- Volume Profile `InpKVLookback` nến, `InpKVBins` ô giá; số tick của mỗi nến rải đều lên các ô nến đó đi qua. Các ô ≥ `InpKVHighMult` ×
+  trung bình liền nhau = 1 vùng (rộng hơn `InpKVMaxATR` ATR thì giữ phần quanh ô lớn nhất).
+- Vùng hợp lệ khi đủ 3 dấu hiệu: (1) ≥ `InpKVMinBars` nến đóng cửa trong vùng và có nến đóng cửa cách vùng ≥ 2 ATR (đi ngang rồi chạy
+  mạnh ra); (2) volume cao (bước trên); (3) đã quay về phản ứng ≥ `InpKVMinReact` lần (từ xa ≥ 1 ATR về chạm, rồi rời ≥ 1 ATR trong 5 nến).
+- Đổi vai: nến trước đóng cửa trên vùng → hỗ trợ; dưới → kháng cự. Nến vừa đóng chạm vùng và phản ứng rõ (đóng cửa lại ngoài vùng cùng
+  chiều, râu ≥ 40% biên độ hoặc vượt đỉnh / đáy nến trước) → vào lệnh, SL bên kia vùng − 0,25 ATR.

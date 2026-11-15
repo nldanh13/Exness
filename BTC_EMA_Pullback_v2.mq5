@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.24"
-#property version   "5.2400"
+#define  BOT_VERSION "5.25"
+#property version   "5.2500"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -30,7 +30,8 @@ enum ENUM_STRATEGY
    STRAT_KNIFE        = 14,  // Thử nghiệm: không bắt dao rơi – thử nhỏ, vào lớn sau đáy, giữ lệnh
    STRAT_OB           = 15,  // Thử nghiệm: order block – vào theo cách giá phản ứng tại vùng
    STRAT_DOW          = 16,  // Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều
-   STRAT_VWAP         = 17   // Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về
+   STRAT_VWAP         = 17,  // Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về
+   STRAT_KEYVOL       = 18   // Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -186,6 +187,12 @@ input double          InpVwapBand1        = 1.0;        // VWAP: cặp đường
 input double          InpVwapBand2        = 2.0;        // VWAP: cặp đường 2 – chốt lời cách 1 (× độ lệch chuẩn)
 input double          InpVwapBand3        = 3.0;        // VWAP: cặp đường 3 – bắt nhịp kéo về (× độ lệch chuẩn)
 input double          InpVwapMinRR        = 1.0;        // VWAP: bỏ nếu lời tới mục tiêu nhỏ hơn (× SL)
+input int             InpKVLookback       = 200;        // Key Volume: Volume Profile trong (số nến)
+input int             InpKVBins           = 50;         // Key Volume: số ô giá của Volume Profile
+input double          InpKVHighMult       = 1.5;        // Key Volume: ô volume cao ≥ (× trung bình)
+input double          InpKVMaxATR         = 2.0;        // Key Volume: vùng rộng tối đa (× ATR)
+input int             InpKVMinBars        = 8;          // Key Volume: giá từng đi ngang trong vùng ít nhất (số nến)
+input int             InpKVMinReact       = 1;          // Key Volume: giá đã quay về và phản ứng ít nhất (lần)
 input double          InpHedgeLockLossR   = 0;          // Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)
 input double          InpHedgeLockProfitR = 0;          // Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)
 input bool            InpHedgeNews        = true;       // Khóa lời trước tin Mỹ
@@ -304,7 +311,8 @@ double          P_BreakMaxATR, P_BreakRetestATR;
 bool            P_BreakRetest, P_FakeoutFade, P_FvgCandle, P_DowFilter, P_DowVolume;
 ENUM_TIMEFRAMES P_DowTF;
 int             P_DowPivot, P_DowLateLegs, P_VwapMode;
-double          P_VwapBand1, P_VwapBand2, P_VwapBand3, P_VwapMinRR;
+double          P_VwapBand1, P_VwapBand2, P_VwapBand3, P_VwapMinRR, P_KVHighMult, P_KVMaxATR;
+int             P_KVLookback, P_KVBins, P_KVMinBars, P_KVMinReact;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
 int             P_RsiPeriod;
@@ -469,6 +477,8 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_KVLookback = InpKVLookback; P_KVBins = InpKVBins; P_KVHighMult = InpKVHighMult; P_KVMaxATR = InpKVMaxATR;
+   P_KVMinBars = InpKVMinBars; P_KVMinReact = InpKVMinReact;
    P_VwapMode = InpVwapMode; P_VwapBand1 = InpVwapBand1; P_VwapBand2 = InpVwapBand2; P_VwapBand3 = InpVwapBand3; P_VwapMinRR = InpVwapMinRR;
    P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowVolume = InpDowVolume;
    P_RangeBars = InpRangeBars;
@@ -585,6 +595,12 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpKVLookback") { P_KVLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpKVBins") { P_KVBins = (int)StringToInteger(v); return true; }
+   if(k == "InpKVHighMult") { P_KVHighMult = StringToDouble(v); return true; }
+   if(k == "InpKVMaxATR") { P_KVMaxATR = StringToDouble(v); return true; }
+   if(k == "InpKVMinBars") { P_KVMinBars = (int)StringToInteger(v); return true; }
+   if(k == "InpKVMinReact") { P_KVMinReact = (int)StringToInteger(v); return true; }
    if(k == "InpVwapMode") { P_VwapMode = (int)StringToInteger(v); return true; }
    if(k == "InpVwapBand1") { P_VwapBand1 = StringToDouble(v); return true; }
    if(k == "InpVwapBand2") { P_VwapBand2 = StringToDouble(v); return true; }

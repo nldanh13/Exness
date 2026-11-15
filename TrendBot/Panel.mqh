@@ -132,7 +132,8 @@ void UpdatePanel()
                   P_Strategy == STRAT_KNIFE ? "Dao rơi: nhỏ – lớn – giữ" :
                   P_Strategy == STRAT_OB ? "Order block" :
                   P_Strategy == STRAT_DOW ? "Dow: thủy triều + con sóng" :
-                  P_Strategy == STRAT_VWAP ? "VWAP + 3 cặp dải" : "EMA pullback";
+                  P_Strategy == STRAT_VWAP ? "VWAP + 3 cặp dải" :
+                  P_Strategy == STRAT_KEYVOL ? "Vùng Key Volume" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)
