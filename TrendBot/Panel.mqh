@@ -137,7 +137,8 @@ void UpdatePanel()
                   P_Strategy == STRAT_SIMPLE ? "3 câu hỏi" :
                   P_Strategy == STRAT_NEWS ? "Tin lớn: chờ cú quét xong" :
                   P_Strategy == STRAT_PD ? "Premium / discount" :
-                  P_Strategy == STRAT_CHAIN ? "Chuỗi phân tích" : "EMA pullback";
+                  P_Strategy == STRAT_CHAIN ? "Chuỗi phân tích" :
+                  P_Strategy == STRAT_AUTO ? "Tự động" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)

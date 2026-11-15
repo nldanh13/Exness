@@ -52,6 +52,9 @@ function Get-GitStatus([switch]$Fetch) {
 }
 
 function Test-MT5Running {
+    # Co ban MT5 rieng cho mo phong (mt5-mophong.txt): chi ban do can dong khi chay mo phong
+    $mp = Get-MoPhongDir
+    if ($mp) { return [bool](Get-Process terminal64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -ieq (Join-Path $mp "terminal64.exe") }) }
     return [bool](Get-Process terminal64 -ErrorAction SilentlyContinue)
 }
 

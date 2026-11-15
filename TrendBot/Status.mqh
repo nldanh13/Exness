@@ -33,6 +33,7 @@ string StrategyName()
       case STRAT_NEWS:       return "Tin lon: cho cu quet xong";
       case STRAT_PD:         return "Premium / discount 2 khung";
       case STRAT_CHAIN:      return "Chuoi phan tich: thuy trieu - vi tri - setup";
+      case STRAT_AUTO:       return "Tu dong theo bang xep hang";
    }
    return "EMA pullback";
 }
@@ -124,7 +125,7 @@ void WriteStatus()
    FileWriteString(h, "taikhoan=" + loai + "\r\n");
    FileWriteString(h, "may=" + AccountInfoString(ACCOUNT_SERVER) + "\r\n");
    FileWriteString(h, "ma=" + _Symbol + "\r\n");
-   FileWriteString(h, "chienluoc=" + StrategyName() + " " + EnumToString((ENUM_TIMEFRAMES)P_TF) + "\r\n");
+   FileWriteString(h, "chienluoc=" + (g_autoMode ? "Tu dong -> " + g_autoName + ": " : "") + StrategyName() + " " + EnumToString((ENUM_TIMEFRAMES)P_TF) + "\r\n");
    int nBot, nTuVao, nTay;
    OwnPositionCounts(nBot, nTuVao, nTay);
    FileWriteString(h, "lenhbot=" + IntegerToString(nBot + nTuVao) + "\r\n");   // tong lenh do bot mo (magic + tu vao)

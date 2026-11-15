@@ -33,6 +33,11 @@ double   g_sigSL = 0, g_sigTP = 0;
 // Bang chung cua quyet dinh (v5.33): cac con so cu the dan toi quyet dinh o nen dang xet, noi bang " ; ".
 // Xoa o dau moi nen moi, ghi vao file trang thai (bangchung=) va nhat ky quyet dinh (sau dau " || ").
 string   g_ev = "";
+// Che do Tu dong (chien luoc 23, v5.34): khai bao o day vi Status.mqh dung truoc phan code Tu dong trong file .mq5
+bool     g_autoMode = false;
+ulong    g_autoMagic = 0;
+string   g_autoName = "", g_autoWant = "";
+datetime g_autoRead = 0;
 double   g_pzA = 0, g_pzB = 0, g_pzC = 0, g_pzD = 0;   // so lieu tam do ham mau hinh tra ra (khong gian gia cua mau, co the doi dau)
 void EvReset() { g_ev = ""; }
 void EvAdd(const string s) { if(s == "" || StringLen(g_ev) > 1800) return; g_ev += (g_ev == "" ? "" : " ; ") + s; }

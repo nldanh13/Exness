@@ -4,16 +4,31 @@
 $BotName = "BTC_EMA_Pullback_v2"
 
 # Tim MT5: noi cai dat + thu muc du lieu (co buoc du phong neu origin.txt khong khop)
-function Find-MT5 {
+# -MoPhong: ban MT5 dung de mo phong (backtest / xep hang). Neu file mt5-mophong.txt (canh script) ghi thu muc cai cua MOT
+# BAN MT5 THU HAI, mo phong chay tren ban do va KHONG bao gio dong ban MT5 dang giao dich. Khong co file thi dung ban chinh.
+# Thu muc Common\Files dung chung moi ban MT5 tren may, nen bot dang chay doc ngay bang xep hang ban kia vua ghi.
+function Get-MoPhongDir {
+    $f = Join-Path $PSScriptRoot "mt5-mophong.txt"
+    if (-not (Test-Path $f)) { return $null }
+    $d = @(Get-Content $f | ForEach-Object { $_.Trim().Trim('"') } | Where-Object { $_ -and -not $_.StartsWith("#") }) | Select-Object -First 1
+    if ($d -and (Test-Path (Join-Path $d "terminal64.exe"))) { return $d.TrimEnd('\') }
+    if ($d) { Write-Host "CANH BAO: mt5-mophong.txt ghi '$d' nhung khong thay terminal64.exe o do. Dung ban MT5 chinh." -ForegroundColor Yellow }
+    return $null
+}
+function Find-MT5([switch]$MoPhong) {
     $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, "$env:LOCALAPPDATA\Programs") |
              Where-Object { $_ -and (Test-Path $_) }
     $terminals = foreach ($r in $roots) {
         Get-ChildItem -Path $r -Directory -ErrorAction SilentlyContinue |
             ForEach-Object { Join-Path $_.FullName "terminal64.exe" } | Where-Object { Test-Path $_ }
     }
-    if (-not $terminals) { throw "Khong tim thay terminal64.exe. MT5 da duoc cai chua?" }
+    $mp = Get-MoPhongDir
+    if (-not $terminals -and -not $mp) { throw "Khong tim thay terminal64.exe. MT5 da duoc cai chua?" }
+    if ($mp) { $terminals = @($terminals | Where-Object { (Split-Path -Parent $_) -ine $mp }) }   # ban chinh: khong phai ban mo phong
     $terminal = $terminals | Where-Object { $_ -match "(?i)exness" } | Select-Object -First 1
     if (-not $terminal) { $terminal = $terminals | Select-Object -First 1 }
+    if ($MoPhong -and $mp) { $terminal = Join-Path $mp "terminal64.exe" }
+    if (-not $terminal) { throw "Khong tim thay ban MT5 chinh (ngoai ban mo phong trong mt5-mophong.txt)." }
     $installDir = Split-Path -Parent $terminal
     $editor = Join-Path $installDir "metaeditor64.exe"
     if (-not (Test-Path $editor)) { throw "Khong thay metaeditor64.exe trong $installDir" }

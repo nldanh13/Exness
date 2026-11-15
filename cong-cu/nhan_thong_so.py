@@ -28,6 +28,7 @@ STRATEGY_LABELS = {
     "STRAT_NEWS":         "Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật",
     "STRAT_PD":           "Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính",
     "STRAT_CHAIN":        "Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung",
+    "STRAT_AUTO":         "Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng",
 }
 
 GROUPS = [

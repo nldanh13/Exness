@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.33
+# Hướng dẫn bot BTC (MT5) v5.34
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1136,3 +1136,21 @@ nhật ký có nút mở bằng chứng. Nội dung:
   3 câu hỏi (mùa, đỉnh / đáy, đường kẻ và điểm), premium / discount (hộp D1, đáy quét, đỉnh bị vượt, FVG), Spring đủ, sóng Dow, VWAP (VWAP,
   độ lệch chuẩn, các dải). Chuỗi phân tích: B1 cấu trúc D1 và số lần phá, B2 hộp D1 và giá ở nửa nào, B3 bằng chứng từng setup, B5 hệ số rủi ro.
 - Lúc vào lệnh: SL cách bao xa (và bằng bao nhiêu ATR), TP, khối lượng, số tiền rủi ro và % vốn, số phần giải vốn.
+
+## v5.34: Chế độ Tự động – 1 chart tự đổi chiến lược + MT5 riêng cho mô phỏng (16/11/2026) – THỬ NGHIỆM
+Mọi chiến lược vẫn nằm chung một bot (`BTC_EMA_Pullback_v2.mq5` + `TrendBot/`); `InpStrategy` là công tắc. **`InpStrategy = 23`
+(Tự động)** cho bot tự bật công tắc đó trong lúc chạy (bộ `31-Tu-dong-1-chart-THU-NGHIEM`):
+- Mỗi 10 phút đọc `TrendBot_xephang.csv` (thứ hạng) và `TrendBot_xephang_cauhinh.csv` (thông số từng cấu hình, mới – nút 1 > Xếp hạng ghi).
+  Lấy cấu hình đứng đầu **đủ điều kiện**, áp dụng thông số tín hiệu / quản lý lệnh của nó (chiến lược, khung, SL / TP, trailing, chốt phần,
+  thông số riêng từng chiến lược), tạo lại chỉ báo, đánh từ nến tiếp theo.
+- Giữ nguyên thông số bạn đặt trên chart: vốn, % rủi ro, giới hạn lỗ ngày / sụt giảm, giờ nghỉ, tránh tin, spread, bảo vệ lệnh tay.
+  (Cấu hình xếp hạng tắt giới hạn sụt giảm để so công bằng – chế độ Tự động KHÔNG lấy dòng đó.)
+- Chỉ đổi khi đang đứng ngoài (không lệnh, không lệnh chờ, không khóa lệnh): lệnh đang mở được quản lý trọn vẹn theo chiến lược đã mở nó.
+  Magic cố định theo lúc gắn bot. Bảng thiếu / cũ hơn `InpSelectMaxAgeDays` ngày → Donchian H4 + ADX (đã kiểm thử); "KHONG" → đứng ngoài.
+- Giao diện: ô chiến lược hiện `Tu dong -> <cấu hình>: <chiến lược> <khung>`; nhật ký ghi mỗi lần chuyển.
+- Khác `InpAutoSelect` (v5.11, mỗi chiến lược 1 chart, chỉ bật / tắt vào lệnh theo mã `S<chiến lược>-<phút>`): mã đó trùng nhau khi cùng
+  chiến lược + khung (vd. FVG và FVG + nến đều là S5-60); chế độ Tự động chọn theo TÊN cấu hình nên không bị trùng.
+
+**MT5 riêng cho mô phỏng** (`mt5-mophong.txt`): cài thêm một bản MT5 vào thư mục khác (vd. `C:\MT5-MoPhong`), mở 1 lần, đăng nhập demo
+Exness, rồi ghi đường dẫn thư mục đó vào `mt5-mophong.txt` (bỏ dấu #). Từ đó mô phỏng / xếp hạng compile và chạy trên bản này, chỉ đóng
+bản này; bản MT5 đang giao dịch không bị đụng tới. Hai bản dùng chung `Common\Files`, nên bot Tự động đọc ngay bảng xếp hạng mới.

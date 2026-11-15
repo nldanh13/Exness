@@ -392,7 +392,8 @@ $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ProjectDir "MT5Common.ps1")
 
 try {
-    $mt5 = Find-MT5
+    $mt5 = Find-MT5 -MoPhong     # ban MT5 rieng cho mo phong neu co mt5-mophong.txt (khong dong ban dang giao dich)
+    if (Get-MoPhongDir) { Write-Host "Mo phong tren ban MT5 rieng: $($mt5.InstallDir)" -ForegroundColor Cyan }
     $src = Join-Path $ProjectDir "$BotName.mq5"
     if (-not (Test-Path $src)) { throw "Khong thay $src" }
     $Inputs = Get-BotInputs $src
@@ -555,6 +556,9 @@ if ($xhList.Count -gt 0 -and -not $incomplete) {
     foreach ($x in $sorted) { $h++; $lines += "$h,$($x.Ten),$($x.Ma),$($x.DuDieuKien),$($x.Diem),$($x.ER_GanDay),$($x.Dot_GanDay),$($x.ER_CaKy),$($x.Dot_CaKy)" }
     $xhFile = Join-Path $mt5.CommonFiles "TrendBot_xephang.csv"
     $lines | Set-Content -Path $xhFile -Encoding ASCII
+    # Thong so tung cau hinh (che do Tu dong, chien luoc 23): Ten|k=v;k=v;... bot chi ap dung thong so tin hieu / quan ly lenh
+    $cfgLines = @($xhList | ForEach-Object { $r = $_; $_.Name + "|" + ((@($r.Inputs.Keys | Sort-Object) | ForEach-Object { "$_=$($r.Inputs[$_])" }) -join ";") })
+    $cfgLines | Set-Content -Path (Join-Path $mt5.CommonFiles "TrendBot_xephang_cauhinh.csv") -Encoding ASCII
     Write-Host ""
     Write-Host "XEP HANG CHIEN LUOC ($XhThang thang gan nhat, R theo dot):" -ForegroundColor Cyan
     $sorted | Format-Table -AutoSize | Out-String -Width 200 | Write-Host

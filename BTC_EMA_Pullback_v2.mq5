@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.33"
-#property version   "5.3300"
+#define  BOT_VERSION "5.34"
+#property version   "5.3400"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -35,7 +35,8 @@ enum ENUM_STRATEGY
    STRAT_SIMPLE       = 19,  // Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa
    STRAT_NEWS         = 20,  // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
    STRAT_PD           = 21,  // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
-   STRAT_CHAIN        = 22   // Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung
+   STRAT_CHAIN        = 22,  // Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung
+   STRAT_AUTO         = 23   // Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -902,6 +903,61 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Panel.mqh"
 #include "TrendBot/Report.mqh"
 
+// Tao (lai) chi bao theo P_ hien tai. Goi o OnInit va khi che do Tu dong (chien luoc 23) doi chien luoc / khung.
+void ReleaseHandles()
+{
+   if(hATRSL != hATR && hATRSL != INVALID_HANDLE) IndicatorRelease(hATRSL);
+   if(hFast != INVALID_HANDLE)  IndicatorRelease(hFast);
+   if(hTrend != INVALID_HANDLE) IndicatorRelease(hTrend);
+   if(hHTF != INVALID_HANDLE)   IndicatorRelease(hHTF);
+   if(hATR != INVALID_HANDLE)   IndicatorRelease(hATR);
+   if(hADX != INVALID_HANDLE)   IndicatorRelease(hADX);
+   if(hRSI != INVALID_HANDLE)   IndicatorRelease(hRSI);
+   if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
+   if(hBB != INVALID_HANDLE)    IndicatorRelease(hBB);
+   if(hMACD != INVALID_HANDLE)  IndicatorRelease(hMACD);
+   if(hMACDH != INVALID_HANDLE) IndicatorRelease(hMACDH);
+   hFast = hTrend = hHTF = hATR = hATRSL = hADX = hRSI = hATRD1 = hBB = hMACD = hMACDH = INVALID_HANDLE;
+}
+bool InitHandles()
+{
+   ReleaseHandles();
+   hFast  = iMA(_Symbol, P_TF,  P_FastEMA,  0, MODE_EMA, PRICE_CLOSE);
+   hTrend = iMA(_Symbol, P_TF,  P_TrendEMA, 0, MODE_EMA, PRICE_CLOSE);
+   hHTF   = iMA(_Symbol, P_HTF, P_HTFEMA,   0, MODE_EMA, PRICE_CLOSE);
+   hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
+   hATRSL = P_SLTFmin > 0 ? iATR(_Symbol, TFFromMin(P_SLTFmin), P_ATRPeriod) : hATR;
+   hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
+   if(P_Strategy == STRAT_RSI_REVERT || P_Strategy == STRAT_DIVCVD)
+   {
+      hRSI = iRSI(_Symbol, P_TF, P_Strategy == STRAT_DIVCVD ? P_DivRsiPeriod : P_RsiPeriod, PRICE_CLOSE);
+      if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return false; }
+   }
+   if(P_Strategy == STRAT_MACD)
+   {
+      hMACD = iMACD(_Symbol, P_TF, 12, 26, 9, PRICE_CLOSE);
+      if(hMACD == INVALID_HANDLE) { Print("Khong tao duoc MACD"); return false; }
+   }
+   if(P_HTFMacd)
+   {
+      hMACDH = iMACD(_Symbol, P_HTF, 12, 26, 9, PRICE_CLOSE);
+      if(hMACDH == INVALID_HANDLE) { Print("Khong tao duoc MACD khung lon"); return false; }
+   }
+   if(P_Strategy == STRAT_EXHAUST)
+   {
+      hATRD1 = iATR(_Symbol, PERIOD_D1, 20);
+      hBB    = iBands(_Symbol, P_TF, 20, 0, 2.0, PRICE_CLOSE);
+      if(hATRD1 == INVALID_HANDLE || hBB == INVALID_HANDLE) { Print("Khong tao duoc ATR D1 / Bollinger"); return false; }
+   }
+   if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
+      hATR == INVALID_HANDLE || hATRSL == INVALID_HANDLE || hADX == INVALID_HANDLE)
+   {
+      Print("Khong tao duoc chi bao");
+      return false;
+   }
+   return true;
+}
+
 int OnInit()
 {
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
@@ -927,6 +983,11 @@ int OnInit()
    // Donchian H4 (cau hinh chinh) giu nguyen Magic goc de khong mat lien ket voi lenh / trang thai cu.
    if(!(P_Strategy == STRAT_DONCHIAN && P_TF == PERIOD_H4))
       P_Magic += (ulong)P_Strategy * 10000 + (ulong)(PeriodSeconds(P_TF) / 60 % 10000);
+   // Che do Tu dong (chien luoc 23): Magic co dinh theo luc gan bot; bat dau bang cau hinh du phong (Donchian H4 + ADX),
+   // roi doi sang chien luoc dung dau bang xep hang o tick dau tien (AutoSwitch).
+   g_autoMode = P_Strategy == STRAT_AUTO;
+   g_autoMagic = P_Magic;
+   if(g_autoMode) AutoFallback();
    // Netting/Exchange hop nhat cac lenh cung symbol, khong bao ton quyen so huu theo Magic.
    // Tu choi thay vi canh bao roi de bot tu vao / dong nham vi the cua nguoi dung.
    if(AccountInfoInteger(ACCOUNT_LOGIN) > 0 &&
@@ -950,40 +1011,8 @@ int OnInit()
       { Print("Khong tim thay ma ", P_MarketSymbol, " / ", g_mktSym, ": tat bo loc Nasdaq."); g_mktSym = ""; }
       else hMkt = iMA(g_mktSym, PERIOD_D1, 200, 0, MODE_EMA, PRICE_CLOSE);
    }
-   hFast  = iMA(_Symbol, P_TF,  P_FastEMA,  0, MODE_EMA, PRICE_CLOSE);
-   hTrend = iMA(_Symbol, P_TF,  P_TrendEMA, 0, MODE_EMA, PRICE_CLOSE);
-   hHTF   = iMA(_Symbol, P_HTF, P_HTFEMA,   0, MODE_EMA, PRICE_CLOSE);
-   hATR   = iATR(_Symbol, P_TF, P_ATRPeriod);
-   hATRSL = P_SLTFmin > 0 ? iATR(_Symbol, TFFromMin(P_SLTFmin), P_ATRPeriod) : hATR;
-   hADX   = iADX(_Symbol, P_TF, P_ADXPeriod);
-   if(P_Strategy == STRAT_RSI_REVERT || P_Strategy == STRAT_DIVCVD)
-   {
-      hRSI = iRSI(_Symbol, P_TF, P_Strategy == STRAT_DIVCVD ? P_DivRsiPeriod : P_RsiPeriod, PRICE_CLOSE);
-      if(hRSI == INVALID_HANDLE) { Print("Khong tao duoc RSI"); return INIT_FAILED; }
-   }
-   if(P_Strategy == STRAT_MACD)
-   {
-      hMACD = iMACD(_Symbol, P_TF, 12, 26, 9, PRICE_CLOSE);
-      if(hMACD == INVALID_HANDLE) { Print("Khong tao duoc MACD"); return INIT_FAILED; }
-   }
+   if(!InitHandles()) return INIT_FAILED;
    if(P_MTFAlign > 0 && !InitMTF()) { Print("Khong tao duoc EMA20 da khung"); return INIT_FAILED; }
-   if(P_HTFMacd)
-   {
-      hMACDH = iMACD(_Symbol, P_HTF, 12, 26, 9, PRICE_CLOSE);
-      if(hMACDH == INVALID_HANDLE) { Print("Khong tao duoc MACD khung lon"); return INIT_FAILED; }
-   }
-   if(P_Strategy == STRAT_EXHAUST)
-   {
-      hATRD1 = iATR(_Symbol, PERIOD_D1, 20);
-      hBB    = iBands(_Symbol, P_TF, 20, 0, 2.0, PRICE_CLOSE);
-      if(hATRD1 == INVALID_HANDLE || hBB == INVALID_HANDLE) { Print("Khong tao duoc ATR D1 / Bollinger"); return INIT_FAILED; }
-   }
-   if(hFast == INVALID_HANDLE || hTrend == INVALID_HANDLE || hHTF == INVALID_HANDLE ||
-      hATR == INVALID_HANDLE || hATRSL == INVALID_HANDLE || hADX == INVALID_HANDLE)
-   {
-      Print("Khong tao duoc chi bao");
-      return INIT_FAILED;
-   }
    if(P_TrendBoard && MEActive() && !TrendBoardInit()) Print("Khong tao duoc bang xu huong (EMA cac khung)");
    trade.SetExpertMagicNumber(P_Magic);
    trade.SetTypeFillingBySymbol(_Symbol);
@@ -1085,17 +1114,7 @@ void OnDeinit(const int reason)
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
-   IndicatorRelease(hFast);
-   IndicatorRelease(hTrend);
-   IndicatorRelease(hHTF);
-   IndicatorRelease(hATR);
-   if(hATRSL != hATR && hATRSL != INVALID_HANDLE) IndicatorRelease(hATRSL);
-   IndicatorRelease(hADX);
-   if(hRSI != INVALID_HANDLE) { IndicatorRelease(hRSI); hRSI = INVALID_HANDLE; }
-   if(hATRD1 != INVALID_HANDLE) IndicatorRelease(hATRD1);
-   if(hBB != INVALID_HANDLE) IndicatorRelease(hBB);
-   if(hMACD != INVALID_HANDLE) IndicatorRelease(hMACD);
-   if(hMACDH != INVALID_HANDLE) IndicatorRelease(hMACDH);
+   ReleaseHandles();
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    ReleaseMTF();
    Comment("");
@@ -1138,6 +1157,118 @@ void CheckPendingEntry()
    if(r > 0) g_pendFilled++;        // chi dem khi server da khop that
 }
 // Dieu kien bat buoc truoc moi lan vao lenh moi (dung chung cho vao ngay va vao khi gia hoi ve)
+// ---- Che do Tu dong (v5.34, chien luoc 23): MOT chart, MOT bot, tu chuyen chien luoc ----
+// Doc Common\Files\TrendBot_xephang.csv (thu hang) + TrendBot_xephang_cauhinh.csv (thong so tung cau hinh, nut 1 > Xep hang ghi).
+// Moi 10 phut: neu bang con moi (<= InpSelectMaxAgeDays ngay) thi lay cau hinh dung dau du dieu kien; bang cu / thieu thi dung
+// Donchian H4 + ADX (cau hinh da kiem thu); "KHONG" (khong ai du dieu kien) thi dung ngoai. Chi DOI khi bot dang dung ngoai
+// (khong lenh, khong lenh cho, khong khoa lenh) de lenh dang mo duoc quan ly dung theo chien luoc da mo no.
+// Chi ap dung thong so tin hieu / quan ly lenh (danh sach AutoKeyOk); thong so von, rui ro, gioi han lo, gio nghi, tin, spread
+// giu nguyen nhu ban dat tren chart. Magic khong doi khi doi chien luoc.
+bool AutoKeyOk(const string k)
+{
+   string exact[] = {"InpStrategy", "InpTF", "InpHTF", "InpUseHTF", "InpHTFEMA", "InpHTFMacd", "InpUseADX", "InpADXPeriod", "InpADXMin",
+                     "InpATRMult", "InpRR", "InpUseTrailing", "InpTrailStartR", "InpTrailATRMult", "InpUsePartial", "InpPartialR",
+                     "InpPartialPct", "InpUseBreakeven", "InpBreakevenR", "InpTrailSwingBars", "InpBESwingBars", "InpFastEMA",
+                     "InpTrendEMA", "InpEntryPullATR", "InpEntryPullMode", "InpUseCandle", "InpMinSLATRMult", "InpExitOnBar", "InpExitOnEMA"};
+   for(int i = 0; i < ArraySize(exact); i++) if(k == exact[i]) return true;
+   string pre[] = {"InpDonchian", "InpBreak", "InpFvg", "InpRange", "InpSpring", "InpOB", "InpKV", "InpKnife", "InpVwap", "InpDow",
+                   "InpPD", "InpChain", "InpSimple", "InpNewsWindow", "InpNewsRange", "InpNewsNFP", "InpDist", "InpBig", "InpDiv",
+                   "InpFib", "InpVP", "InpRsi", "InpOrb", "InpExh", "InpMacd", "InpImom", "InpGrid", "InpFakeout"};
+   for(int i = 0; i < ArraySize(pre); i++) if(StringFind(k, pre[i]) == 0) return true;
+   return false;
+}
+void AutoReset()
+{
+   LoadParams();
+   if((_Symbol == "BTCUSDc" || _Symbol == "ETHUSDc") && P_CorrSymbols == "BTCUSDm,ETHUSDm") P_CorrSymbols = "BTCUSDc,ETHUSDc";
+}
+void AutoApplied(const string name)
+{
+   P_Magic = g_autoMagic;
+   trade.SetExpertMagicNumber(P_Magic);
+   if(!InitHandles()) { Print("Tu dong: khong tao duoc chi bao cho ", name, ", quay ve Donchian H4"); if(name != "Donchian H4 + ADX (du phong)") AutoFallback(); return; }
+   lastBarTime = 0;
+   g_autoName = name;
+   string msg = "Tu dong chuyen sang: " + name + " (" + StrategyName() + " " + EnumToString((ENUM_TIMEFRAMES)P_TF) + ")";
+   Print(msg);
+   DecisionLog("phan-tich", msg);
+}
+void AutoFallback()
+{
+   AutoReset();
+   P_Strategy = STRAT_DONCHIAN; P_TF = PERIOD_H4; P_UseADX = true;
+   AutoApplied("Donchian H4 + ADX (du phong)");
+}
+// Thong so cua cau hinh ten 'name' trong TrendBot_xephang_cauhinh.csv (dong: Ten|k=v;k=v;...)
+bool AutoApplyConfig(const string name)
+{
+   int h = OpenCommonRead("TrendBot_xephang_cauhinh.csv", FILE_TXT | FILE_ANSI);
+   if(h == INVALID_HANDLE) return false;
+   string cfg = "";
+   while(!FileIsEnding(h) && cfg == "")
+   {
+      string l = FileReadString(h);
+      int p = StringFind(l, "|");
+      if(p > 0 && StringSubstr(l, 0, p) == name) cfg = StringSubstr(l, p + 1);
+   }
+   FileClose(h);
+   if(cfg == "") return false;
+   AutoReset();
+   string kv[];
+   int n = StringSplit(cfg, ';', kv);
+   for(int i = 0; i < n; i++)
+   {
+      int e = StringFind(kv[i], "=");
+      if(e <= 0) continue;
+      string k = StringSubstr(kv[i], 0, e), v = StringSubstr(kv[i], e + 1);
+      if(AutoKeyOk(k)) SetParam(k, v);
+   }
+   if(P_Strategy == STRAT_AUTO) { AutoFallback(); return true; }
+   AutoApplied(name);
+   return true;
+}
+// Ten cau hinh dung dau du dieu kien; "" = bang thieu / cu; "KHONG" = khong ai du dieu kien
+string AutoTop()
+{
+   if(!FileIsExist("TrendBot_xephang.csv", FILE_COMMON)) return "";
+   int h = OpenCommonRead("TrendBot_xephang.csv", FILE_TXT | FILE_ANSI);
+   if(h == INVALID_HANDLE) return "";
+   datetime upd = 0; string top = "KHONG"; bool rows = false;
+   while(!FileIsEnding(h))
+   {
+      string p[];
+      int n = StringSplit(FileReadString(h), ',', p);
+      if(n < 2) continue;
+      if(p[0] == "CapNhat") upd = StringToTime(p[1]);
+      if(p[0] == "Hang") { rows = true; continue; }
+      if(rows && n >= 4 && top == "KHONG" && p[3] == "1") top = p[1];
+   }
+   FileClose(h);
+   if(upd == 0 || TimeLocal() - upd > (long)P_SelectMaxAgeDays * 86400) return "";
+   return top;
+}
+bool AutoBusy()
+{
+   if(HasOwnPosition() || HedgeActive()) return true;
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+      if(OrderGetTicket(i) != 0 && OrderGetString(ORDER_SYMBOL) == _Symbol && OrderGetInteger(ORDER_MAGIC) == (long)P_Magic) return true;
+   return false;
+}
+void AutoSwitch()
+{
+   if(!g_autoMode || MQLInfoInteger(MQL_TESTER)) return;
+   if(g_autoRead != 0 && TimeCurrent() - g_autoRead < 600) return;
+   g_autoRead = TimeCurrent();
+   string top = AutoTop();
+   g_autoWant = top == "" ? "Donchian H4 + ADX (du phong)" : top;
+   if(top == "KHONG") { g_status = "Tu dong: bang xep hang khong co chien luoc nao du dieu kien, dung ngoai"; return; }
+   if(g_autoWant == g_autoName) return;
+   if(AutoBusy()) { g_status = "Tu dong: se chuyen sang " + g_autoWant + " sau khi lenh hien tai dong"; return; }
+   if(top == "") AutoFallback();
+   else if(!AutoApplyConfig(top)) { Print("Tu dong: khong thay thong so cua ", top, " trong TrendBot_xephang_cauhinh.csv (chay lai Xep hang)"); if(g_autoName == "") AutoFallback(); }
+}
+bool AutoStandAside() { return g_autoMode && g_autoWant == "KHONG"; }
+
 // ---- Tu chon chien luoc (v5.11) ----
 // Bang xep hang Common\Files\TrendBot_xephang.csv do nut 1 > "Xep hang chien luoc" ghi (ChayThuNghiem.ps1):
 //   CapNhat,yyyy.MM.dd HH:mm  /  ChonDung,S<chien luoc>-<so phut khung>  (vd. S1-240 = Donchian H4; KHONG = khong ai)
@@ -1182,6 +1313,7 @@ bool AutoSelectAllowed()
 
 bool EntryGatesOk()
 {
+   if(AutoStandAside()) { g_status = "Tu dong: khong chien luoc nao du dieu kien, dung ngoai"; return false; }
    if(!AutoSelectAllowed()) return false;
    if(P_GuardAlgoDayPct > 0 && GuardBucketLocked(2)) { g_status = "Da khoa bucket thuat toan trong ngay"; return false; }
    if(DailyLossHit())   { g_status = "Cham gioi han lo ngay, nghi den mai"; return false; }
@@ -1260,6 +1392,7 @@ void OnTick()
 void OnTickBody()
 {
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
+   AutoSwitch();                    // che do Tu dong: doi sang chien luoc dung dau bang xep hang (khi dang dung ngoai)
    SafetyStep();
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)

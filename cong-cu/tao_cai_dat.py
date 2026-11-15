@@ -284,6 +284,13 @@ PRESETS = [
         "InpDowTF": "16408", "InpDowLateLegs": "4", "InpPDDays": "60", "InpNewsPreMin": "30",
         "InpUseBreakeven": "true", "InpBreakevenR": "1.0", "InpUsePartial": "true", "InpPartialR": "1.5", "InpPartialPct": "50",
         "InpTrailSwingBars": "10"}),
+    ("31-Tu-dong-1-chart-THU-NGHIEM.set", [
+        "31. Tự động (chiến lược 23): 1 chart, 1 bot, tự chuyển sang chiến lược đứng đầu bảng xếp hạng. THỬ NGHIỆM – chạy demo trước.",
+        "Mỗi 10 phút đọc TrendBot_xephang.csv + TrendBot_xephang_cauhinh.csv (nút 1 > Xếp hạng chiến lược ghi). Chỉ đổi khi đang đứng",
+        "ngoài (không lệnh / lệnh chờ). Bảng thiếu hoặc cũ hơn 10 ngày: dùng Donchian H4 + ADX. Không ai đủ điều kiện: đứng ngoài.",
+        "Chỉ lấy thông số tín hiệu / quản lý lệnh của cấu hình đứng đầu; vốn, rủi ro, giới hạn lỗ, giờ nghỉ, tin, spread giữ như bộ này.",
+        "Chạy xếp hạng mỗi tuần (tốt nhất trên bản MT5 thứ hai – xem mt5-mophong.txt – để không phải đóng MT5 đang giao dịch).",
+    ], {"InpStrategy": "23", "InpAutoSelect": "false", "InpSelectMaxAgeDays": "10"}),
 ]
 
 

@@ -1,0 +1,4 @@
+# Ban MT5 thu hai CHI de mo phong (xep hang / backtest), de khong phai dong ban MT5 dang giao dich.
+# Cach dung: cai them MT5 vao thu muc khac (vd. C:\MT5-MoPhong), mo no 1 lan, dang nhap tai khoan demo Exness,
+# roi bo dau # o dong duoi va sua dung duong dan thu muc co terminal64.exe. De nguyen dau # = dung ban MT5 chinh nhu cu.
+# C:\MT5-MoPhong
