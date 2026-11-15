@@ -239,6 +239,15 @@ PRESETS = [
         "Không thêm bộ lọc nào khác (không ADX, không EMA khung lớn).",
     ], {"InpStrategy": "19", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
         "InpSimpleLevels": "3", "InpSimpleLookback": "200", "InpSimplePivot": "5", "InpDowPivot": "3"}),
+    ("26-Quet-tin-lon-M15-THU-NGHIEM.set", [
+        "26. Ngày có tin lớn (chiến lược 20, M15): chờ cú quét thanh khoản xong rồi đi theo hướng thật. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "Tin: CPI, Fed (FOMC), việc làm NFP (backtest: NFP ước lượng). Vùng đi ngang 3 giờ trước tin (≤ 4 ATR). Cú đầu sau tin vượt ra ngoài = quét.",
+        "Vào khi cấu trúc mới hình thành: nến đóng cửa lại trong vùng, ngược chiều cú quét, thủng đáy / đỉnh nến tạo cực trị quét.",
+        "SL ngoài cực trị quét + 0,25 ATR, TP 2R. Chỉ trong 4 giờ sau tin, mỗi tin 1 lần. Chỉ chạy demo.",
+        "Các chiến lược khác: bật 'Trước giờ tin 30 phút' + 'chốt nửa + hòa vốn' + lịch tin sáng thứ Hai.",
+    ], {"InpStrategy": "20", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
+        "InpNewsWindowMin": "240", "InpNewsRangeMin": "180", "InpNewsRangeMaxATR": "4", "InpNewsWeekly": "true",
+        "InpNewsNFP": "true"}),
 ]
 
 

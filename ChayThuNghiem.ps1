@@ -329,6 +329,7 @@ $XhRuns = @(
     @{ N = "XH-VWAP-M15";     I = (Cfg $Brk $Scalp @{ InpStrategy = 17; InpTF = 15; InpRR = 0 }) },
     @{ N = "XH-KeyVol-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 18; InpTF = 16385; InpRR = 2 }) },
     @{ N = "XH-3CauHoi-H4";   I = (Cfg $Brk @{ InpStrategy = 19; InpUseADX = "false"; InpUseHTF = "false"; InpRR = 2 }) },
+    @{ N = "XH-QuetTin-M15";  I = (Cfg $Brk $Scalp @{ InpStrategy = 20; InpTF = 15; InpRR = 2; InpNewsNFP = "true" }) },
     @{ N = "XH-DaoRoi-H1";    I = (Cfg $Brk $Scalp @{ InpStrategy = 14; InpTF = 16385; InpRR = 0; InpUsePartial = "true"; InpPartialPct = 50; InpPartialR = 99; InpTrailSwingBars = 10 }) }
 )
 foreach ($x in $XhRuns) {
@@ -408,6 +409,7 @@ try {
     Update-FundingData $mt5 @("BTCUSDT", "ETHUSDT")
     Update-SentimentData $mt5
     Copy-Item (Join-Path $ProjectDir "du-lieu\tin_my.csv") (Join-Path $mt5.CommonFiles "tin_my.csv") -Force   # lich FOMC + CPI
+    Copy-Item (Join-Path $ProjectDir "du-lieu\tin_my_nfp.csv") (Join-Path $mt5.CommonFiles "tin_my_nfp.csv") -Force   # NFP uoc luong (InpNewsNFP)
     # Nen Binance co khoi luong mua chu dong cho bo loc dong tien (InpUseFlow): du-lieu\flow_<CAP>_<khung>.csv neu co
     foreach ($ff in @(Get-ChildItem (Join-Path $ProjectDir "du-lieu") -File -Filter "flow_*.csv" -ErrorAction SilentlyContinue)) {
         Copy-Item $ff.FullName (Join-Path $mt5.CommonFiles $ff.Name) -Force

@@ -62,6 +62,7 @@ void FinalizeClosed(const ulong posId)
    GlobalVariableDel(GVName("PV_" + (string)posId));
    GlobalVariableDel(GVName("HL_" + (string)posId));
    GlobalVariableDel(GVName("PX_" + (string)posId));
+   GlobalVariableDel(GVName("NP_" + (string)posId));
 }
 void ReconcileClosed()
 {
@@ -367,6 +368,7 @@ void PyramidStep(const bool addOnly = false)
    string pw = "", pn = "";
    if(!TimeAllowed(pw)) return;
    if(P_AvoidUSNews && USNewsNear(pn)) return;
+   if(P_NewsPreMin > 0 && MinutesToNews(P_NewsPreMin, pn) >= 0) return;
 
    // Doi SL cac lenh cu ve it nhat hoa von
    for(int i = PositionsTotal() - 1; i >= 0; i--)

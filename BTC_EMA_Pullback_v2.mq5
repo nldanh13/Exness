@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.26"
-#property version   "5.2600"
+#define  BOT_VERSION "5.27"
+#property version   "5.2700"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -32,7 +32,8 @@ enum ENUM_STRATEGY
    STRAT_DOW          = 16,  // Thử nghiệm: lý thuyết Dow – theo thủy triều, vào ở cuối con sóng ngược chiều
    STRAT_VWAP         = 17,  // Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về
    STRAT_KEYVOL       = 18,  // Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất
-   STRAT_SIMPLE       = 19   // Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa
+   STRAT_SIMPLE       = 19,  // Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa
+   STRAT_NEWS         = 20   // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -130,6 +131,10 @@ input bool            InpUseMarketFilter  = false;      // Theo xu hướng Nasd
 input string          InpMarketSymbol     = "USTEC";    // Mã Nasdaq trên sàn
 input bool            InpAvoidUSNews      = false;      // Tránh tin kinh tế Mỹ quan trọng
 input int             InpNewsHours        = 2;          // Khoảng tránh tin (giờ trước và sau)
+input int             InpNewsPreMin       = 0;          // Trước giờ tin (phút): không mở lệnh mới (0 = tắt)
+input int             InpNewsProtect      = 0;          // Trước giờ tin, lệnh đang lời: 0 = để yên, 1 = SL về hòa vốn, 2 = chốt nửa + hòa vốn
+input bool            InpNewsNFP          = false;      // Backtest: thêm lịch NFP ước lượng (chưa đối chiếu BLS)
+input bool            InpNewsWeekly       = false;      // Sáng thứ Hai: gửi lịch tin Mỹ quan trọng trong tuần
 input bool            InpUseFlow          = false;      // Xác nhận bằng dòng tiền Binance (chưa kiểm thử)
 input double          InpFlowMinDelta     = 0.10;       // Dòng tiền: phá vỡ cần delta chủ động ≥
 input double          InpFlowBigMult      = 1.5;        // Dòng tiền: khối lượng nến ≥ (× TB 20 nến, 0 = tắt)
@@ -197,6 +202,9 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
+input int             InpNewsWindowMin    = 240;        // Quét tin: tìm tín hiệu trong (phút) sau giờ tin
+input int             InpNewsRangeMin     = 180;        // Quét tin: vùng đi ngang trước tin (phút)
+input double          InpNewsRangeMaxATR  = 4.0;        // Quét tin: vùng trước tin cao tối đa (× ATR)
 input double          InpHedgeLockLossR   = 0;          // Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)
 input double          InpHedgeLockProfitR = 0;          // Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)
 input bool            InpHedgeNews        = true;       // Khóa lời trước tin Mỹ
@@ -317,6 +325,9 @@ ENUM_TIMEFRAMES P_DowTF;
 int             P_DowPivot, P_DowLateLegs, P_VwapMode;
 double          P_VwapBand1, P_VwapBand2, P_VwapBand3, P_VwapMinRR, P_KVHighMult, P_KVMaxATR;
 int             P_KVLookback, P_KVBins, P_KVMinBars, P_KVMinReact, P_SimpleLevels, P_SimpleLookback, P_SimplePivot;
+int             P_NewsPreMin, P_NewsProtect, P_NewsWindowMin, P_NewsRangeMin;
+bool            P_NewsWeekly, P_NewsNFP;
+double          P_NewsRangeMaxATR;
 int             P_BreakRetestBars, P_BreakSkipOpenMin;
 double          P_BreakMinVol;
 int             P_RsiPeriod;
@@ -481,6 +492,8 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_NewsPreMin = InpNewsPreMin; P_NewsProtect = InpNewsProtect; P_NewsWeekly = InpNewsWeekly; P_NewsNFP = InpNewsNFP;
+   P_NewsWindowMin = InpNewsWindowMin; P_NewsRangeMin = InpNewsRangeMin; P_NewsRangeMaxATR = InpNewsRangeMaxATR;
    P_SimpleLevels = InpSimpleLevels; P_SimpleLookback = InpSimpleLookback; P_SimplePivot = InpSimplePivot;
    P_KVLookback = InpKVLookback; P_KVBins = InpKVBins; P_KVHighMult = InpKVHighMult; P_KVMaxATR = InpKVMaxATR;
    P_KVMinBars = InpKVMinBars; P_KVMinReact = InpKVMinReact;
@@ -600,6 +613,13 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsPreMin") { P_NewsPreMin = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsProtect") { P_NewsProtect = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsNFP") { P_NewsNFP = (v == "true" || v == "1"); return true; }
+   if(k == "InpNewsWeekly") { P_NewsWeekly = (v == "true" || v == "1"); return true; }
+   if(k == "InpNewsWindowMin") { P_NewsWindowMin = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsRangeMin") { P_NewsRangeMin = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsRangeMaxATR") { P_NewsRangeMaxATR = StringToDouble(v); return true; }
    if(k == "InpSimpleLevels") { P_SimpleLevels = (int)StringToInteger(v); return true; }
    if(k == "InpSimpleLookback") { P_SimpleLookback = (int)StringToInteger(v); return true; }
    if(k == "InpSimplePivot") { P_SimplePivot = (int)StringToInteger(v); return true; }
@@ -877,7 +897,9 @@ int OnInit()
    }
    if(!MQLInfoInteger(MQL_TESTER) && !ClaimMagic()) return INIT_FAILED;
    if(P_UseFunding) LoadFunding();
-   if(P_AvoidUSNews && MQLInfoInteger(MQL_TESTER)) LoadNews();
+   // Lich tin cho backtest: moi tinh nang dung gio tin (tranh tin, truoc tin, khoa loi truoc tin, chien luoc 20)
+   if(MQLInfoInteger(MQL_TESTER) && (P_AvoidUSNews || P_NewsPreMin > 0 || P_Strategy == STRAT_NEWS ||
+      (P_HedgeLockProfitR > 0 && P_HedgeNews))) LoadNews();
    if(P_UseFearGreed) LoadDaily("fng.csv", g_fngT, g_fngV);
    if(P_UseAttention && WikiArticle() != "") LoadDaily("wiki_" + WikiArticle() + ".csv", g_wikT, g_wikV);
    if(P_UseMarketFilter)
@@ -1222,6 +1244,8 @@ void OnTickBody()
    HedgeTick();                     // khoa / mo khoa lenh (InpHedgeLockLossR, InpHedgeLockProfitR), truoc quan ly lenh
    ManagePositions();
    SessionEndPartial();             // het gio cao diem: chot mot nua + hoa von (InpSessPartialR)
+   NewsProtect();                   // sap ra tin: lenh dang loi chot bot / SL ve hoa von (InpNewsProtect)
+   NewsWeekly();                    // sang thu Hai: lich tin trong tuan (InpNewsWeekly)
    StallExit();                     // lenh dung yen qua lau thi thoat (InpStallBars)
    ReconcileClosed();
    CheckPendingEntry();             // tin hieu dang cho gia hoi ve: sau khi da cap nhat lo ngay / sut giam cua tick nay
@@ -1340,6 +1364,39 @@ void SessionEndPartial()
       GlobalVariableSet(pK, 1);
       if(PositionSelectByTicket(t) && (buy ? sl < op : (sl <= 0 || sl > op)))
          TradeDone(PrepSend() && trade.PositionModify(t, NormalizeDouble(op, _Digits), tp), "Het gio cao diem: SL ve hoa von", "#" + (string)t);
+   }
+}
+
+// Truoc gio tin InpNewsPreMin phut: lenh dang loi thi keo SL ve hoa von (1) hoac chot mot nua + hoa von (2). Lenh dang lo giu
+// nguyen SL (khong the dat hoa von phia tren gia). Moi lenh 1 lan (NP_). Chien luoc 20 danh sau tin nen bo qua.
+void NewsProtect()
+{
+   if(P_NewsProtect <= 0 || P_NewsPreMin <= 0 || P_Strategy == STRAT_GRID || HedgeActive()) return;
+   string nm;
+   if(MinutesToNews(P_NewsPreMin, nm) < 0) return;
+   double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double minDist = (double)MathMax(SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL), SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL)) * _Point + _Point * 2;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong t = PositionGetTicket(i);
+      if(t == 0 || !IsOwnSelected()) continue;
+      ulong id = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
+      string k = GVName("NP_" + (string)id);
+      if(GlobalVariableCheck(k)) continue;
+      bool buy = PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY;
+      double op = PositionGetDouble(POSITION_PRICE_OPEN), cur = PositionGetDouble(POSITION_PRICE_CURRENT);
+      double sl = PositionGetDouble(POSITION_SL), tp = PositionGetDouble(POSITION_TP), vol = PositionGetDouble(POSITION_VOLUME);
+      GlobalVariableSet(k, 1);
+      if((buy ? cur - op : op - cur) <= minDist) continue;                 // chua loi: giu nguyen SL
+      if(P_NewsProtect == 2)
+      {
+         double half = NormalizeVolume(vol * 0.5);
+         if(half >= minL && vol - half >= minL - 1e-9) TradeDone(PrepSend() && trade.PositionClosePartial(t, half), "Truoc tin: chot mot nua", "#" + (string)t);
+         GlobalVariableSet(GVName("P_" + (string)id), 1);
+      }
+      if(PositionSelectByTicket(t) && (buy ? sl < op : (sl <= 0 || sl > op)))
+         TradeDone(PrepSend() && trade.PositionModify(t, NormalizeDouble(op, _Digits), tp), "Truoc tin " + nm + ": SL ve hoa von", "#" + (string)t);
+      g_newsProtects++;
    }
 }
 

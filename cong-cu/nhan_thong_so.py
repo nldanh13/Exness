@@ -25,6 +25,7 @@ STRATEGY_LABELS = {
     "STRAT_VWAP":         "Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về",
     "STRAT_KEYVOL":       "Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất",
     "STRAT_SIMPLE":       "Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa",
+    "STRAT_NEWS":         "Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật",
 }
 
 GROUPS = [
@@ -122,7 +123,11 @@ GROUPS = [
         ("InpUseMarketFilter", "Theo xu hướng Nasdaq (EMA200 khung ngày)", "Chỉ mua khi Nasdaq trên EMA200, chỉ bán khi dưới."),
         ("InpMarketSymbol",    "Mã Nasdaq trên sàn", "Bot tự thử thêm đuôi \"m\" nếu không tìm thấy."),
         ("InpAvoidUSNews",     "Tránh tin kinh tế Mỹ quan trọng", "Dùng lịch kinh tế của MT5, chỉ có tác dụng khi chạy thật hoặc demo. Áp dụng cho cả chế độ tự vào lệnh."),
-        ("InpNewsHours",       "Khoảng tránh tin (giờ trước và sau)", ""),
+        ("InpNewsHours",       "Khoảng tránh tin (giờ trước và sau)", "Tin lớn nhất: CPI Mỹ (19:30 / 20:30 giờ VN), quyết định lãi suất Fed (1–2 giờ sáng, kèm họp báo), báo cáo việc làm NFP (tối thứ Sáu đầu tháng). Backtest dùng du-lieu/tin_my.csv (FOMC, CPI đã đối chiếu lịch chính thức)."),
+        ("InpNewsPreMin",      "Trước giờ tin (phút): không mở lệnh mới (0 = tắt)", "Ví dụ 30: trong 30 phút trước tin lớn không mở lệnh mới và không nhồi. Dùng độc lập với khoảng tránh tin theo giờ."),
+        ("InpNewsProtect",     "Trước giờ tin, lệnh đang lời: 0 = để yên, 1 = SL về hòa vốn, 2 = chốt nửa + hòa vốn", "Áp dụng trong khoảng 'Trước giờ tin (phút)', mỗi lệnh 1 lần. Lệnh đang lỗ giữ nguyên SL."),
+        ("InpNewsNFP",         "Backtest: thêm lịch NFP ước lượng (chưa đối chiếu BLS)", "Chạy thật dùng lịch kinh tế MT5 (đã có NFP). Backtest: thêm du-lieu/tin_my_nfp.csv (thứ Sáu đầu tháng 8:30 New York, ước lượng theo quy tắc). Bật thì mọi tính năng tin (kể cả tránh tin) tính cả NFP, nên kết quả không so trực tiếp được với cấu hình đã kiểm thử."),
+        ("InpNewsWeekly",      "Sáng thứ Hai: gửi lịch tin Mỹ quan trọng trong tuần", "Gửi qua thông báo (Telegram / điện thoại nếu đã bật) danh sách tin quan trọng 7 ngày tới, giờ Việt Nam. Chỉ chạy thật."),
         ("InpUseFlow",         "Xác nhận bằng dòng tiền Binance (chưa kiểm thử)", "Hỗ trợ / kháng cự đặt câu hỏi, dòng tiền trả lời. Phá vỡ: phe theo chiều lệnh chủ động áp đảo, khối lượng lớn bất thường, nến giữ được giá; mua nhiều mà nến đóng thấp = bị hấp thụ, bỏ. Bật lại ở vùng giá: bên kia chủ động đổ vào nhưng nến vẫn đóng theo chiều lệnh = có người đỡ. Dùng nến Binance Futures cùng khung (Exness không có chiều mua/bán chủ động)."),
         ("InpFlowMinDelta",    "Dòng tiền: phá vỡ cần delta chủ động ≥", "Delta = (mua chủ động − bán chủ động) / tổng khối lượng của cây nến, từ −1 đến +1."),
         ("InpFlowBigMult",     "Dòng tiền: khối lượng nến ≥ (× TB 20 nến, 0 = tắt)", "Thay cho \"big trades\": cây nến tín hiệu phải có khối lượng lớn bất thường."),
@@ -190,6 +195,9 @@ GROUPS = [
         ("InpSimpleLevels",   "3 câu hỏi: số đường kẻ ngang", "Chiến lược 19: chỉ nến, vài đường kẻ và 3 câu hỏi. (1) Mùa gì: đỉnh sau cao hơn = mùa tăng, chỉ mua; thấp hơn = mùa giảm, chỉ bán; lộn xộn = đứng ngoài. (2) Cá tụ ở đâu: 2–3 đường ngang ở chỗ giá từng quay đầu rõ nhất. (3) Phao động chưa: giá về đúng đường rồi một nến mạnh cùng chiều mùa (thân ≥ 60% biên độ) mới vào. SL dưới đường − 0,25 ATR."),
         ("InpSimpleLookback", "3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)", ""),
         ("InpSimplePivot",    "3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)", "Các chỗ quay đầu cách nhau < 0,5 ATR gộp thành 1 đường. Đường mạnh = tổng độ dài các cú quay đầu tại đó (đo trong 10 nến sau)."),
+        ("InpNewsWindowMin",  "Quét tin: tìm tín hiệu trong (phút) sau giờ tin", "Chiến lược 20. Ngày có tin đừng hỏi giá chạy hướng nào, hãy hỏi cú quét xong chưa. Cú đầu tiên sau tin vượt ra ngoài vùng đi ngang trước tin là để lấy thanh khoản. Bot chờ: không còn lập đỉnh quét mới, nến đóng cửa lại trong vùng, là nến giảm và thủng đáy cây nến tạo đỉnh quét (cấu trúc mới) → bán, SL trên đỉnh quét. Quét xuống: ngược lại. Mỗi tin 1 lần."),
+        ("InpNewsRangeMin",   "Quét tin: vùng đi ngang trước tin (phút)", "Đỉnh và đáy của khoảng này trước giờ tin = 2 kho thanh khoản (lệnh chờ + dừng lỗ dồn về 2 đầu)."),
+        ("InpNewsRangeMaxATR", "Quét tin: vùng trước tin cao tối đa (× ATR)", "Vùng rộng hơn thì giá không thật sự đi ngang chờ tin: bỏ qua."),
         ("InpHedgeLockLossR", "Khóa lỗ: lệnh lỗ (R) thì mở lệnh ngược chiều (0 = tắt)", "THỬ NGHIỆM. Lệnh đang lỗ bấy nhiêu R (nhỏ hơn 1, trước khi chạm SL): mở lệnh ngược chiều cùng khối lượng, bỏ SL / TP lệnh gốc, chờ thị trường lộ hướng. Chỉ khóa khi bot giữ đúng 1 lệnh. Giữ 2 lệnh tốn phí gấp đôi."),
         ("InpHedgeLockProfitR", "Khóa lời trước tin / cuối tuần: lệnh lời (R, 0 = tắt)", "THỬ NGHIỆM. Lệnh đang lời từ bấy nhiêu R mà sắp có tin Mỹ hoặc sắp cuối tuần: mở lệnh ngược chiều để giữ nguyên phần lời. Chỉ mở khóa sau khi tin / cuối tuần đã qua."),
         ("InpHedgeNews",      "Khóa lời trước tin Mỹ", "Dùng cùng khoảng giờ với bộ lọc tin (InpNewsHours). Backtest cần file tin_my.csv."),

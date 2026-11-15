@@ -1048,6 +1048,37 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          }
       }
    }
+   else if(P_Strategy == STRAT_NEWS)
+   {
+      // Quet roi moi di (v5.27). Truoc tin, nguoi lon dung ngoai: gia di ngang sat dinh / day, lenh cho va dung lo don ve 2 dau.
+      // Tin ra, so lenh mong: gia vot len quet het lenh mua + dung lo phia tren, nguoi lon dung chinh so lenh do de ban, roi quay dau
+      // di theo huong that. Cu dau la lay thanh khoan, cu thu hai moi la con song that. Khong du cay nen tin dau tien:
+      //  - vung truoc tin = dinh / day InpNewsRangeMin phut truoc gio tin (cao <= InpNewsRangeMaxATR ATR: di ngang);
+      //  - cu quet = nen dau tien sau gio tin vuot ra ngoai vung; dinh quet = cao nhat tu do;
+      //  - cau truc moi: nen vua dong (khong lap dinh quet moi) dong cua lai trong vung, la nen giam va thung day cay nen tao dinh quet
+      //    -> Sell, SL tren dinh quet + 0,25 ATR. Quet xuong: nguoc lai. Chi trong InpNewsWindowMin phut sau tin, moi tin 1 lan.
+      string nm;
+      datetime nt = LastNewsTime(P_NewsWindowMin, nm);
+      if(nt == 0 || nt == g_newsUsedT) return true;
+      int sNews = iBarShift(_Symbol, P_TF, nt, false), sFrom = iBarShift(_Symbol, P_TF, nt - P_NewsRangeMin * 60, false);
+      if(sNews < 2 || sFrom <= sNews) return true;
+      double rHi = 0, rLo = DBL_MAX;
+      for(int q = sNews + 1; q <= sFrom; q++) { rHi = MathMax(rHi, iHigh(_Symbol, P_TF, q)); rLo = MathMin(rLo, iLow(_Symbol, P_TF, q)); }
+      if(rHi <= 0 || rHi - rLo > P_NewsRangeMaxATR * atr) return true;
+      int dir = 0, xs = -1; double ext = 0;
+      for(int q = sNews; q >= 2; q--)
+      {
+         double hq = iHigh(_Symbol, P_TF, q), lq = iLow(_Symbol, P_TF, q);
+         if(dir == 0) { if(hq > rHi) { dir = 1; ext = hq; xs = q; } else if(lq < rLo) { dir = -1; ext = lq; xs = q; } }
+         else if(dir == 1 && hq > ext)  { ext = hq; xs = q; }
+         else if(dir == -1 && lq < ext) { ext = lq; xs = q; }
+      }
+      double o1 = iOpen(_Symbol, P_TF, 1);
+      if(dir == 1 && h1 <= ext && c1 < rHi && c1 < iLow(_Symbol, P_TF, xs) && c1 < o1)
+      { sellBase = true; g_sigSL = MathMax(ext + 0.25 * atr - c1, 0.5 * atr); g_newsUsedT = nt; }
+      if(dir == -1 && l1 >= ext && c1 > rLo && c1 > iHigh(_Symbol, P_TF, xs) && c1 > o1)
+      { buyBase = true; g_sigSL = MathMax(c1 - (ext - 0.25 * atr), 0.5 * atr); g_newsUsedT = nt; }
+   }
    else if(P_Strategy == STRAT_SIMPLE)
    {
       bool sb; double ss;

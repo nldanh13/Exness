@@ -277,8 +277,20 @@ bool g_newsDataOk = true;
 void LoadNews()
 {
    ArrayResize(g_newsT, 0); ArrayResize(g_newsN, 0);
-   int h = OpenCommonRead("tin_my.csv", FILE_TXT | FILE_ANSI);
-   if(h == INVALID_HANDLE) { Print("Chua co file tin_my.csv: bo loc tin se khong chan lenh nao trong backtest."); return; }
+   LoadNewsFile("tin_my.csv");
+   // NFP uoc luong (InpNewsNFP, v5.27): file rieng, chua doi chieu lich BLS, khong tron vao lich da kiem chung
+   if(P_NewsNFP) LoadNewsFile("tin_my_nfp.csv");
+   for(int i = 1; i < ArraySize(g_newsT); i++)                  // sap xep theo thoi gian (HoursToNews can thu tu tang dan)
+   {
+      datetime t = g_newsT[i]; string nm = g_newsN[i]; int j = i - 1;
+      while(j >= 0 && g_newsT[j] > t) { g_newsT[j + 1] = g_newsT[j]; g_newsN[j + 1] = g_newsN[j]; j--; }
+      g_newsT[j + 1] = t; g_newsN[j + 1] = nm;
+   }
+}
+void LoadNewsFile(const string file)
+{
+   int h = OpenCommonRead(file, FILE_TXT | FILE_ANSI);
+   if(h == INVALID_HANDLE) { Print("Chua co file ", file, ": lich tin trong backtest se thieu."); return; }
    while(!FileIsEnding(h))
    {
       string p[];
@@ -331,6 +343,83 @@ bool USNewsNear(string &name)
       { name = ev.name; return true; }
    }
    return false;
+}
+
+// ---- Ngay co tin lon (v5.27): CPI (19:30 / 20:30 gio VN), Fed (1-2 gio sang), viec lam NFP (toi thu Sau dau thang) ----
+// Tin quan trong sap ra trong aheadMin phut toi: tra ve so phut con lai, -1 = khong co
+double MinutesToNews(const int aheadMin, string &name)
+{
+   name = "";
+   datetime now = MQLInfoInteger(MQL_TESTER) ? TimeCurrent() : TimeTradeServer();
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      for(int i = 0; i < ArraySize(g_newsT); i++)
+      {
+         double m = (double)(g_newsT[i] - now) / 60.0;
+         if(m > aheadMin) break;
+         if(m >= 0) { name = g_newsN[i]; return m; }
+      }
+      return -1;
+   }
+   MqlCalendarValue vals[];
+   if(CalendarValueHistory(vals, now, now + aheadMin * 60, "US") <= 0) return -1;
+   for(int i = 0; i < ArraySize(vals); i++)
+   {
+      MqlCalendarEvent ev;
+      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      { name = ev.name; return (double)(vals[i].time - now) / 60.0; }
+   }
+   return -1;
+}
+// Tin quan trong gan nhat da ra trong backMin phut qua (0 = khong co)
+datetime LastNewsTime(const int backMin, string &name)
+{
+   name = "";
+   datetime now = MQLInfoInteger(MQL_TESTER) ? TimeCurrent() : TimeTradeServer(), best = 0;
+   if(MQLInfoInteger(MQL_TESTER))
+   {
+      for(int i = 0; i < ArraySize(g_newsT); i++)
+      {
+         if(g_newsT[i] > now) break;
+         if(now - g_newsT[i] <= backMin * 60) { best = g_newsT[i]; name = g_newsN[i]; }
+      }
+      return best;
+   }
+   MqlCalendarValue vals[];
+   if(CalendarValueHistory(vals, now - backMin * 60, now, "US") <= 0) return 0;
+   for(int i = 0; i < ArraySize(vals); i++)
+   {
+      MqlCalendarEvent ev;
+      if(vals[i].time <= now && vals[i].time > best && CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      { best = vals[i].time; name = ev.name; }
+   }
+   return best;
+}
+// Moi sang thu Hai: gui lich tin quan trong cua tuan (gio Viet Nam). Chi chay that.
+void NewsWeekly()
+{
+   if(!P_NewsWeekly || MQLInfoInteger(MQL_TESTER)) return;
+   datetime now = TimeTradeServer();
+   MqlDateTime d; TimeToStruct(now, d);
+   if(d.day_of_week != 1) return;
+   double wk = (double)(now / (7 * 86400));
+   if(GlobalVariableCheck(GVName("newsWeek")) && GlobalVariableGet(GVName("newsWeek")) == wk) return;
+   MqlCalendarValue vals[];
+   int n = CalendarValueHistory(vals, now, now + 7 * 86400, "US");
+   if(n < 0) return;                                                    // chua tai duoc lich: thu lai sau
+   GlobalVariableSet(GVName("newsWeek"), wk);
+   string msg = "[" + _Symbol + "] Lich tin My quan trong tuan nay (gio VN):";
+   int cnt = 0;
+   for(int i = 0; i < n; i++)
+   {
+      MqlCalendarEvent ev;
+      if(!CalendarEventById(vals[i].event_id, ev) || ev.importance != CALENDAR_IMPORTANCE_HIGH) continue;
+      msg += "\n- " + TimeToString(vals[i].time + 7 * 3600, TIME_DATE | TIME_MINUTES) + " " + ev.name;
+      cnt++;
+   }
+   if(cnt == 0) msg += "\n(khong co tin lon)";
+   msg += StringFormat("\nTruoc gio tin %d phut: khong mo lenh moi. Dung du cay nen tin dau tien: cho cu quet xong.", P_NewsPreMin);
+   Notify(msg);
 }
 
 bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
@@ -392,7 +481,14 @@ bool MarketFiltersOk(const bool isBuy, const bool breakout = false)
       }
    }
    string news;
-   if(P_AvoidUSNews)
+   // Truoc gio tin InpNewsPreMin phut: khong mo lenh moi (chien luoc 20 danh SAU tin nen khong bi chan)
+   if(P_NewsPreMin > 0 && P_Strategy != STRAT_NEWS && MinutesToNews(P_NewsPreMin, news) >= 0)
+   {
+      g_newsBlocked++;
+      g_status = "Sap ra tin " + news + ": khong mo lenh moi";
+      return false;
+   }
+   if(P_AvoidUSNews && P_Strategy != STRAT_NEWS)
    {
       bool nearNews = USNewsNear(news);
       if(!g_newsDataOk)

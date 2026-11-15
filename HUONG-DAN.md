@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.26
+# Hướng dẫn bot BTC (MT5) v5.27
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 21 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 22 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1056,3 +1056,17 @@ Không phải biết quá ít, mà là nhìn quá nhiều (bộ `25-Ba-cau-hoi-d
 Đó đúng là cái bẫy bài này nói: bật hết lên thì mỗi cái nói một kiểu. Cách dùng đúng: chạy xếp hạng, chọn **một** chiến lược đứng đầu
 (cộng tối đa **một** bộ lọc hỗ trợ), chạy demo đủ lâu cho thật thành thạo, rồi mới tính cái khác. Đừng bật nhiều bộ lọc cùng lúc
 chỉ vì chúng có sẵn – mỗi bộ lọc thêm vào là một lần "chọn cái nói đúng điều mình muốn nghe" trong backtest.
+
+## v5.27: Ngày có tin lớn – hỏi cú quét xong chưa (16/11/2026) – CHƯA KIỂM THỬ
+Kịch bản: cả ngày đi ngang sát đỉnh / đáy (người lớn đứng ngoài chờ), lệnh chờ và dừng lỗ dồn về 2 đầu; tin ra, sổ lệnh mỏng, giá vọt
+quét một đầu rồi quay đầu đi theo hướng thật. Tin mạnh nhất: CPI (19:30 / 20:30 giờ VN), Fed (1–2 giờ sáng), NFP (tối thứ Sáu đầu tháng).
+1. `InpNewsWeekly`: sáng thứ Hai bot gửi lịch tin Mỹ quan trọng 7 ngày tới (giờ VN). Chỉ chạy thật (lịch kinh tế MT5).
+2. `InpNewsPreMin` (vd. 30): trước giờ tin x phút không mở lệnh mới, không nhồi (mọi chiến lược trừ 20). `InpNewsProtect`: lệnh đang lời
+   → 1 = SL về hòa vốn, 2 = chốt một nửa + hòa vốn (mỗi lệnh 1 lần, lệnh đang lỗ giữ SL). Cột báo cáo `BaoVeTruocTin`.
+3. **Chiến lược 20 – Quét rồi mới đi** (bộ `26-Quet-tin-lon-M15-THU-NGHIEM`, xếp hạng `XH-QuetTin-M15`): vùng = đỉnh / đáy
+   `InpNewsRangeMin` phút trước tin (cao ≤ `InpNewsRangeMaxATR` ATR). Cú quét = nến đầu tiên sau tin vượt ra ngoài vùng. Không đu cây nến tin:
+   chờ hết lập cực trị mới, nến đóng cửa lại trong vùng, ngược chiều cú quét, thủng đáy (đỉnh) cây nến tạo cực trị → vào, SL ngoài cực trị.
+- NFP: chạy thật lấy từ lịch kinh tế MT5. Backtest: `du-lieu/tin_my_nfp.csv` (2020–2026, thứ Sáu đầu tháng 8:30 New York, ƯỚC LƯỢNG theo
+  quy tắc, chưa đối chiếu BLS) chỉ nạp khi bật `InpNewsNFP`. `tin_my.csv` giữ nguyên CPI / FOMC đã kiểm chứng để cấu hình C so sánh được.
+- Lịch tin cho backtest nay được nạp khi dùng bất kỳ tính năng nào cần giờ tin (trước đây chỉ khi bật tránh tin – khóa lời trước tin
+  trong backtest đã không có dữ liệu).
