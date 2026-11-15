@@ -16,7 +16,7 @@
 //    Backtest: hoc trong bo nho (khong doc / ghi file), de kiem tra chinh co che hoc.
 #define LRN_SIT 8
 #define LRN_STR 32
-struct LVT { datetime t; int sit; int strat; int dir; double entry; double sl; double tp; double risk; int bars; };
+struct LVT { datetime t; int sit; int strat; int dir; double entry; double sl; double tp; double risk; int bars; double cost; datetime lastT; };
 LVT      g_lvt[];
 int      g_ln[LRN_SIT][LRN_STR], g_lw[LRN_SIT][LRN_STR], g_rn[LRN_SIT][LRN_STR];
 double   g_ls[LRN_SIT][LRN_STR], g_ls2[LRN_SIT][LRN_STR], g_rs[LRN_SIT][LRN_STR];
@@ -25,6 +25,39 @@ datetime g_lrnBar = 0;
 int      g_sigMember = -1;                 // chien luoc thanh vien dung dau cua lenh vua vao (de gan ket qua lenh that)
 
 string LearnFile() { return StringFormat("TrendBot_hoc_%I64d_%s.csv", AccountInfoInteger(ACCOUNT_LOGIN), _Symbol); }
+// Lenh giay dang mo (v5.37): luu ra file de tat may khong mat; mo may lai thi cham bu cac nen da bo lo (gia trong luc tat may
+// co san trong lich su MT5). Danh cho nguoi chi mo may vai gio moi ngay.
+string LearnOpenFile() { return StringFormat("TrendBot_hoc_mo_%I64d_%s.csv", AccountInfoInteger(ACCOUNT_LOGIN), _Symbol); }
+void LearnSaveOpen()
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   int h = FileOpen(LearnOpenFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   for(int i = 0; i < ArraySize(g_lvt); i++)
+      FileWriteString(h, StringFormat("%I64d,%d,%d,%d,%.8f,%.8f,%.8f,%.8f,%d,%.8f,%I64d\r\n", (long)g_lvt[i].t, g_lvt[i].sit, g_lvt[i].strat,
+                      g_lvt[i].dir, g_lvt[i].entry, g_lvt[i].sl, g_lvt[i].tp, g_lvt[i].risk, g_lvt[i].bars, g_lvt[i].cost, (long)g_lvt[i].lastT));
+   FileClose(h);
+}
+void LearnLoadOpen()
+{
+   ArrayResize(g_lvt, 0);
+   if(MQLInfoInteger(MQL_TESTER) || !FileIsExist(LearnOpenFile(), FILE_COMMON)) return;
+   int h = FileOpen(LearnOpenFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
+   if(h == INVALID_HANDLE) return;
+   while(!FileIsEnding(h))
+   {
+      string p[];
+      if(StringSplit(FileReadString(h), ',', p) < 11) continue;
+      int n = ArraySize(g_lvt);
+      ArrayResize(g_lvt, n + 1);
+      g_lvt[n].t = (datetime)StringToInteger(p[0]); g_lvt[n].sit = (int)StringToInteger(p[1]); g_lvt[n].strat = (int)StringToInteger(p[2]);
+      g_lvt[n].dir = (int)StringToInteger(p[3]); g_lvt[n].entry = StringToDouble(p[4]); g_lvt[n].sl = StringToDouble(p[5]);
+      g_lvt[n].tp = StringToDouble(p[6]); g_lvt[n].risk = StringToDouble(p[7]); g_lvt[n].bars = (int)StringToInteger(p[8]);
+      g_lvt[n].cost = StringToDouble(p[9]); g_lvt[n].lastT = (datetime)StringToInteger(p[10]);
+   }
+   FileClose(h);
+   if(ArraySize(g_lvt) > 0) PrintFormat("Hoc tu thuc chien: nap lai %d lenh giay dang mo, cham bu cac nen luc tat may", ArraySize(g_lvt));
+}
 bool LearnKeyOk(const int sit, const int st) { return sit >= 0 && sit < LRN_SIT && st >= 0 && st < LRN_STR; }
 void LearnStat(const int sit, const int st, const double r, const bool real)
 {
@@ -39,6 +72,7 @@ void LearnLoad()
    g_lrnLoaded = true;
    ArrayInitialize(g_ln, 0); ArrayInitialize(g_lw, 0); ArrayInitialize(g_rn, 0);
    ArrayInitialize(g_ls, 0); ArrayInitialize(g_ls2, 0); ArrayInitialize(g_rs, 0);
+   LearnLoadOpen();
    if(MQLInfoInteger(MQL_TESTER) || !FileIsExist(LearnFile(), FILE_COMMON)) return;
    int h = FileOpen(LearnFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
    if(h == INVALID_HANDLE) return;
@@ -77,7 +111,10 @@ void LearnRegister(const int sit, const int st, const int dir, const double entr
    g_lvt[n].t = t; g_lvt[n].sit = sit; g_lvt[n].strat = st; g_lvt[n].dir = dir; g_lvt[n].entry = entry;
    g_lvt[n].risk = slDist; g_lvt[n].sl = entry - dir * slDist;
    g_lvt[n].tp = (dir > 0 ? tpPx > entry : (tpPx > 0 && tpPx < entry)) ? tpPx : entry + dir * 2.0 * slDist;
-   g_lvt[n].bars = 0;
+   g_lvt[n].bars = 0; g_lvt[n].lastT = 0;
+   // Phi: R cua lenh giay tru spread luc thay setup (quy ra R), de bot khong hoc tu con so dep hon thuc te
+   g_lvt[n].cost = (double)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
+   LearnSaveOpen();
 }
 // Cham lenh giay: goi moi tick, chi lam viec khi co nen moi tren khung chinh
 void LearnUpdate()
@@ -87,24 +124,32 @@ void LearnUpdate()
    datetime b = iTime(_Symbol, P_TF, 0);
    if(b == 0 || b == g_lrnBar) return;
    g_lrnBar = b;
-   datetime t1 = iTime(_Symbol, P_TF, 1);
-   double h = iHigh(_Symbol, P_TF, 1), l = iLow(_Symbol, P_TF, 1), c = iClose(_Symbol, P_TF, 1);
+   bool changed = false;
    for(int i = ArraySize(g_lvt) - 1; i >= 0; i--)
    {
-      if(t1 < g_lvt[i].t) continue;                                   // chua co nen nao dong sau nen tin hieu
-      g_lvt[i].bars++;
-      int d = g_lvt[i].dir;
+      // Cham tung nen da dong tu sau nen tin hieu (ke ca cac nen trong luc tat may), theo thu tu thoi gian
+      int d = g_lvt[i].dir, sh0 = iBarShift(_Symbol, P_TF, g_lvt[i].t, false);
       double r = 0; bool done = false;
-      if(d > 0 ? l <= g_lvt[i].sl : h >= g_lvt[i].sl) { r = -1; done = true; }
-      else if(d > 0 ? h >= g_lvt[i].tp : l <= g_lvt[i].tp) { r = (g_lvt[i].tp - g_lvt[i].entry) * d / g_lvt[i].risk; done = true; }
-      else if(g_lvt[i].bars >= P_LearnMaxBars) { r = (c - g_lvt[i].entry) * d / g_lvt[i].risk; done = true; }
+      for(int sh = MathMax(sh0, 1); sh >= 1 && !done; sh--)
+      {
+         datetime tb = iTime(_Symbol, P_TF, sh);
+         if(tb < g_lvt[i].t || tb <= g_lvt[i].lastT) continue;
+         double h = iHigh(_Symbol, P_TF, sh), l = iLow(_Symbol, P_TF, sh), c = iClose(_Symbol, P_TF, sh);
+         if(h <= 0 || l <= 0) break;                                  // chua tai du lich su: thu lai o nen sau
+         g_lvt[i].lastT = tb; g_lvt[i].bars++; changed = true;
+         if(d > 0 ? l <= g_lvt[i].sl : h >= g_lvt[i].sl) { r = -1; done = true; }
+         else if(d > 0 ? h >= g_lvt[i].tp : l <= g_lvt[i].tp) { r = (g_lvt[i].tp - g_lvt[i].entry) * d / g_lvt[i].risk; done = true; }
+         else if(g_lvt[i].bars >= P_LearnMaxBars) { r = (c - g_lvt[i].entry) * d / g_lvt[i].risk; done = true; }
+      }
       if(!done) continue;
+      r -= g_lvt[i].risk > 0 ? g_lvt[i].cost / g_lvt[i].risk : 0;     // tru phi spread
       LearnStat(g_lvt[i].sit, g_lvt[i].strat, r, false);
       LearnSave(g_lvt[i].sit, g_lvt[i].strat, d, r, false);
       int last = ArraySize(g_lvt) - 1;
       if(i != last) g_lvt[i] = g_lvt[last];
       ArrayResize(g_lvt, last);
    }
+   if(changed) LearnSaveOpen();
 }
 // Danh gia cap (tinh huong, chien luoc): 0 dang thu, 1 tin dung, 2 chua chac, 3 loai. factor = he so rui ro.
 int LearnVerdict(const int sit, const int st, double &factor, string &txt)

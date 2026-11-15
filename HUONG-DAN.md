@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.36
+# Hướng dẫn bot BTC (MT5) v5.37
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1188,3 +1188,12 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
   khi khởi động lại. Backtest học trong bộ nhớ (không đọc / ghi file) để kiểm tra chính cơ chế học.
 - **Giao diện:** khung "Bot đã học được gì từ thực chiến" – bảng tình huống × chiến lược: số lệnh giấy, R TB, % thắng, đánh giá, lệnh thật.
 - Học cần thời gian: với H1, mỗi cặp cần vài tuần tới vài tháng để đủ 20 lệnh giấy. Chạy demo trước.
+
+## v5.37: Chỉ mở máy vài giờ mỗi ngày (16/11/2026)
+- Lệnh giấy đang theo dõi được lưu ở `Common\\Files\\TrendBot_hoc_mo_<tài khoản>_<mã>.csv`. Mở máy lại, bot nạp lại và **chấm bù** từng nến
+  đã đóng trong lúc tắt máy (giá có sẵn trong lịch sử MT5), theo đúng thứ tự thời gian – không mất dữ liệu học.
+- R của lệnh giấy **trừ spread** lúc thấy setup (quy ra R), để bot không học từ con số đẹp hơn thực tế.
+- Setup chỉ được phát hiện trong lúc máy mở. Mở máy 1–3 giờ / ngày với H1 = 1–3 nến được phân tích mỗi ngày → học chậm. Nên mở máy
+  vào giờ cao điểm (phiên New York 19:30–23:00 giờ VN) và cân nhắc VPS (MT5 > Virtual Hosting, hoặc VPS của Exness) để bot chạy 24/7.
+- Lệnh thật khi tắt máy: SL / TP nằm trên máy chủ Exness nên vẫn bảo vệ; dời hòa vốn, chốt từng phần, trailing, khóa lệnh dừng lại tới
+  khi mở máy. Không bật khóa lệnh (hedging) nếu không treo máy: lúc khóa, 2 lệnh không có SL.
