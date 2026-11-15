@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.29
+# Hướng dẫn bot BTC (MT5) v5.30
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -817,7 +817,7 @@ Exness chỉ có số tick, không có khối lượng thật, nên đây là ư
 Mô phỏng thô bằng Python trên nến M10 (H1, theo xu hướng D1, chi phí 0,06%/vòng) để kiểm tra logic: 283 lệnh, thắng 30%,
 PF 0,69 (12/2020–11/2023) và 0,79 (11/2023–11/2026). Kết quả thật trong MT5 xem ở đợt xếp hạng.
 
-**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 23 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
+**Xếp hạng chiến lược:** nút 1, nhóm *Xếp hạng chiến lược*. Chạy 24 cấu hình (mỗi chiến lược 1 cấu hình đại diện, không dò tìm) trên 6 năm gần nhất,
 vốn 30.000 USD. Tính R theo đợt (lệnh nhồi chồng nhau gộp 1 đợt):
 - Đủ điều kiện: R trung bình trên cả 6 năm > 0 và ≥ 20 đợt. Chiến lược không có lợi thế lâu dài không bao giờ được chọn, dù vài tháng gần đây gặp may.
 - Điểm = cận dưới 90% của R trung bình 12 tháng gần nhất (cần ≥ 8 đợt). Đứng đầu = được vào lệnh.
@@ -1089,3 +1089,13 @@ Chiến lược 6 trước đây vào ngay ở cây nến spring (thủng đáy 
 3. Test: về gần đáy (≤ 0,5 ATR) với nến nhỏ (≤ 70% biên độ TB trong hộp) và volume thấp (< TB hộp), không thủng đáy spring.
 4. Nến tăng mạnh (thân ≥ 60%) đóng cửa trên nắp hộp; lần đầu giá hồi về chạm nắp (≤ 0,3 ATR) mà vẫn đóng cửa trên → Buy.
 5. SL dưới đáy spring − 0,25 ATR; TP ở nơi cú giảm bắt đầu (nếu ≥ 1R, không thì `InpRR`). Upthrust ở đỉnh: ngược lại.
+
+## v5.30: Premium / discount – khung ngày cho biết đắt hay rẻ, H4 cho biết khi nào ra tay (chiến lược 21, 16/11/2026) – CHƯA KIỂM THỬ
+Bộ `29-Premium-Discount-D1-H4-THU-NGHIEM`, xếp hạng `XH-PremDisc-H4`:
+- Hộp = cao nhất / thấp nhất `InpPDDays` nến D1 (60 ≈ 2 tháng). Nửa dưới discount (chỉ mua), nửa trên premium (chỉ bán). Giá vào lệnh
+  phải còn ở đúng nửa; quanh đường giữa thì không có lợi thế.
+- Khung chính (H4), trong `InpPDLookback` nến: (1) cú quét – nến thủng đáy gần nhất (pivot ± 2 nến, trong vùng rẻ) rồi đóng cửa lại trên
+  đáy đó trong 2 nến; (2) xác nhận – nến đóng cửa vượt đỉnh gần nhất trước cú quét, chưa có đáy thấp hơn; (3) FVG tăng trong cú bật, lần
+  đầu giá hồi về + nến tăng đóng cửa trên đáy FVG → Buy.
+- SL dưới đáy cú quét − 0,25 ATR. Chốt `InpPartialPct` % ở đường giữa (mức chốt theo giá), phần còn lại TP ở cạnh trên hộp. Bỏ nếu < 1R.
+  Mỗi cú quét chỉ vào 1 lần. Premium: ngược lại.

@@ -135,7 +135,8 @@ void UpdatePanel()
                   P_Strategy == STRAT_VWAP ? "VWAP + 3 cặp dải" :
                   P_Strategy == STRAT_KEYVOL ? "Vùng Key Volume" :
                   P_Strategy == STRAT_SIMPLE ? "3 câu hỏi" :
-                  P_Strategy == STRAT_NEWS ? "Tin lớn: chờ cú quét xong" : "EMA pullback";
+                  P_Strategy == STRAT_NEWS ? "Tin lớn: chờ cú quét xong" :
+                  P_Strategy == STRAT_PD ? "Premium / discount" : "EMA pullback";
    string head = "TrendBot v" + BOT_VERSION + "  ·  " + _Symbol + "  ·  " + (guardOnly ? (InpGuardAutoEntry ? "Tự vào + bảo vệ" : "Bảo vệ lệnh tay") : P_ManualEntry ? "Tự bấm lệnh" : strat);
 
    if(guardOnly)

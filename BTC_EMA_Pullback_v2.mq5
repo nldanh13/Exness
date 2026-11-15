@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.29"
-#property version   "5.2900"
+#define  BOT_VERSION "5.30"
+#property version   "5.3000"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -33,7 +33,8 @@ enum ENUM_STRATEGY
    STRAT_VWAP         = 17,  // Thử nghiệm: VWAP trong ngày + 3 cặp dải – theo xu hướng / bắt nhịp kéo về
    STRAT_KEYVOL       = 18,  // Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất
    STRAT_SIMPLE       = 19,  // Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa
-   STRAT_NEWS         = 20   // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
+   STRAT_NEWS         = 20,  // Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật
+   STRAT_PD           = 21   // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -209,6 +210,8 @@ input int             InpKVMinReact       = 1;          // Key Volume: giá đã
 input int             InpSimpleLevels     = 3;          // 3 câu hỏi: số đường kẻ ngang
 input int             InpSimpleLookback   = 200;        // 3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)
 input int             InpSimplePivot      = 5;          // 3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)
+input int             InpPDDays           = 60;         // Premium / discount: hộp giá khung ngày (số nến D1)
+input int             InpPDLookback       = 60;         // Premium / discount: tìm cú quét + FVG trong (số nến khung chính)
 input int             InpNewsWindowMin    = 240;        // Quét tin: tìm tín hiệu trong (phút) sau giờ tin
 input int             InpNewsRangeMin     = 180;        // Quét tin: vùng đi ngang trước tin (phút)
 input double          InpNewsRangeMaxATR  = 4.0;        // Quét tin: vùng trước tin cao tối đa (× ATR)
@@ -336,6 +339,7 @@ int             P_NewsPreMin, P_NewsProtect, P_NewsWindowMin, P_NewsRangeMin;
 bool            P_NewsWeekly, P_NewsNFP;
 int             P_ScaleParts, P_ScaleBars, P_BESwingBars;
 bool            P_SpringFull;
+int             P_PDDays, P_PDLookback;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
@@ -503,6 +507,7 @@ void LoadParams()
    P_ExhaustATR = InpExhaustATR;
    P_FvgBigATR = InpFvgBigATR;
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
+   P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
    P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
    P_ScaleParts = InpScaleParts; P_ScaleStepATR = InpScaleStepATR; P_ScaleBars = InpScaleBars; P_BESwingBars = InpBESwingBars;
    P_NewsPreMin = InpNewsPreMin; P_NewsProtect = InpNewsProtect; P_NewsWeekly = InpNewsWeekly; P_NewsNFP = InpNewsNFP;
@@ -626,6 +631,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpExhaustATR") { P_ExhaustATR = StringToDouble(v); return true; }
    if(k == "InpFvgBigATR") { P_FvgBigATR = StringToDouble(v); return true; }
    if(k == "InpFvgLookback") { P_FvgLookback = (int)StringToInteger(v); return true; }
+   if(k == "InpPDDays") { P_PDDays = (int)StringToInteger(v); return true; }
+   if(k == "InpPDLookback") { P_PDLookback = (int)StringToInteger(v); return true; }
    if(k == "InpSpringFull") { P_SpringFull = (v == "true" || v == "1"); return true; }
    if(k == "InpSpringDepthATR") { P_SpringDepthATR = StringToDouble(v); return true; }
    if(k == "InpSpringDropATR") { P_SpringDropATR = StringToDouble(v); return true; }

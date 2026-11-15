@@ -545,6 +545,57 @@ bool SpringFullPattern(const double &hi[], const double &lo[], const double &op[
    return false;
 }
 
+// Premium / Discount 2 khung (v5.30). Khung ngay cho biet gia dat hay re, khung chinh (H4) cho biet khi nao ra tay.
+// Hop = dinh cao nhat / day thap nhat InpPDDays nen D1 (~2 thang). Nua tren = premium (dat, chi ban), nua duoi = discount (re, chi mua),
+// duong giua = can bang. Gia lo lung quanh giua: dung ngoai (chi vao khi gia vao lenh con o nua re / dat).
+// Khung chinh, chieu mua (ban: doi dau gia):
+//  1) Cu quet: nen dam thung day gan nhat (pivot +-2 nen, nam trong vung discount) roi dong cua lai tren day do trong 2 nen.
+//  2) Xac nhan quay dau: sau cu quet, nen dong cua vuot dinh gan nhat (pivot truoc cu quet); khong co day thap hon day quet.
+//  3) Diem vao: cu bat de lai FVG tang (day nen k+1 > dinh nen k-1). Lan dau gia hoi ve FVG, nen tang dong cua tren day FVG -> Buy.
+// SL duoi day cu quet - 0,25 ATR. Chot phan dau o duong giua (InpPartialPct), phan con lai o canh tren premium (TP).
+bool PDPattern(const double &hi[], const double &lo[], const double &op[], const double &cl[], const int last, const double atr,
+               const double bxHi, const double bxLo, double &slDist, double &tp1, double &tp2, int &sweepIx)
+{
+   double mid = (bxHi + bxLo) / 2.0;
+   if(cl[last] >= mid) return false;                                   // khong o vung re
+   for(int s = last - 3; s >= 10; s--)
+   {
+      // day gan nhat truoc s (pivot +-2), trong vung discount
+      double pl = 0; int ip = -1;
+      for(int k = s - 3; k >= 2 && ip < 0; k--)
+         if(lo[k] < lo[k - 1] && lo[k] < lo[k - 2] && lo[k] <= lo[k + 1] && lo[k] <= lo[k + 2]) { ip = k; pl = lo[k]; }
+      if(ip < 0 || pl >= mid || lo[s] >= pl) continue;
+      int ret = -1; double swLow = lo[s];
+      for(int q = s; q <= MathMin(s + 2, last - 3) && ret < 0; q++) { swLow = MathMin(swLow, lo[q]); if(cl[q] > pl) ret = q; }
+      if(ret < 0) continue;
+      // dinh gan nhat truoc cu quet
+      double ph = 0;
+      for(int k = s - 1; k >= 2 && ph == 0; k--)
+         if(k + 2 < s && hi[k] > hi[k - 1] && hi[k] > hi[k - 2] && hi[k] >= hi[k + 1] && hi[k] >= hi[k + 2]) ph = hi[k];
+      if(ph == 0) continue;
+      int b = -1;
+      for(int q = ret; q < last && b < 0; q++)
+      {
+         if(lo[q] < swLow) break;                                      // co day thap hon: chua quay dau
+         if(cl[q] > ph) b = q;
+      }
+      if(b < 0) continue;
+      // FVG tang trong cu bat (nen giua k tu s+1 toi b), lay khoang trong gan nhat
+      double gBot = 0, gTop = 0; int gk = -1;
+      for(int k = MathMin(b, last - 2); k >= s + 1 && gk < 0; k--)
+         if(lo[k + 1] > hi[k - 1] && cl[k] > op[k]) { gk = k; gBot = hi[k - 1]; gTop = lo[k + 1]; }
+      if(gk < 0) continue;
+      bool fresh = true;
+      for(int q = gk + 2; q < last && fresh; q++) if(lo[q] <= gTop || cl[q] < gBot) fresh = false;
+      if(!fresh) return false;                                         // da hoi ve truoc do / da thung: bo cau truc nay
+      if(!(lo[last] <= gTop && cl[last] > gBot && cl[last] > op[last])) return false;
+      slDist = MathMax(cl[last] - (swLow - 0.25 * atr), 0.5 * atr);
+      tp1 = mid; tp2 = bxHi; sweepIx = s;
+      return tp2 - cl[last] >= slDist;                                  // lai toi canh tren < 1R: bo
+   }
+   return false;
+}
+
 // Pha vo gia (v5.21). Pha vo THAT can du 3 dieu: than nen dong cua han ngoai vung (InpBreakMinBody), khoi luong tang manh
 // (InpBreakMinVol) va khi gia hoi ve test lai, vung vua pha giu duoc (InpBreakRetest). Thieu 1 dieu la dang doan.
 // 6 kieu pha vo gia va cach bot tranh: 1) pha bang rau - Donchian chi tin gia dong cua; 2) dong cua qua roi quay vao -
@@ -1122,6 +1173,31 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             if(km == 1) g_knifeProbeUsed = kk; else g_knifeUsed = kk;
          }
       }
+   }
+   else if(P_Strategy == STRAT_PD)
+   {
+      int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
+      if(dH < 0 || dL < 0) return false;
+      double bxHi = iHigh(_Symbol, PERIOD_D1, dH), bxLo = iLow(_Symbol, PERIOD_D1, dL);
+      if(bxHi - bxLo < 3 * atr) return true;
+      int L = P_PDLookback < 30 ? 30 : P_PDLookback;
+      double hi[], lo[], op[], cl[], nh[], nl[], no[], nc[];
+      datetime tm[];
+      ArrayResize(hi, L); ArrayResize(lo, L); ArrayResize(op, L); ArrayResize(cl, L); ArrayResize(tm, L);
+      ArrayResize(nh, L); ArrayResize(nl, L); ArrayResize(no, L); ArrayResize(nc, L);
+      for(int i = 0; i < L; i++)
+      {
+         int sh = L - i;
+         hi[i] = iHigh(_Symbol, P_TF, sh); lo[i] = iLow(_Symbol, P_TF, sh); op[i] = iOpen(_Symbol, P_TF, sh); cl[i] = iClose(_Symbol, P_TF, sh);
+         tm[i] = iTime(_Symbol, P_TF, sh);
+         if(hi[i] <= 0 || lo[i] <= 0) return false;
+         nh[i] = -lo[i]; nl[i] = -hi[i]; no[i] = -op[i]; nc[i] = -cl[i];
+      }
+      double sd, t1, t2; int sx;
+      if(PDPattern(hi, lo, op, cl, L - 1, atr, bxHi, bxLo, sd, t1, t2, sx) && tm[sx] != g_pdUsed)
+      { buyBase = true; g_sigSL = sd; g_sigPartialPx = t1; g_sigTP = t2; g_pdUsed = tm[sx]; }
+      else if(PDPattern(nh, nl, no, nc, L - 1, atr, -bxLo, -bxHi, sd, t1, t2, sx) && tm[sx] != g_pdUsed)
+      { sellBase = true; g_sigSL = sd; g_sigPartialPx = -t1; g_sigTP = -t2; g_pdUsed = tm[sx]; }
    }
    else if(P_Strategy == STRAT_NEWS)
    {

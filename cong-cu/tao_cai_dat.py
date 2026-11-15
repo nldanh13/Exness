@@ -265,6 +265,14 @@ PRESETS = [
         "Thủng đáy rồi nằm luôn bên dưới = giảm tiếp, không vào.",
     ], {"InpStrategy": "6", "InpTF": "16385", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2",
         "InpSpringFull": "true", "InpRangeBars": "20", "InpRangeMaxATR": "4", "InpSpringDepthATR": "1.5", "InpSpringDropATR": "4"}),
+    ("29-Premium-Discount-D1-H4-THU-NGHIEM.set", [
+        "29. Premium / discount (chiến lược 21): hộp D1 60 ngày, chia đôi. Chỉ mua ở nửa dưới, chỉ bán ở nửa trên. CHƯA CÓ KẾT QUẢ BACKTEST.",
+        "H4: cú quét thủng đáy gần nhất trong vùng rẻ → nến đóng cửa vượt đỉnh gần nhất → hồi về FVG của cú bật + nến tăng → MUA.",
+        "SL dưới đáy cú quét − 0,25 ATR. Chốt 50% ở đường giữa hộp, 50% còn lại TP ở cạnh trên hộp (bỏ nếu < 1R).",
+        "Vùng premium: quét đỉnh → thủng đáy gần nhất → hồi lên FVG → BÁN. Chỉ chạy demo.",
+        "Khung ngày cho biết đắt hay rẻ, khung H4 cho biết khi nào ra tay.",
+    ], {"InpStrategy": "21", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "0", "InpUsePartial": "true",
+        "InpPartialPct": "50", "InpPartialR": "99", "InpPDDays": "60", "InpPDLookback": "60"}),
 ]
 
 

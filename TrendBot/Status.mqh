@@ -31,6 +31,7 @@ string StrategyName()
       case STRAT_KEYVOL:     return "Vung Key Volume";
       case STRAT_SIMPLE:     return "3 cau hoi: mua - cho ca - phao";
       case STRAT_NEWS:       return "Tin lon: cho cu quet xong";
+      case STRAT_PD:         return "Premium / discount 2 khung";
    }
    return "EMA pullback";
 }

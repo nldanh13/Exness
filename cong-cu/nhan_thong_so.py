@@ -26,6 +26,7 @@ STRATEGY_LABELS = {
     "STRAT_KEYVOL":       "Thử nghiệm: vùng Key Volume – nơi thị trường giao dịch nhiều nhất",
     "STRAT_SIMPLE":       "Thử nghiệm: 3 câu hỏi – mùa gì, cá tụ ở đâu, phao đã động chưa",
     "STRAT_NEWS":         "Thử nghiệm: ngày có tin – chờ cú quét thanh khoản xong rồi đi theo hướng thật",
+    "STRAT_PD":           "Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính",
 }
 
 GROUPS = [
@@ -202,6 +203,8 @@ GROUPS = [
         ("InpSimpleLevels",   "3 câu hỏi: số đường kẻ ngang", "Chiến lược 19: chỉ nến, vài đường kẻ và 3 câu hỏi. (1) Mùa gì: đỉnh sau cao hơn = mùa tăng, chỉ mua; thấp hơn = mùa giảm, chỉ bán; lộn xộn = đứng ngoài. (2) Cá tụ ở đâu: 2–3 đường ngang ở chỗ giá từng quay đầu rõ nhất. (3) Phao động chưa: giá về đúng đường rồi một nến mạnh cùng chiều mùa (thân ≥ 60% biên độ) mới vào. SL dưới đường − 0,25 ATR."),
         ("InpSimpleLookback", "3 câu hỏi: tìm chỗ giá từng quay đầu trong (số nến)", ""),
         ("InpSimplePivot",    "3 câu hỏi: chỗ quay đầu = cao / thấp nhất trong ± (số nến)", "Các chỗ quay đầu cách nhau < 0,5 ATR gộp thành 1 đường. Đường mạnh = tổng độ dài các cú quay đầu tại đó (đo trong 10 nến sau)."),
+        ("InpPDDays",         "Premium / discount: hộp giá khung ngày (số nến D1)", "Chiến lược 21. Hộp = đỉnh cao nhất và đáy thấp nhất của bấy nhiêu nến D1 (60 ≈ 2 tháng). Nửa trên premium (đắt, chỉ bán), nửa dưới discount (rẻ, chỉ mua), đường giữa = cân bằng; quanh đường giữa thì đứng ngoài. Trên khung chính: (1) chờ cú quét thủng đáy gần nhất trong vùng rẻ rồi kéo lại; (2) chờ nến đóng cửa vượt đỉnh gần nhất; (3) giá hồi về FVG của cú bật, nến tăng → mua. SL dưới đáy cú quét. Chốt phần đầu ở đường giữa, phần còn lại ở cạnh trên hộp."),
+        ("InpPDLookback",     "Premium / discount: tìm cú quét + FVG trong (số nến khung chính)", ""),
         ("InpNewsWindowMin",  "Quét tin: tìm tín hiệu trong (phút) sau giờ tin", "Chiến lược 20. Ngày có tin đừng hỏi giá chạy hướng nào, hãy hỏi cú quét xong chưa. Cú đầu tiên sau tin vượt ra ngoài vùng đi ngang trước tin là để lấy thanh khoản. Bot chờ: không còn lập đỉnh quét mới, nến đóng cửa lại trong vùng, là nến giảm và thủng đáy cây nến tạo đỉnh quét (cấu trúc mới) → bán, SL trên đỉnh quét. Quét xuống: ngược lại. Mỗi tin 1 lần."),
         ("InpNewsRangeMin",   "Quét tin: vùng đi ngang trước tin (phút)", "Đỉnh và đáy của khoảng này trước giờ tin = 2 kho thanh khoản (lệnh chờ + dừng lỗ dồn về 2 đầu)."),
         ("InpNewsRangeMaxATR", "Quét tin: vùng trước tin cao tối đa (× ATR)", "Vùng rộng hơn thì giá không thật sự đi ngang chờ tin: bỏ qua."),

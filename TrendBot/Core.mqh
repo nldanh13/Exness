@@ -25,6 +25,7 @@ double   g_sigRiskMult = 1;              // he so rui ro lenh nay do chien luoc 
 double   g_sigPartialPx = 0;             // muc gia chot mot phan do chien luoc dat (0 = theo R)
 datetime g_knifeProbeUsed = 0, g_knifeUsed = 0;
 datetime g_obUsed = 0, g_obFlipUsed = 0;
+datetime g_pdUsed = 0;                  // premium / discount: cu quet da vao lenh (moi cu 1 lan)
 datetime g_newsUsedT = 0;               // tin da danh cu quet (chien luoc 20, moi tin 1 lan)
 int      g_newsProtects = 0;             // so lan bao ve lenh truoc tin (InpNewsProtect)
 int      g_fvgPat = 0;                    // mau nen xac nhan cua lenh FVG gan nhat (ZoneCandle), de ghi nhat ky          // order block da vao lenh / da danh khang cu (moi OB 1 lan)   // dao roi: day da vao lenh thu / lenh lon (moi day 1 lan)
