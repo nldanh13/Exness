@@ -39,6 +39,7 @@ nav.tabs { display: flex; gap: 4px; margin-left: auto; }
 nav.tabs a { text-decoration: none; color: var(--ink2); padding: 6px 14px; border-radius: 6px; font-weight: 600; }
 nav.tabs a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 nav.tabs a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.shared { display: grid; gap: 12px; padding-top: 16px; } .shared:empty { display: none; }
 main { padding-block: 20px 48px; display: grid; gap: 20px; }
 h2 { font-size: 15px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
@@ -175,6 +176,8 @@ details.ev li { overflow-wrap: anywhere; }
 .explain p { margin: 0; max-width: 80ch; }
 details.tech > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink2); padding: 4px 0; }
 details.tech[open] > summary { margin-bottom: 8px; }
+.strip2 { grid-template-columns: 2fr 1fr !important; }
+@media (max-width: 720px) { .strip2 { grid-template-columns: 1fr !important; } }
 .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 720px) { .strip { grid-template-columns: 1fr; } }
 .strip .st { padding: 10px 12px; gap: 4px; align-content: start; }
@@ -239,62 +242,17 @@ main { gap: 14px; padding-block: 14px 40px; }
 <header class="top"><div class="wrap">
   <div class="brand">Bảng điều khiển</div>
   <nav class="tabs" aria-label="Trang">
-    <a href="#chay" id="tab-chay">Điều khiển</a>
-    <a href="#ket-qua" id="tab-ket-qua">Kết quả</a>
+    <a href="#chay" id="tab-chay">Bot đang chạy</a>
+    <a href="#hoc" id="tab-hoc">Học &amp; điều chỉnh</a>
+    <a href="#ket-qua" id="tab-ket-qua">Mô phỏng</a>
     <a href="#thong-so" id="tab-thong-so">Thông số</a>
   </nav>
 </div></header>
 
 <div class="wrap">
-<main id="view-chay">
+<div class="shared">
   <div class="banner warn" id="reopen-note" hidden><b>Giao diện vừa có bản mới.</b> Đóng cửa sổ PowerShell của giao diện rồi mở lại <span class="num">GiaoDien.cmd</span> để dùng đủ chức năng (cửa sổ đang chạy vẫn là bản cũ).</div>
   <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy của bạn.</div>
-
-  <section class="sec" id="sec-status">
-    <div class="sec-head"><h2>Tình trạng</h2><button class="small ghost" id="git-check">Kiểm tra lại</button></div>
-    <p class="now-text banner bad" id="now-text" hidden></p>
-    <div class="strip" aria-label="Chi tiết tình trạng">
-      <div class="st"><span class="lbl">Ứng dụng</span><span class="val"><i class="dot" id="mt5-dot"></i><span id="mt5-val">…</span></span><span class="sub" id="mt5-sub"></span></div>
-      <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
-      <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul></div>
-    </div>
-  </section>
-
-  <section class="sec" id="sec-decide">
-    <div class="sec-head"><h2>Quyết định của bot</h2><span class="hint">Cập nhật mỗi 10 giây</span></div>
-    <div class="decide" id="decide-list"><span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span></div>
-  </section>
-
-  <section class="sec" id="sec-learn" hidden>
-    <div class="sec-head"><h2>Bot đã học được gì từ thực chiến</h2><span class="hint">Chỉ để tham khảo: bot quyết định theo kiến thức. Lệnh giấy = mọi setup bot thấy, theo dõi tới SL / TP.</span></div>
-    <div id="learn-box"></div>
-  </section>
-
-  <section class="sec" id="sec-know">
-    <div class="sec-head"><h2>Chấm điểm &amp; điều chỉnh kiến thức</h2><button class="small ghost" id="know-reload">Phân tích lại</button>
-      <span class="hint">Mỗi lần bot áp dụng kiến thức được chấm A–F. Bạn duyệt điều kiện bổ sung, bot không tự sửa.</span></div>
-    <details class="ev"><summary>Thang điểm</summary><ul>
-      <li><b>A (4)</b> chạm TP, chưa bao giờ ngược quá 0,5R – đúng, vào đúng điểm</li>
-      <li><b>B (3)</b> có lời – đúng</li>
-      <li><b>C (2)</b> hòa (±0,3R) – chưa rõ</li>
-      <li><b>D (1)</b> thua nhưng đã từng đi đúng hướng ≥ 0,5R – đúng hướng, quản lý lệnh chưa tốt</li>
-      <li><b>F (0)</b> thua, chưa bao giờ đi đúng hướng 0,5R – điều kiện vào có vấn đề</li></ul></details>
-    <div id="know-box"><p class="muted" style="margin:0">Đang đọc…</p></div>
-  </section>
-
-  <section class="sec" id="sec-journal">
-    <div class="sec-head"><h2>Nhật ký quá trình</h2>
-      <div class="chips" id="jr-filter" role="group" aria-label="Lọc nhật ký">
-        <button class="chip" data-f="" aria-pressed="true">Tất cả</button>
-        <button class="chip" data-f="lenh" aria-pressed="false">Vào / thoát lệnh</button>
-        <button class="chip" data-f="phan-tich" aria-pressed="false">Phân tích</button>
-        <button class="chip" data-f="quan-ly" aria-pressed="false">Quản lý lệnh</button>
-        <button class="chip" data-f="loi" aria-pressed="false">Lỗi</button>
-      </div>
-    </div>
-    <div class="jr" id="jr-list"><p class="muted" style="margin:8px 0 0">Chưa có nhật ký (cần bot bản 5.32 trở lên đang chạy).</p></div>
-  </section>
-
   <section class="sec" id="sec-run" hidden>
     <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
     <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
@@ -309,11 +267,66 @@ main { gap: 14px; padding-block: 14px 40px; }
       <span id="stop-confirm" hidden>Dừng hẳn việc đang chạy? <button class="small danger" id="btn-stop-yes">Dừng ngay</button> <button class="small ghost" id="btn-stop-no">Thôi</button></span>
     </div>
   </section>
-  <section class="sec" id="sec-verdict">
-    <div class="sec-head"><h2>Kết luận gần nhất</h2><a class="hint" href="#ket-qua">Xem bảng kết quả</a></div>
-    <div class="verdict-a" id="verdict-text">Đang đọc…</div>
+</div>
+<main id="view-chay">
+
+  <section class="sec" id="sec-status">
+    <div class="sec-head"><h2>Tình trạng</h2><button class="small ghost" id="git-check">Kiểm tra lại</button></div>
+    <p class="now-text banner bad" id="now-text" hidden></p>
+    <div class="strip strip2" aria-label="Chi tiết tình trạng">
+      <div class="st"><span class="lbl">Môi trường</span><div class="acct" id="acct"><span class="muted">…</span></div></div>
+      <div class="st"><span class="lbl">Phiên bản</span><span class="val"><i class="dot" id="git-dot"></i><span id="git-val">Đang kiểm tra…</span></span><span class="sub" id="git-sub"></span><ul class="commits" id="git-commits" hidden></ul>
+        <div class="actions" style="margin-top:6px"><button class="small" id="btn-update">Cập nhật bản mới</button></div></div>
+    </div>
   </section>
 
+  <section class="sec" id="sec-decide">
+    <div class="sec-head"><h2>Quyết định của bot</h2><span class="hint">Cập nhật mỗi 10 giây</span></div>
+    <div class="decide" id="decide-list"><span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span></div>
+  </section>
+
+
+
+  <section class="sec" id="sec-journal">
+    <div class="sec-head"><h2>Nhật ký quá trình</h2>
+      <div class="chips" id="jr-filter" role="group" aria-label="Lọc nhật ký">
+        <button class="chip" data-f="" aria-pressed="true">Tất cả</button>
+        <button class="chip" data-f="lenh" aria-pressed="false">Vào / thoát lệnh</button>
+        <button class="chip" data-f="phan-tich" aria-pressed="false">Phân tích</button>
+        <button class="chip" data-f="quan-ly" aria-pressed="false">Quản lý lệnh</button>
+        <button class="chip" data-f="loi" aria-pressed="false">Lỗi</button>
+      </div>
+    </div>
+    <div class="jr" id="jr-list"><p class="muted" style="margin:8px 0 0">Chưa có nhật ký (cần bot bản 5.32 trở lên đang chạy).</p></div>
+  </section>
+
+
+
+</main>
+
+<main id="view-hoc" hidden>
+  <section class="sec" id="sec-know">
+    <div class="sec-head"><h2>Chấm điểm &amp; điều chỉnh kiến thức</h2><button class="small ghost" id="know-reload">Phân tích lại</button>
+      <span class="hint">Mỗi lần bot áp dụng kiến thức được chấm A–F. Bạn duyệt điều kiện bổ sung, bot không tự sửa.</span></div>
+    <details class="ev"><summary>Thang điểm</summary><ul>
+      <li><b>A (4)</b> chạm TP, chưa bao giờ ngược quá 0,5R – đúng, vào đúng điểm</li>
+      <li><b>B (3)</b> có lời – đúng</li>
+      <li><b>C (2)</b> hòa (±0,3R) – chưa rõ</li>
+      <li><b>D (1)</b> thua nhưng đã từng đi đúng hướng ≥ 0,5R – đúng hướng, quản lý lệnh chưa tốt</li>
+      <li><b>F (0)</b> thua, chưa bao giờ đi đúng hướng 0,5R – điều kiện vào có vấn đề</li></ul></details>
+    <div id="know-box"><p class="muted" style="margin:0">Đang đọc…</p></div>
+  </section>
+  <section class="sec" id="sec-learn" hidden>
+    <div class="sec-head"><h2>Kết quả thực chiến theo tình huống</h2><span class="hint">Chỉ để tham khảo: bot quyết định theo kiến thức. Lệnh giấy = mọi setup bot thấy, theo dõi tới SL / TP.</span></div>
+    <div id="learn-box"></div>
+  </section>
+</main>
+
+<main id="view-ket-qua" hidden>
+  <section class="sec" id="sec-sim-app">
+    <div class="sec-head"><h2>Mô phỏng trên dữ liệu cũ</h2><span class="hint">Để so sánh và xếp hạng chiến lược. Không ảnh hưởng bot đang chạy, trừ khi cho phép đóng ứng dụng.</span></div>
+    <div class="strip"><div class="st"><span class="lbl">Ứng dụng MT5</span><span class="val"><i class="dot" id="mt5-dot"></i><span id="mt5-val">…</span></span><span class="sub" id="mt5-sub"></span></div></div>
+  </section>
   <section class="sec" id="sec-start">
     <h2>Chạy việc mới</h2>
     <div class="jobgroups" role="radiogroup" aria-label="Việc">
@@ -322,7 +335,7 @@ main { gap: 14px; padding-block: 14px 40px; }
         <label><input type="radio" name="viec" value="sosanh-chinhxac" id="viec-chinhxac"><span>2. Chi tiết</span></label>
       </div></div>
       <div class="jg"><span class="jg-l">Khác</span><div class="seg">
-        <label><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
+        <label hidden><input type="radio" name="viec" value="capnhat" id="viec-capnhat"><span>Cập nhật</span></label>
         <label><input type="radio" name="viec" value="nhatky" id="viec-nhatky"><span>Gửi nhật ký</span></label>
         <label><input type="radio" name="viec" value="backtest" id="viec-backtest"><span>Tự chạy 1 lần</span></label>
         <label><input type="radio" name="viec" value="thanhly" id="viec-thanhly"><span>Dữ liệu thanh lý</span></label>
@@ -334,11 +347,6 @@ main { gap: 14px; padding-block: 14px 40px; }
         <select id="nhom">
           <option value="xephang">Xếp hạng chiến lược – nên chạy (26 cấu hình, 6 năm)</option>
           <option value="file">Đợt kiểm tra Claude đang làm</option>
-          <optgroup label="Nhóm cũ (các đợt nghiên cứu trước)">
-            <option value="h4">Các cấu hình khung H4</option>
-            <option value="luotsong">Lướt sóng khung nhỏ</option>
-            <option value="von1tr">Lướt sóng – vốn 1 triệu</option>
-          </optgroup>
           <option value="tatca">Tất cả (rất lâu)</option>
         </select>
       </div>
@@ -354,11 +362,13 @@ main { gap: 14px; padding-block: 14px 40px; }
       <span class="muted" id="start-msg" style="font-size:12px"></span>
     </div>
   </section>
+  <section class="sec" id="sec-verdict">
+    <div class="sec-head"><h2>Kết luận gần nhất</h2><a class="hint" href="#ket-qua" onclick="document.getElementById('sec-results').scrollIntoView({behavior:'smooth'});return false;">Xem bảng kết quả</a></div>
+    <div class="verdict-a" id="verdict-text">Đang đọc…</div>
+  </section>
 
-</main>
-
-<main id="view-ket-qua" hidden>
-  <section class="sec">
+  <section class="sec" id="sec-results">
+    <div class="sec-head"><h2>Bảng kết quả mô phỏng</h2></div>
     <div class="toolbar">
       <label for="file-sel" class="muted" style="font-size:12px">Lần chạy</label>
       <select id="file-sel"></select>
@@ -470,12 +480,13 @@ function store(k, v) { try { if (v === undefined) return localStorage.getItem(k)
 
 /* ---------- Điều hướng 3 tab ---------- */
 function route() {
-  var h = location.hash === '#ket-qua' ? 'ket-qua' : location.hash === '#thong-so' ? 'thong-so' : 'chay';
-  ['chay', 'ket-qua', 'thong-so'].forEach(function (k) {
+  var h = location.hash === '#ket-qua' ? 'ket-qua' : location.hash === '#thong-so' ? 'thong-so' : location.hash === '#hoc' ? 'hoc' : 'chay';
+  ['chay', 'hoc', 'ket-qua', 'thong-so'].forEach(function (k) {
     $('view-' + k).hidden = h !== k;
     $('tab-' + k).setAttribute('aria-current', h === k ? 'page' : 'false');
   });
   if (h === 'ket-qua') ensureResults();
+  if (h === 'hoc' && typeof knowLoad === 'function') knowLoad();
   if (h === 'thong-so' && window.TB_ThongSo) window.TB_ThongSo();
 }
 window.addEventListener('hashchange', route);
@@ -575,6 +586,10 @@ function renderStatus(d) {
   $('now-text').hidden = true;
   renderDecide(b);
   $('btn-start').disabled = !!j.Running;
+  var behind = (d.Git || {}).Behind > 0;
+  $('btn-update').disabled = !!j.Running;
+  $('btn-update').textContent = behind ? 'Cập nhật bản mới (' + d.Git.Behind + ' thay đổi)' : 'Nạp lại bản đang có';
+  $('btn-update').className = behind ? 'small primary' : 'small ghost';
   $('start-msg').textContent = j.Running ? 'Đang có việc chạy. Đợi xong hoặc bấm Dừng.' : '';
   $('btn-stop').hidden = !j.Running; if (!j.Running) $('stop-confirm').hidden = true;
   $('sec-run').hidden = !j.Viec;
@@ -907,6 +922,7 @@ function initRun() {
   document.querySelectorAll('input[name="viec"]').forEach(function (r) { r.addEventListener('change', renderOptions); });
   $('nhom').addEventListener('change', function () { store('tb-nhom', $('nhom').value); nhomHelp(); renderOptions(); });
   var n = store('tb-nhom'); if (n) $('nhom').value = n;
+  if (!$('nhom').value) $('nhom').value = 'xephang';            // nhóm cũ đã bỏ khỏi menu
   nhomHelp();
   function nhomHelp() {
     var h = { xephang: 'Mỗi chiến lược 1 cấu hình đại diện, 6 năm. Ra bảng chiến lược nào đang tốt nhất – bot tự chọn đọc bảng này. Nên chạy mỗi tuần.',
@@ -921,7 +937,7 @@ function initRun() {
   if (NHUNG) {
     $('static-note').hidden = false;
     renderStatus({ Git: {}, MT5Mo: false, Viec: {}, Bot: [], ChiChay: NHUNG.chiChay || [], ChinhXac: NHUNG.chinhXac || [], KetQua: NHUNG.files });
-    $('btn-start').disabled = true; $('git-check').disabled = true;
+    $('btn-start').disabled = true; $('git-check').disabled = true; $('btn-update').disabled = true;
     $('acct').innerHTML = '<span class="muted">Chỉ xem được trên máy.</span>';
     $('git-val').textContent = 'Chỉ xem được trên máy'; $('git-dot').className = 'dot'; $('git-sub').textContent = '';
     $('mt5-val').textContent = 'Chỉ xem được trên máy'; $('mt5-dot').className = 'dot'; $('mt5-sub').textContent = '';
@@ -935,6 +951,11 @@ function initRun() {
     S.logLen = 0; FULL_LOG = ''; $('log').innerHTML = ''; $('log').dataset.filled = '1'; $('run-result').hidden = true;
     api('/api/chay', body).then(function () { $('opt-git').checked = false; delete $('opt-git').dataset.touched; $('opt-nk').checked = false; poll(); $('sec-run').scrollIntoView({ behavior: 'smooth', block: 'start' }); })
       .catch(function (e) { $('btn-start').disabled = false; $('start-msg').textContent = e.message; });
+  };
+  // Nút Cập nhật bản mới (ô Phiên bản): lấy bản mới từ GitHub + nạp vào ứng dụng
+  $('btn-update').onclick = function () {
+    $('viec-capnhat').checked = true; $('opt-git').checked = true; $('opt-git').dataset.touched = 1;
+    renderOptions(); $('btn-start').onclick();
   };
   $('btn-stop').onclick = function () { $('stop-confirm').hidden = false; this.hidden = true; };
   $('btn-stop-no').onclick = function () { $('stop-confirm').hidden = true; $('btn-stop').hidden = false; };
@@ -1011,7 +1032,7 @@ function ensureResults() {
     RES.files = files || []; RES.loaded = true;
     var sel = $('file-sel');
     sel.innerHTML = RES.files.map(function (f) { return '<option value="' + esc(f.Ten) + '">' + esc(fileLabel(f)) + '</option>'; }).join('');
-    if (!RES.files.length) { $('tbl').querySelector('tbody').innerHTML = '<tr><td class="empty" colspan="6">Chưa có kết quả nào. Ở tab Điều khiển, chọn "Mô phỏng nhanh" rồi bấm Bắt đầu.</td></tr>'; return; }
+    if (!RES.files.length) { $('tbl').querySelector('tbody').innerHTML = '<tr><td class="empty" colspan="6">Chưa có kết quả nào. Ở phần "Chạy việc mới" phía trên, chọn "1. Nhanh" rồi bấm Bắt đầu.</td></tr>'; return; }
     var keep = RES.want !== 'newest' && RES.file && RES.files.some(function (f) { return f.Ten === RES.file; });
     sel.value = keep ? RES.file : RES.files[0].Ten;
     RES.want = null;

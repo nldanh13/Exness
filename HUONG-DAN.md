@@ -1231,3 +1231,8 @@ mất ≤ 6% vốn (SL ≤ ~175 USD giá), còn lại bỏ; lỗ ngày 3% (thua 
 Theo tình huống: đã ở *xu hướng mạnh* thì giữ cho tới khi ADX < `InpSmartTrendADX` − 3 hoặc thủy triều đổi chiều; đã ở *đi ngang* thì giữ cho tới
 khi ADX ≥ `InpSmartRangeADX` + 3 hoặc hộp rộng hơn 1,15 × `InpSmartRangeATR` ATR. Tránh đổi bộ kiến thức mỗi nến khi ADX dao động quanh ngưỡng.
 Bằng chứng ghi "(đổi từ ...)" hoặc "(giữ tình huống: vùng đệm ±3 ADX)".
+
+### Giao diện sắp xếp lại (16/11/2026)
+4 tab theo thứ tự dùng: **Bot đang chạy** (tình trạng + nút Cập nhật bản mới, quyết định, nhật ký) · **Học & điều chỉnh** (chấm điểm,
+đề xuất điều chỉnh kiến thức, kết quả thực chiến theo tình huống) · **Mô phỏng** (ứng dụng MT5, chạy mô phỏng / xếp hạng, kết luận, bảng kết quả)
+· **Thông số**. Thanh tiến trình hiện ở mọi tab khi có việc chạy. Bỏ các nhóm mô phỏng cũ khỏi menu (vẫn chạy được bằng dòng lệnh).
