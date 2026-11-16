@@ -524,8 +524,8 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
    }
    string lvT = "";
    for(int t = 0; t < keep; t++) lvT += (lvT == "" ? "" : ", ") + Px(lv[t]) + StringFormat(" (cách %.2f ATR)", MathAbs(c1 - lv[t]) / atr);
-   Why(StringFormat("mùa %s; %d đường ngang mạnh nhất: %s; nến vừa đóng thân %.0f%% biên độ (cần ≥ 60%%), %s; chưa có nến %s chạm đường kẻ rồi đóng cửa %s đường",
-                    s.trend == 1 ? "TĂNG (chỉ tìm mua)" : "GIẢM (chỉ tìm bán)", keep, keep > 0 ? lvT : "chưa có", r1 > 0 ? body / r1 * 100.0 : 0,
+   Why(StringFormat("mùa theo cấu trúc đỉnh / đáy %s (không phải thủy triều D1): %s; %d đường ngang mạnh nhất: %s; nến vừa đóng thân %.0f%% biên độ (cần ≥ 60%%), %s; chưa có nến %s chạm đường kẻ rồi đóng cửa %s đường",
+                    TfName(P_TF), s.trend == 1 ? "TĂNG (chỉ tìm mua)" : "GIẢM (chỉ tìm bán)", keep, keep > 0 ? lvT : "chưa có", r1 > 0 ? body / r1 * 100.0 : 0,
                     c1 > o1 ? "nến tăng" : "nến giảm", s.trend == 1 ? "tăng" : "giảm", s.trend == 1 ? "trên" : "dưới"));
    return false;
 }
@@ -770,7 +770,6 @@ string SmartNoSetup(const int m)
    return "";
 }
 // Ten tieng Viet co dau cho khung "Qua trinh phan tich" (v5.42; file nay luu UTF-8 co BOM de MetaEditor doc dung dau)
-string TfName(const int tf) { string s = EnumToString((ENUM_TIMEFRAMES)tf); StringReplace(s, "PERIOD_", ""); return s; }
 string SmartSitNameVi(const int s)
 {
    switch(s)
@@ -837,6 +836,22 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       Tr("Du lieu", 2, StringFormat("Khối lượng (số tick) nến vừa đóng %I64d = %.2f lần trung bình 20 nến trước (%.0f)", v1t,
                                     vNt > 0 && vSt > 0 ? (double)v1t / (vSt / vNt) : 0, vNt > 0 ? vSt / vNt : 0));
       Tr("Du lieu", 2, StringFormat("ATR(%d) = %s giá; ADX(%d) = %.2f", P_ATRPeriod, Px(atr), P_ADXPeriod, adx));
+      {
+         // Vốn nhỏ: SL xa nhất mà lot nhỏ nhất còn vào được, so với SL tối thiểu theo ATR (InpMinSLATRMult)
+         double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tvl = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+         if(tvl <= 0) tvl = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+         double mnL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), rB = MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY));
+         double capP = P_MaxRiskRoundUp > 0 ? P_MaxRiskRoundUp : P_RiskPercent;
+         if(P_MaxGroupRiskPct > 0 && InGroup()) capP = MathMin(capP, P_MaxGroupRiskPct);
+         if(P_MaxDailyLossPct > 0) capP = MathMin(capP, P_MaxDailyLossPct);
+         if(tsz > 0 && tvl > 0 && mnL > 0 && rB > 0 && atr > 0)
+         {
+            double maxSL = rB * capP / 100.0 / (mnL * tvl / tsz), minSL = P_MinSLATRMult * atr;
+            Tr("Du lieu", maxSL >= minSL ? 2 : 0, StringFormat("Vốn: %.2f lot nhỏ nhất chỉ vào được khi SL ≤ %s giá (%.1f%% vốn = %.2f ATR); SL tối thiểu của bot = %.1f ATR = %s giá%s",
+                                                    mnL, Px(maxSL), capP, maxSL / atr, P_MinSLATRMult, Px(minSL),
+                                                    maxSL >= minSL ? "" : " → với ATR hiện tại MỌI setup đều sẽ bị bỏ vì vốn"));
+         }
+      }
       Tr("Du lieu", 2, !tideOk ? StringFormat("Thủy triều Dow %s: chưa tính được (thiếu dữ liệu)", TfName(P_DowTF))
                        : StringFormat("Thủy triều Dow %s: %s, đã phá %d lần; đỉnh gần nhất %s, đáy gần nhất %s%s", TfName(P_DowTF),
                                       t.trend > 0 ? "TĂNG" : t.trend < 0 ? "GIẢM" : "CHƯA RÕ", t.legs, Px(t.ph), Px(t.pl),
@@ -1750,10 +1765,10 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
       if(!buyBase && !sellBase)
-         Why(StringFormat("VWAP %s, dải 3: %s / %s; nến vừa đóng %s – %s, đóng cửa %s (%+.2f độ lệch); %s%s", Px(vw), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
+         Why(StringFormat("VWAP %s, dải 3: %s / %s; nến vừa đóng %s – %s, đóng cửa %s (%+.2f độ lệch)%s%s", Px(vw), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
                           Px(l1), Px(h1), Px(c1), sd > 0 ? (c1 - vw) / sd : 0,
-                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "có chạm VWAP nhưng nến chưa bật đúng chiều / lời tới mục tiêu < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
-                                                                                          : StringFormat("chưa hồi về chạm VWAP (cách %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
+                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "; có chạm VWAP nhưng nến chưa bật đúng chiều / lời tới mục tiêu < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
+                                                                                          : StringFormat("; chưa hồi về chạm VWAP (cách %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
                           P_VwapMode != 1 ? (h1 >= vw + P_VwapBand3 * sd || l1 <= vw - P_VwapBand3 * sd ? "; có chạm dải 3 nhưng chưa có nến từ chối mạnh (râu ≥ 40%) / lời < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
                                                                                                     : StringFormat("; chưa chạm dải 3 (còn cách %.2f ATR)", MathMin(MathAbs(vw + P_VwapBand3 * sd - h1), MathAbs(l1 - (vw - P_VwapBand3 * sd))) / atr)) : ""));
       if(buyBase || sellBase)

@@ -1283,3 +1283,10 @@ phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đ�
 - Nút **Sao chép gửi Claude** chép kèm lần phân tích gần nhất và kết luận 12 lần gần nhất.
 - Sửa hiển thị ADX: in 2 chữ số thập phân, không còn "ADX 20.0 < 20" khi ADX thật là 19,96. Không đổi logic giao dịch.
 - Cần mở lại giao diện (GiaoDien.cmd) sau khi cập nhật vì có thêm dữ liệu mới.
+
+### v5.42.1: Làm rõ "mùa" của 3 câu hỏi, thêm dòng vốn vs SL tối thiểu (17/11/2026)
+- "3 câu hỏi" xác định mùa theo **cấu trúc đỉnh / đáy của khung chính (M15)**, không phải thủy triều Dow D1. Hai cái khác khung nên có lúc
+  ngược nhau (D1 giảm nhưng M15 đang tăng) – không phải lỗi. Câu lý do giờ ghi rõ khung.
+- Dữ liệu lấy vào có thêm dòng **Vốn**: lot nhỏ nhất vào được khi SL ≤ bao nhiêu giá, so với SL tối thiểu của bot (`InpMinSLATRMult` × ATR).
+  Khi SL tối thiểu lớn hơn mức vốn cho phép, dòng này báo đỏ: mọi setup sẽ bị bỏ vì vốn dù kiến thức có tín hiệu.
+- Sửa dấu "; ;" thừa trong lý do VWAP. Không đổi logic giao dịch.
