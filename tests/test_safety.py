@@ -208,6 +208,21 @@ class MqlSafetyRegression(unittest.TestCase):
         self.assertIn("return DBL_MAX;", function("OwnOpenRisk", "TrendBot/Risk.mqh"))
         self.assertIn("MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY))", risk)
 
+    def test_analysis_trace_every_bar(self):
+        main = source("BTC_EMA_Pullback_v2.mq5")
+        status = source("TrendBot/Status.mqh")
+        smart = function("SmartSignals", "TrendBot/Signals.mqh")
+        # moi nen moi deu bat dau 1 ban ghi, ghi ra file o lan WriteStatus sau, ke ca khi ket luan khong doi
+        self.assertLess(main.index("EvReset();"), main.index("TraceBegin();"))
+        self.assertIn("if(g_trPending) TraceFlush();", status)
+        self.assertIn('"TrendBot_phantich_"', status)
+        for frag in ('Tr("Du lieu"', 'Tr("Tinh huong"', 'Tr("Kien thuc"', "SmartNoSetup(m)"):
+            self.assertIn(frag, smart)
+        # ADX hien 2 chu so thap phan: khong con "ADX 20.0 < 20" khi ADX = 19,96
+        self.assertNotIn('"ADX %.1f', smart)
+        # backtest khong ghi qua trinh
+        self.assertIn("g_trOn = !MQLInfoInteger(MQL_TESTER);", source("TrendBot/Core.mqh"))
+
     def test_round_up_respects_daily_loss_room(self):
         lots = function("CalcLots", "TrendBot/Risk.mqh")
         self.assertIn("dayStartEquity * P_MaxDailyLossPct / 100.0 + DayPL() - own", lots)

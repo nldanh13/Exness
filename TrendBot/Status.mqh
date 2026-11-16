@@ -112,9 +112,55 @@ void DecisionWrite()
    g_dlogDirty = false;
 }
 
+// Qua trinh phan tich (v5.42): TrendBot_phantich_<chart>.txt, moi dong 1 lan phan tich nen vua dong:
+//   gio nen (server)<TAB>luc phan tich (gio may)<TAB>khung (phut)<TAB>ket luan<TAB>cac buoc (nhom`trang thai`noi dung, noi bang ``)
+// Giu 96 lan gan nhat (1 ngay M15). Ghi o lan WriteStatus ngay sau nen (cung tick phan tich da chay xong).
+string g_trLog[];
+bool   g_trLoaded = false;
+string TraceFile() { return "TrendBot_phantich_" + IntegerToString(ChartID()) + ".txt"; }
+void TraceFlush()
+{
+   g_trPending = false;
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   if(!g_trLoaded)
+   {
+      g_trLoaded = true;
+      int hr = FileOpen(TraceFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
+      if(hr != INVALID_HANDLE)
+      {
+         while(!FileIsEnding(hr)) { string l = FileReadString(hr); if(l == "") continue; int k = ArraySize(g_trLog); ArrayResize(g_trLog, k + 1); g_trLog[k] = l; }
+         FileClose(hr);
+      }
+   }
+   string steps = g_tr;
+   // Phan sau phan tich: bo loc chung, kiem tra rui ro / tinh lot, gui lenh (bang chung ghi sau khi chien luoc tra ket qua)
+   string tail = g_trEvFrom > 0 ? StringSubstr(g_ev, g_trEvFrom) : (steps == "" ? g_ev : "");
+   StringReplace(tail, "`", "'");
+   StringTrimLeft(tail); StringTrimRight(tail);
+   if(StringFind(tail, "; ") == 0) tail = StringSubstr(tail, 2);
+   if(tail != "")
+   {
+      StringReplace(tail, " ; ", "``Ket luan`2`");             // cac muc bang chung noi bang " ; "
+      steps += (steps == "" ? "" : "``") + "Ket luan`2`" + tail;
+   }
+   string st = IsHalted() ? "DUNG HAN (sut giam)" : g_status;
+   StringReplace(st, "`", "'"); StringReplace(st, "\t", " ");
+   steps += (steps == "" ? "" : "``") + "Ket luan`3`" + st;
+   int n = ArraySize(g_trLog);
+   if(n >= 96) { ArrayRemove(g_trLog, 0, n - 95); n = ArraySize(g_trLog); }
+   ArrayResize(g_trLog, n + 1);
+   g_trLog[n] = TimeToString(g_trBar, TIME_DATE | TIME_MINUTES) + "\t" + TimeToString(g_trAt, TIME_DATE | TIME_SECONDS) + "\t" +
+                IntegerToString(PeriodSeconds((ENUM_TIMEFRAMES)P_TF) / 60) + "\t" + st + "\t" + steps;
+   int h = FileOpen(TraceFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(h == INVALID_HANDLE) return;
+   for(int i = 0; i < ArraySize(g_trLog); i++) FileWriteString(h, g_trLog[i] + "\r\n");
+   FileClose(h);
+}
+
 void WriteStatus()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
+   if(g_trPending) TraceFlush();     // ngay ca khi chua toi 10 giay: tick phan tich da xong
    static datetime last = 0;
    if(TimeLocal() - last < 10) return;
    last = TimeLocal();

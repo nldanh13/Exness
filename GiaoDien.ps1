@@ -26,7 +26,7 @@ $MySetDir   = Join-Path $ProjectDir "cai-dat-rieng"    # bo thong so ban tu luu 
 # (PowerShell da nap vao bo nho) -> bao nguoi dung dong cua so va mo lai GiaoDien.cmd.
 $SelfFile  = $MyInvocation.MyCommand.Path
 $SelfStamp = (Get-Item $SelfFile).LastWriteTimeUtc.Ticks
-$ApiVer    = 5   # tang khi them API moi; trang web so voi so nay (3: ma truy cap, 4: nhat ky quyet dinh, 5: cham diem + dieu chinh kien thuc)
+$ApiVer    = 6   # tang khi them API moi; trang web so voi so nay (3: ma truy cap, 4: nhat ky quyet dinh, 5: cham diem + dieu chinh kien thuc, 6: qua trinh phan tich)
 $ErrFile    = Join-Path $WorkDir "loi.txt"
 $KeyFile    = Join-Path $WorkDir "khoa.txt"
 
@@ -76,6 +76,12 @@ function Get-BotStatus {
             $o["NhatKy"] = @()
             if (Test-Path $dec) {
                 $o["NhatKy"] = @((Read-Shared $dec) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 150)
+            }
+            # Qua trinh phan tich (v5.42): moi lan phan tich nen vua dong, tung buoc; 48 lan gan nhat (12 gio M15)
+            $tr = Join-Path $dir ($_.Name -replace '^TrendBot_trangthai_', 'TrendBot_phantich_')
+            $o["PhanTich"] = @()
+            if (Test-Path $tr) {
+                $o["PhanTich"] = @((Read-Shared $tr) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 48)
             }
             $o
         })

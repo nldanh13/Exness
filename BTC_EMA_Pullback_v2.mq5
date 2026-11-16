@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.41.0"
-#property version   "5.4100"
+#define  BOT_VERSION "5.42.0"
+#property version   "5.4200"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -1474,6 +1474,7 @@ void OnTickBody()
    if(barTime == 0 || barTime == lastBarTime) return;
    lastBarTime = barTime;
    EvReset();                       // bang chung cua quyet dinh nen nay (v5.33)
+   TraceBegin();                    // qua trinh phan tich nen nay, ghi ra file o lan WriteStatus sau (v5.42)
 
    if(IsHalted())       { g_status = "DUNG HAN (sut giam)"; return; }
    if(HasOwnPosition())
@@ -1508,7 +1509,9 @@ void OnTickBody()
 
    bool adxOk = !P_UseADX || adx >= P_ADXMin;
    bool buyBase, sellBase;
-   if(!BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase)) return;
+   bool baseOk = BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase);
+   g_trEvFrom = StringLen(g_ev);    // bang chung tu day tro di: bo loc chung, tinh lot, gui lenh
+   if(!baseOk) return;
    bool buySignal  = P_AllowBuy && buyBase
                      && (!P_UseHTF || (P_HTFMacd ? htfUp : htfClose > htfEma)) && adxOk
                      && (!P_UseCandle || BullCandle()) && MTFOk(true);

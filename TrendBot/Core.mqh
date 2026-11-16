@@ -50,6 +50,30 @@ string   g_wMem = "", g_wKV = "";
 double   g_pzA = 0, g_pzB = 0, g_pzC = 0, g_pzD = 0;   // so lieu tam do ham mau hinh tra ra (khong gian gia cua mau, co the doi dau)
 void EvReset() { g_ev = ""; }
 void EvAdd(const string s) { if(s == "" || StringLen(g_ev) > 1800) return; g_ev += (g_ev == "" ? "" : " ; ") + s; }
+// Qua trinh phan tich (v5.42): moi lan phan tich nen vua dong ghi TUNG BUOC (du lieu lay gi, tinh ra so nao, so voi nguong nao,
+// tung kien thuc ket luan gi, ket luan cuoi) - ke ca khi ket luan khong doi. Status.mqh ghi ra TrendBot_phantich_<chart>.txt
+// (96 lan gan nhat = 1 ngay M15) cho khung "Qua trinh phan tich" tren giao dien. Moi buoc: nhom`trang thai`noi dung,
+// cac buoc noi bang "``". Trang thai: 1 dat, 0 khong dat, 2 thong tin, 3 ket luan. Tat khi backtest.
+string   g_tr = "";
+bool     g_trOn = false, g_trPending = false;
+datetime g_trBar = 0, g_trAt = 0;
+int      g_trEvFrom = 0;                  // vi tri trong g_ev tu do la bang chung SAU phan tich (bo loc chung, tinh lot)
+string   g_why = "";                      // ly do kien thuc thanh vien KHONG co setup o nen nay (dat trong BaseSignals)
+void Why(const string s) { g_why = s; }
+void TraceBegin()
+{
+   g_trOn = !MQLInfoInteger(MQL_TESTER);
+   if(!g_trOn) return;
+   g_tr = ""; g_trEvFrom = 0; g_trPending = true;
+   g_trBar = iTime(_Symbol, P_TF, 1); g_trAt = TimeLocal();
+}
+void Tr(const string grp, const int ok, const string s)
+{
+   if(!g_trOn || s == "" || StringLen(g_tr) > 12000) return;
+   string t = s;
+   StringReplace(t, "`", "'"); StringReplace(t, "\t", " "); StringReplace(t, "\r", " "); StringReplace(t, "\n", " ");
+   g_tr += (g_tr == "" ? "" : "``") + grp + "`" + IntegerToString(ok) + "`" + t;
+}
 string Px(const double v) { return DoubleToString(v, _Digits); }       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
 datetime g_fvgUsed = 0;
 datetime g_fibUsed = 0;                 // Fib + VP: thoi diem dinh/day cua con song da vao lenh (moi song chi vao 1 lan)
