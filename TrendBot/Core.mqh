@@ -74,7 +74,8 @@ void Tr(const string grp, const int ok, const string s)
    StringReplace(t, "`", "'"); StringReplace(t, "\t", " "); StringReplace(t, "\r", " "); StringReplace(t, "\n", " ");
    g_tr += (g_tr == "" ? "" : "``") + grp + "`" + IntegerToString(ok) + "`" + t;
 }
-string Px(const double v) { return DoubleToString(v, _Digits); }       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
+string Px(const double v) { return DoubleToString(v, _Digits); }
+string TfName(const int tf) { string s = EnumToString((ENUM_TIMEFRAMES)tf); StringReplace(s, "PERIOD_", ""); return s; }   // "M15", "D1"       // SL (khoang cach) / TP (gia) do chien luoc dat; 0 = dung mac dinh ATR / RR
 datetime g_fvgUsed = 0;
 datetime g_fibUsed = 0;                 // Fib + VP: thoi diem dinh/day cua con song da vao lenh (moi song chi vao 1 lan)
 datetime g_divUsed = 0, g_absUsed = 0;  // RSI + CVD: dinh/day phan ky da vao lenh; lan hap thu gan nhat da vao lenh

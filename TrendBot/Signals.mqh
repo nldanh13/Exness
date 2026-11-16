@@ -524,8 +524,8 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
    }
    string lvT = "";
    for(int t = 0; t < keep; t++) lvT += (lvT == "" ? "" : ", ") + Px(lv[t]) + StringFormat(" (cách %.2f ATR)", MathAbs(c1 - lv[t]) / atr);
-   Why(StringFormat("mùa %s; %d đường ngang mạnh nhất: %s; nến vừa đóng thân %.0f%% biên độ (cần ≥ 60%%), %s; chưa có nến %s chạm đường kẻ rồi đóng cửa %s đường",
-                    s.trend == 1 ? "TĂNG (chỉ tìm mua)" : "GIẢM (chỉ tìm bán)", keep, keep > 0 ? lvT : "chưa có", r1 > 0 ? body / r1 * 100.0 : 0,
+   Why(StringFormat("mùa theo cấu trúc đỉnh / đáy %s (không phải thủy triều D1): %s; %d đường ngang mạnh nhất: %s; nến vừa đóng thân %.0f%% biên độ (cần ≥ 60%%), %s; chưa có nến %s chạm đường kẻ rồi đóng cửa %s đường",
+                    TfName(P_TF), s.trend == 1 ? "TĂNG (chỉ tìm mua)" : "GIẢM (chỉ tìm bán)", keep, keep > 0 ? lvT : "chưa có", r1 > 0 ? body / r1 * 100.0 : 0,
                     c1 > o1 ? "nến tăng" : "nến giảm", s.trend == 1 ? "tăng" : "giảm", s.trend == 1 ? "trên" : "dưới"));
    return false;
 }
@@ -658,7 +658,7 @@ string ChainName(const int m)
       case 0: return "EMA hoi"; case 1: return "Pha vo + test lai"; case 5: return "FVG + nen"; case 6: return "Spring du";
       case 9: return "Fib + VP"; case 12: return "Hop phan phoi"; case 14: return "Dao roi"; case 15: return "Order block";
       case 16: return "Song Dow"; case 17: return "VWAP"; case 18: return "Key Volume"; case 19: return "3 cau hoi"; case 21: return "Premium/discount";
-      case 20: return "Quet tin";
+      case 20: return "Quet tin"; case 25: return "Mep hop";
    }
    return "S" + IntegerToString(m);
 }
@@ -770,7 +770,6 @@ string SmartNoSetup(const int m)
    return "";
 }
 // Ten tieng Viet co dau cho khung "Qua trinh phan tich" (v5.42; file nay luu UTF-8 co BOM de MetaEditor doc dung dau)
-string TfName(const int tf) { string s = EnumToString((ENUM_TIMEFRAMES)tf); StringReplace(s, "PERIOD_", ""); return s; }
 string SmartSitNameVi(const int s)
 {
    switch(s)
@@ -786,7 +785,7 @@ string ChainNameVi(const int m)
    {
       case 1: return "Phá vỡ + test lại"; case 5: return "FVG + nến xác nhận"; case 6: return "Spring đầy đủ"; case 12: return "Hộp phân phối / tích lũy";
       case 14: return "Dao rơi"; case 15: return "Order block"; case 16: return "Sóng Dow"; case 17: return "VWAP"; case 18: return "Key Volume";
-      case 19: return "3 câu hỏi"; case 20: return "Quét tin"; case 21: return "Premium / discount";
+      case 19: return "3 câu hỏi"; case 20: return "Quét tin"; case 21: return "Premium / discount"; case 25: return "Đánh mép hộp";
    }
    return ChainName(m);
 }
@@ -837,6 +836,23 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       Tr("Du lieu", 2, StringFormat("Khối lượng (số tick) nến vừa đóng %I64d = %.2f lần trung bình 20 nến trước (%.0f)", v1t,
                                     vNt > 0 && vSt > 0 ? (double)v1t / (vSt / vNt) : 0, vNt > 0 ? vSt / vNt : 0));
       Tr("Du lieu", 2, StringFormat("ATR(%d) = %s giá; ADX(%d) = %.2f", P_ATRPeriod, Px(atr), P_ADXPeriod, adx));
+      {
+         // Vốn nhỏ: SL xa nhất mà lot nhỏ nhất còn vào được, so với SL tối thiểu theo ATR (InpMinSLATRMult)
+         double tsz = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE), tvl = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+         if(tvl <= 0) tvl = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+         double mnL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN), rB = MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY));
+         double capP = P_MaxRiskRoundUp > 0 ? P_MaxRiskRoundUp : P_RiskPercent;
+         if(P_MaxGroupRiskPct > 0 && InGroup()) capP = MathMin(capP, P_MaxGroupRiskPct);
+         if(P_MaxDailyLossPct > 0) capP = MathMin(capP, P_MaxDailyLossPct);
+         if(tsz > 0 && tvl > 0 && mnL > 0 && rB > 0 && atr > 0)
+         {
+            double mSL = g_smartPrev == 6 && P_RangeMinSLATR > 0 ? P_RangeMinSLATR : P_MinSLATRMult;
+            double maxSL = rB * capP / 100.0 / (mnL * tvl / tsz), minSL = mSL * atr;
+            Tr("Du lieu", maxSL >= minSL ? 2 : 0, StringFormat("Vốn: %.2f lot nhỏ nhất chỉ vào được khi SL ≤ %s giá (%.1f%% vốn = %.2f ATR); SL tối thiểu của bot = %.1f ATR%s = %s giá%s",
+                                                    mnL, Px(maxSL), capP, maxSL / atr, mSL, mSL != P_MinSLATRMult ? " (đi ngang)" : "", Px(minSL),
+                                                    maxSL >= minSL ? "" : " → với ATR hiện tại MỌI setup đều sẽ bị bỏ vì vốn"));
+         }
+      }
       Tr("Du lieu", 2, !tideOk ? StringFormat("Thủy triều Dow %s: chưa tính được (thiếu dữ liệu)", TfName(P_DowTF))
                        : StringFormat("Thủy triều Dow %s: %s, đã phá %d lần; đỉnh gần nhất %s, đáy gần nhất %s%s", TfName(P_DowTF),
                                       t.trend > 0 ? "TĂNG" : t.trend < 0 ? "GIẢM" : "CHƯA RÕ", t.legs, Px(t.ph), Px(t.pl),
@@ -896,7 +912,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    else if((adx < P_SmartRangeADX && boxH <= P_SmartRangeATR * atr) ||
            (g_smartPrev == 6 && adx < P_SmartRangeADX + 3 && boxH <= P_SmartRangeATR * 1.15 * atr))
    {
-      g_smartSit = 6; list = "6,18,17,19";
+      g_smartSit = 6; list = "25,17,6,18,19";                       // v5.43: them danh mep hop (25) va VWAP dai 2
       // v5.39.3: tach ro phan nao dat nguong that, phan nao chi duoc giu nho vung dem
       bool adxIn = adx < P_SmartRangeADX, boxIn = boxH <= P_SmartRangeATR * atr;
       string adxTxt = adxIn ? StringFormat("ADX %.2f < %.0f", adx, P_SmartRangeADX)
@@ -1057,6 +1073,57 @@ bool BreakAtSessionOpen(const datetime t)
    int mins = d.hour * 60 + d.min;
    int opens[] = {0, 7 * 60, 13 * 60};
    for(int i = 0; i < 3; i++) if(mins >= opens[i] && mins < opens[i] + P_BreakSkipOpenMin) return true;
+   return false;
+}
+
+// VWAP: dai bat nhip keo ve. Theo tinh huong DI NGANG dung InpRangeVwapBand (mac dinh dai 2, cham thuong xuyen hon dai 3).
+double VwapRevBand() { return g_inChain && g_smartSit == 6 && P_RangeVwapBand > 0 ? P_RangeVwapBand : P_VwapBand3; }
+
+// Danh mep hop (v5.43, chien luoc 25). Hop = InpSmartRangeBars nen truoc nen vua dong. Gia cham vung mep duoi (InpBoxEdgePct % chieu cao)
+// roi co nen tu choi: rau duoi >= 40% bien do, dong cua o nua tren cay nen va van tren day hop -> MUA. SL duoi rau 0,1 ATR (toi thieu
+// InpRangeMinSLATR ATR), TP = giua hop; chi vao khi loi toi giua hop >= InpBoxMinRR x SL (sau khi tru spread). Mep tren: nguoc lai.
+// Hop hep hon 2 ATR thi bo (loi khong du bu SL + phi). Moi nen 1 lan, khong gioi han so lan / hop.
+bool BoxEdgeSignal(const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist, double &tp)
+{
+   int rb = P_SmartRangeBars < 10 ? 10 : P_SmartRangeBars;
+   int iH = iHighest(_Symbol, P_TF, MODE_HIGH, rb, 2), iL = iLowest(_Symbol, P_TF, MODE_LOW, rb, 2);
+   if(iH < 0 || iL < 0 || atr <= 0) return false;
+   double top = iHigh(_Symbol, P_TF, iH), bot = iLow(_Symbol, P_TF, iL), hgt = top - bot;
+   double o1 = iOpen(_Symbol, P_TF, 1), r1 = h1 - l1, mid = (top + bot) / 2.0;
+   double sp = (double)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
+   if(hgt < 2.0 * atr) { Why(StringFormat("hộp %d nến %s – %s chỉ cao %.2f ATR (< 2 ATR): lời không đủ bù SL + phí", rb, Px(bot), Px(top), hgt / atr)); return false; }
+   if(r1 <= 0) return false;
+   double zone = hgt * MathMax(5.0, MathMin(45.0, P_BoxEdgePct)) / 100.0, minSL = MathMax(0.25, P_RangeMinSLATR) * atr;
+   double pos = (c1 - bot) / hgt * 100.0;
+   string head = StringFormat("hộp %d nến: đáy %s, giữa %s, đỉnh %s (cao %.2f ATR); vùng mép %.0f%% = %s giá; nến vừa đóng %s – %s, đóng cửa %s (ở %.0f%% hộp)",
+                              rb, Px(bot), Px(mid), Px(top), hgt / atr, P_BoxEdgePct, Px(zone), Px(l1), Px(h1), Px(c1), pos);
+   bool lowT = l1 <= bot + zone, highT = h1 >= top - zone;
+   double wickLo = MathMin(o1, c1) - l1, wickHi = h1 - MathMax(o1, c1);
+   bool bullRej = c1 > bot && wickLo >= 0.4 * r1 && c1 >= l1 + 0.5 * r1;
+   bool bearRej = c1 < top && wickHi >= 0.4 * r1 && c1 <= h1 - 0.5 * r1;
+   if(lowT && bullRej)
+   {
+      double sl = MathMax(c1 + sp - (l1 - 0.1 * atr), minSL), rr = (mid - c1 - sp) / sl;
+      if(rr >= P_BoxMinRR)
+      { buy = true; slDist = sl; tp = mid;
+        EvAdd(StringFormat("Mep hop duoi: hop %s - %s, nen cham %s roi tu choi (rau duoi %.0f%% bien do), dong cua %s; SL %s gia, TP giua hop %s (%.1fR)",
+                           Px(bot), Px(top), Px(l1), wickLo / r1 * 100.0, Px(c1), Px(sl), Px(mid), rr)); return true; }
+      Why(head + StringFormat("; có nến từ chối ở mép dưới nhưng lời tới giữa hộp chỉ %.2f × SL (cần ≥ %.1f)", rr, P_BoxMinRR));
+      return false;
+   }
+   if(highT && bearRej)
+   {
+      double sl = MathMax((h1 + 0.1 * atr) - (c1 - sp), minSL), rr = (c1 - sp - mid) / sl;
+      if(rr >= P_BoxMinRR)
+      { buy = false; slDist = sl; tp = mid;
+        EvAdd(StringFormat("Mep hop tren: hop %s - %s, nen cham %s roi tu choi (rau tren %.0f%% bien do), dong cua %s; SL %s gia, TP giua hop %s (%.1fR)",
+                           Px(bot), Px(top), Px(h1), wickHi / r1 * 100.0, Px(c1), Px(sl), Px(mid), rr)); return true; }
+      Why(head + StringFormat("; có nến từ chối ở mép trên nhưng lời tới giữa hộp chỉ %.2f × SL (cần ≥ %.1f)", rr, P_BoxMinRR));
+      return false;
+   }
+   Why(head + (lowT ? StringFormat("; chạm mép dưới nhưng chưa có nến từ chối (râu dưới %.0f%% biên độ, cần ≥ 40%% và đóng cửa nửa trên nến)", wickLo / r1 * 100.0)
+             : highT ? StringFormat("; chạm mép trên nhưng chưa có nến từ chối (râu trên %.0f%% biên độ, cần ≥ 40%% và đóng cửa nửa dưới nến)", wickHi / r1 * 100.0)
+             : StringFormat("; giá chưa về vùng mép (cần thấp nhất ≤ %s hoặc cao nhất ≥ %s)", Px(bot + zone), Px(top - zone))));
    return false;
 }
 
@@ -1716,6 +1783,11 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       bool sb; double ss;
       if(SimpleSignal(atr, c1, h1, l1, sb, ss)) { if(sb) buyBase = true; else sellBase = true; g_sigSL = ss; }
    }
+   else if(P_Strategy == STRAT_BOXEDGE)
+   {
+      bool bb; double bs, bt;
+      if(BoxEdgeSignal(atr, c1, h1, l1, bb, bs, bt)) { if(bb) buyBase = true; else sellBase = true; g_sigSL = bs; g_sigTP = bt; }
+   }
    else if(P_Strategy == STRAT_KEYVOL)
    {
       bool kb; double ks;
@@ -1734,28 +1806,29 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       if(!VwapAt(1, vw, sd) || !VwapAt(2, vw2, sd2)) { Why("chưa đủ nến trong ngày để tính VWAP"); return true; }
       double o1 = iOpen(_Symbol, P_TF, 1), c2 = iClose(_Symbol, P_TF, 2), r1 = h1 - l1;
       double tol = 0.1 * atr, sl = 0, tp = 0;
+      double slMin = (g_inChain && g_smartSit == 6 ? MathMax(0.3, P_RangeMinSLATR) : 0.3) * atr;   // di ngang: khop SL toi thieu rieng
       if(P_VwapMode != 2)
       {
          if(c2 > vw2 && l1 <= vw + tol && c1 > vw && c1 > o1)
-         { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw + P_VwapBand2 * sd; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         { sl = MathMax(c1 - (l1 - 0.1 * atr), slMin); tp = vw + P_VwapBand2 * sd; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
          else if(c2 < vw2 && h1 >= vw - tol && c1 < vw && c1 < o1)
-         { sl = MathMax((h1 + 0.1 * atr) - c1, 0.3 * atr); tp = vw - P_VwapBand2 * sd; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         { sl = MathMax((h1 + 0.1 * atr) - c1, slMin); tp = vw - P_VwapBand2 * sd; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
       if(P_VwapMode != 1 && !buyBase && !sellBase && r1 > 0)
       {
-         double up3 = vw + P_VwapBand3 * sd, dn3 = vw - P_VwapBand3 * sd;
+         double up3 = vw + VwapRevBand() * sd, dn3 = vw - VwapRevBand() * sd;
          if(h1 >= up3 && c1 < up3 && c1 < o1 && h1 - MathMax(o1, c1) >= 0.4 * r1)
-         { sl = MathMax((h1 + 0.1 * atr) - c1, 0.3 * atr); tp = vw; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         { sl = MathMax((h1 + 0.1 * atr) - c1, slMin); tp = vw; if(c1 - tp >= P_VwapMinRR * sl) { sellBase = true; g_sigSL = sl; g_sigTP = tp; } }
          else if(l1 <= dn3 && c1 > dn3 && c1 > o1 && MathMin(o1, c1) - l1 >= 0.4 * r1)
-         { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
+         { sl = MathMax(c1 - (l1 - 0.1 * atr), slMin); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
       if(!buyBase && !sellBase)
-         Why(StringFormat("VWAP %s, dải 3: %s / %s; nến vừa đóng %s – %s, đóng cửa %s (%+.2f độ lệch); %s%s", Px(vw), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
+         Why(StringFormat("VWAP %s, dải bắt nhịp kéo về (%.1f độ lệch): %s / %s; nến vừa đóng %s – %s, đóng cửa %s (%+.2f độ lệch)%s%s", Px(vw), VwapRevBand(), Px(vw + VwapRevBand() * sd), Px(vw - VwapRevBand() * sd),
                           Px(l1), Px(h1), Px(c1), sd > 0 ? (c1 - vw) / sd : 0,
-                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "có chạm VWAP nhưng nến chưa bật đúng chiều / lời tới mục tiêu < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
-                                                                                          : StringFormat("chưa hồi về chạm VWAP (cách %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
-                          P_VwapMode != 1 ? (h1 >= vw + P_VwapBand3 * sd || l1 <= vw - P_VwapBand3 * sd ? "; có chạm dải 3 nhưng chưa có nến từ chối mạnh (râu ≥ 40%) / lời < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
-                                                                                                    : StringFormat("; chưa chạm dải 3 (còn cách %.2f ATR)", MathMin(MathAbs(vw + P_VwapBand3 * sd - h1), MathAbs(l1 - (vw - P_VwapBand3 * sd))) / atr)) : ""));
+                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "; có chạm VWAP nhưng nến chưa bật đúng chiều / lời tới mục tiêu < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
+                                                                                          : StringFormat("; chưa hồi về chạm VWAP (cách %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
+                          P_VwapMode != 1 ? (h1 >= vw + VwapRevBand() * sd || l1 <= vw - VwapRevBand() * sd ? "; có chạm dải nhưng chưa có nến từ chối mạnh (râu ≥ 40%) / lời < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
+                                                                                                    : StringFormat("; chưa chạm dải (còn cách %.2f ATR)", MathMin(MathAbs(vw + VwapRevBand() * sd - h1), MathAbs(l1 - (vw - VwapRevBand() * sd))) / atr)) : ""));
       if(buyBase || sellBase)
          EvAdd(StringFormat("VWAP hom nay %s, do lech chuan %s (dai 2: %s / %s, dai 3: %s / %s); nen vua dong %s - %s, dong cua %s; muc tieu %s",
                             Px(vw), Px(sd), Px(vw + P_VwapBand2 * sd), Px(vw - P_VwapBand2 * sd), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),

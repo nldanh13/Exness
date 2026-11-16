@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.42
+# Hướng dẫn bot BTC (MT5) v5.43
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1283,3 +1283,24 @@ phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đ�
 - Nút **Sao chép gửi Claude** chép kèm lần phân tích gần nhất và kết luận 12 lần gần nhất.
 - Sửa hiển thị ADX: in 2 chữ số thập phân, không còn "ADX 20.0 < 20" khi ADX thật là 19,96. Không đổi logic giao dịch.
 - Cần mở lại giao diện (GiaoDien.cmd) sau khi cập nhật vì có thêm dữ liệu mới.
+
+### v5.42.1: Làm rõ "mùa" của 3 câu hỏi, thêm dòng vốn vs SL tối thiểu (17/11/2026)
+- "3 câu hỏi" xác định mùa theo **cấu trúc đỉnh / đáy của khung chính (M15)**, không phải thủy triều Dow D1. Hai cái khác khung nên có lúc
+  ngược nhau (D1 giảm nhưng M15 đang tăng) – không phải lỗi. Câu lý do giờ ghi rõ khung.
+- Dữ liệu lấy vào có thêm dòng **Vốn**: lot nhỏ nhất vào được khi SL ≤ bao nhiêu giá, so với SL tối thiểu của bot (`InpMinSLATRMult` × ATR).
+  Khi SL tối thiểu lớn hơn mức vốn cho phép, dòng này báo đỏ: mọi setup sẽ bị bỏ vì vốn dù kiến thức có tín hiệu.
+- Sửa dấu "; ;" thừa trong lý do VWAP. Không đổi logic giao dịch.
+
+### v5.43: Kiếm tiền khi đi ngang (17/11/2026) – chạy thật, rủi ro cao
+Trước đây tình huống ĐI NGANG chỉ có 4 kiến thức chờ mẫu hiếm (Spring đủ chuỗi, VWAP chạm dải 3, Key Volume đổi vai, 3 câu hỏi), và SL tối
+thiểu 1 ATR M15 (~286 USD giá) lớn hơn mức vốn ~770 nghìn cho phép (~175 USD), nên mọi setup đều bị bỏ vì vốn. Bản này (theo yêu cầu: làm thật,
+không chạy lệnh giấy trước):
+- **Đánh mép hộp** (kiến thức mới, chiến lược 25, xét đầu tiên): hộp `InpSmartRangeBars` nến trước nến vừa đóng. Nến chạm vùng mép dưới
+  (`InpBoxEdgePct` = 20% chiều cao) rồi **từ chối** (râu dưới ≥ 40% biên độ, đóng cửa nửa trên nến, vẫn trên đáy hộp) → MUA; SL dưới râu 0,1 ATR
+  (tối thiểu `InpRangeMinSLATR`), TP **giữa hộp**; chỉ vào khi lời tới giữa hộp, đã trừ spread, ≥ `InpBoxMinRR` (1,5) × SL. Mép trên ngược lại.
+  Hộp hẹp hơn 2 ATR thì bỏ.
+- **VWAP dải 2 khi đi ngang** (`InpRangeVwapBand` = 2, thay dải 3): chạm dải 2 rồi nến từ chối mạnh → đánh kéo về VWAP.
+- **SL tối thiểu 0,4 ATR khi đi ngang** (`InpRangeMinSLATR`, thay `InpMinSLATRMult` = 1 ATR chỉ trong tình huống này).
+- Giữ nguyên: trần 6% mỗi lệnh, lỗ ngày 6%, trần nhóm, phần lỗ ngày còn lại (v5.41), 1 setup = rủi ro ×0,5 (với 0,01 lot vẫn là lot nhỏ nhất).
+- Đánh đổi: spread ~6,4 USD bằng 4–6% của 1R khi SL 115–175 USD; SL ngắn trên M15 dễ bị nhiễu quét. Theo dõi điểm học (tab Học & điều chỉnh)
+  của "Đánh mép hộp" sau 20–30 lệnh; điểm kém thì tắt bằng điều kiện bổ sung hoặc đặt `InpRangeMinSLATR` = 0.
