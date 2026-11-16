@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //| TrendBot/Signals.mqh: tin hieu goc (Donchian breakout / EMA pullback)
 //| Chua xet bo loc. Tra false khi nen nay phai bo qua han (thieu du lieu, nen qua dai).
 //+------------------------------------------------------------------+
@@ -433,7 +433,7 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
       if(StringLen(g_wKV) < 200) g_wKV += (g_wKV == "" ? "" : "_") + DoubleToString(bot, _Digits) + "-" + DoubleToString(top, _Digits);
       zN++;
       if(StringLen(zNear) < 300) zNear += (zNear == "" ? "" : ", ") + Px(bot) + " - " + Px(top) +
-                                         StringFormat(" (cach %.2f ATR)", (c1 > top ? c1 - top : c1 < bot ? bot - c1 : 0) / atr);
+                                         StringFormat(" (cách %.2f ATR)", (c1 > top ? c1 - top : c1 < bot ? bot - c1 : 0) / atr);
       if(l1 > top + 0.1 * atr || h1 < bot - 0.1 * atr) continue;       // nen vua dong khong ve vung nay
       zTouch++;
       // Dau hieu 1: di ngang trong vung lau roi chay manh ra
@@ -459,9 +459,9 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
       if(fromBelow && c1 < bot && c1 < o1 && (h1 - MathMax(o1, c1) >= 0.4 * r1 || c1 < l2))
       { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); EvAdd(kvEv + "; gia tu duoi len (khang cu), nen giam dong cua " + Px(c1) + " duoi vung"); return true; }
    }
-   Why(StringFormat("%d vung volume lon (o >= %.1f x TB, %d nen): %s; nen vua dong (%s - %s) cham %d vung, %d vung du dau hieu tich luy (>= %d nen trong vung + cu chay manh ra), "
-                    "%d vung da phan ung >= %d lan; chua co nen phan ung doi vai ro (dong cua ra ngoai vung theo chieu moi)",
-                    zN, P_KVHighMult, L, zN > 0 ? zNear : "khong co", Px(l1), Px(h1), zTouch, zBase, P_KVMinBars, zReact, P_KVMinReact));
+   Why(StringFormat("%d vùng volume lớn (ô ≥ %.1f × trung bình, %d nến): %s; nến vừa đóng (%s – %s) chạm %d vùng, %d vùng đủ dấu hiệu tích lũy (≥ %d nến đóng cửa trong vùng + từng chạy mạnh ra), "
+                    "%d vùng đã phản ứng ≥ %d lần; chưa có nến phản ứng đổi vai rõ (đóng cửa ra ngoài vùng theo chiều mới)",
+                    zN, P_KVHighMult, L, zN > 0 ? zNear : "không có", Px(l1), Px(h1), zTouch, zBase, P_KVMinBars, zReact, P_KVMinReact));
    return false;
 }
 
@@ -477,8 +477,8 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
 {
    DowState s;
    if(!DowCalc(P_TF, 300, P_DowPivot, s) || s.trend == 0 || s.pend != 0)
-   { g_status = "Mua lon xon: dung ngoai"; Why(StringFormat("cau truc dinh / day %s %s -> mua lon xon, dung ngoai", EnumToString((ENUM_TIMEFRAMES)P_TF),
-                                                            s.trend == 0 ? "chua ro chieu" : "dang canh bao doi chieu")); return false; }
+   { g_status = "Mua lon xon: dung ngoai"; Why(StringFormat("cấu trúc đỉnh / đáy %s %s → mùa lộn xộn, đứng ngoài", TfName(P_TF),
+                                                            s.trend == 0 ? "chưa rõ chiều" : "đang cảnh báo đổi chiều")); return false; }
    int L = P_SimpleLookback < 50 ? 50 : P_SimpleLookback, P = P_SimplePivot < 2 ? 2 : P_SimplePivot;
    double lv[], sc[]; int nl = 0;
    ArrayResize(lv, 0); ArrayResize(sc, 0);
@@ -523,10 +523,10 @@ bool SimpleSignal(const double atr, const double c1, const double h1, const doub
       { buy = false; slDist = MathMax((MathMax(h1, lvl) + 0.25 * atr) - c1, 0.5 * atr); EvAdd(sEv); return true; }
    }
    string lvT = "";
-   for(int t = 0; t < keep; t++) lvT += (lvT == "" ? "" : ", ") + Px(lv[t]) + StringFormat(" (cach %.2f ATR)", MathAbs(c1 - lv[t]) / atr);
-   Why(StringFormat("mua %s; %d duong ngang manh nhat: %s; nen vua dong than %.0f%% bien do (can >= 60%%), %s; chua co nen %s cham duong ke roi dong cua %s duong",
-                    s.trend == 1 ? "TANG (chi tim mua)" : "GIAM (chi tim ban)", keep, keep > 0 ? lvT : "chua co", r1 > 0 ? body / r1 * 100.0 : 0,
-                    c1 > o1 ? "nen tang" : "nen giam", s.trend == 1 ? "tang" : "giam", s.trend == 1 ? "tren" : "duoi"));
+   for(int t = 0; t < keep; t++) lvT += (lvT == "" ? "" : ", ") + Px(lv[t]) + StringFormat(" (cách %.2f ATR)", MathAbs(c1 - lv[t]) / atr);
+   Why(StringFormat("mùa %s; %d đường ngang mạnh nhất: %s; nến vừa đóng thân %.0f%% biên độ (cần ≥ 60%%), %s; chưa có nến %s chạm đường kẻ rồi đóng cửa %s đường",
+                    s.trend == 1 ? "TĂNG (chỉ tìm mua)" : "GIẢM (chỉ tìm bán)", keep, keep > 0 ? lvT : "chưa có", r1 > 0 ? body / r1 * 100.0 : 0,
+                    c1 > o1 ? "nến tăng" : "nến giảm", s.trend == 1 ? "tăng" : "giảm", s.trend == 1 ? "trên" : "dưới"));
    return false;
 }
 
@@ -758,22 +758,43 @@ string SmartNoSetup(const int m)
 {
    switch(m)
    {
-      case 6:  return StringFormat("quet %d nen: chua co chuoi spring / upthrust day du (hop di ngang, thung mep <= %.1f ATR roi quay lai trong 3 nen, test volume thap, nen manh pha nap, hoi ve cham nap van giu)",
+      case 6:  return StringFormat("quét %d nến: chưa có chuỗi spring / upthrust đầy đủ (hộp đi ngang, thủng mép ≤ %.1f ATR rồi quay lại trong 3 nến, test với volume thấp, nến mạnh phá nắp, hồi về chạm nắp vẫn giữ)",
                                    (P_RangeBars < 8 ? 8 : P_RangeBars) + 140, P_SpringDepthATR);
-      case 12: return StringFormat("quet %d nen: chua co du 5 nhip phan phoi / tich luy (nen hung phan, di ngang, pha dinh gia, dinh thap hon, nen sap) va lan hoi test lai day / nap hop",
+      case 12: return StringFormat("quét %d nến: chưa đủ 5 nhịp phân phối / tích lũy (nến hưng phấn, đi ngang, phá đỉnh giả, đỉnh thấp hơn, nến sập) và lần hồi test lại đáy / nắp hộp",
                                    P_DistLookback < 80 ? 80 : P_DistLookback);
-      case 14: return StringFormat("quet %d nen: chua co day / dinh sau cu sap / tang dung dung duoc xac nhan (gia dung lai, di ngang, test lai trong %.2f ATR)",
+      case 14: return StringFormat("quét %d nến: chưa có đáy / đỉnh sau cú sập / tăng dựng đứng được xác nhận (giá dừng lại, đi ngang, test lại trong %.2f ATR)",
                                    P_KnifeLookback < 20 ? 20 : P_KnifeLookback, P_KnifeRetestATR);
-      case 15: return StringFormat("quet %d nen: chua co order block (nen nguoc chieu cuoi cung truoc cu day >= %.1f ATR) nao duoc gia quay ve va phan ung dung kieu",
+      case 15: return StringFormat("quét %d nến: chưa có order block (nến ngược chiều cuối cùng trước cú đẩy ≥ %.1f ATR) nào được giá quay về và phản ứng đúng kiểu",
                                    (P_OBLookback < 20 ? 20 : P_OBLookback) + 6, P_OBImpulseATR);
    }
    return "";
+}
+// Ten tieng Viet co dau cho khung "Qua trinh phan tich" (v5.42; file nay luu UTF-8 co BOM de MetaEditor doc dung dau)
+string TfName(const int tf) { string s = EnumToString((ENUM_TIMEFRAMES)tf); StringReplace(s, "PERIOD_", ""); return s; }
+string SmartSitNameVi(const int s)
+{
+   switch(s)
+   {
+      case 1: return "SẮP CÓ TIN"; case 2: return "VỪA RA TIN"; case 3: return "VỪA CÓ CÚ SẬP / TĂNG DỰNG ĐỨNG"; case 4: return "XU HƯỚNG MẠNH";
+      case 5: return "XU HƯỚNG GIAI ĐOẠN CUỐI"; case 6: return "ĐI NGANG"; case 7: return "KHÔNG RÕ";
+   }
+   return "?";
+}
+string ChainNameVi(const int m)
+{
+   switch(m)
+   {
+      case 1: return "Phá vỡ + test lại"; case 5: return "FVG + nến xác nhận"; case 6: return "Spring đầy đủ"; case 12: return "Hộp phân phối / tích lũy";
+      case 14: return "Dao rơi"; case 15: return "Order block"; case 16: return "Sóng Dow"; case 17: return "VWAP"; case 18: return "Key Volume";
+      case 19: return "3 câu hỏi"; case 20: return "Quét tin"; case 21: return "Premium / discount";
+   }
+   return ChainName(m);
 }
 string SmartListNames(const string list)
 {
    string ls[], r = "";
    int n = StringSplit(list, ',', ls);
-   for(int i = 0; i < n; i++) r += (r == "" ? "" : ", ") + ChainName((int)StringToInteger(ls[i]));
+   for(int i = 0; i < n; i++) r += (r == "" ? "" : ", ") + ChainNameVi((int)StringToInteger(ls[i]));
    return r;
 }
 bool SmartSignals(const double atr, const double trend, const double fast, const double c1, const double h1, const double l1,
@@ -809,49 +830,49 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       double o1t = iOpen(_Symbol, P_TF, 1), rgt = h1 - l1, vSt = 0; int vNt = 0;
       for(int q = 2; q <= 21; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vSt += (double)v; vNt++; } }
       long v1t = iTickVolume(_Symbol, P_TF, 1);
-      Tr("Du lieu", 2, StringFormat("Nen %s vua dong (%s): mo %s, cao %s, thap %s, dong %s; than %.0f%% bien do, %s; bien do %.2f ATR",
-                                    TimeToString(iTime(_Symbol, P_TF, 1), TIME_DATE | TIME_MINUTES), EnumToString((ENUM_TIMEFRAMES)P_TF),
-                                    Px(o1t), Px(h1), Px(l1), Px(c1), rgt > 0 ? MathAbs(c1 - o1t) / rgt * 100.0 : 0, c1 > o1t ? "nen TANG" : c1 < o1t ? "nen GIAM" : "nen doji",
+      Tr("Du lieu", 2, StringFormat("Nến %s %s vừa đóng: mở %s, cao %s, thấp %s, đóng %s; thân %.0f%% biên độ, %s; biên độ %.2f ATR",
+                                    TfName(P_TF), TimeToString(iTime(_Symbol, P_TF, 1), TIME_DATE | TIME_MINUTES),
+                                    Px(o1t), Px(h1), Px(l1), Px(c1), rgt > 0 ? MathAbs(c1 - o1t) / rgt * 100.0 : 0, c1 > o1t ? "nến TĂNG" : c1 < o1t ? "nến GIẢM" : "nến doji",
                                     atr > 0 ? rgt / atr : 0));
-      Tr("Du lieu", 2, StringFormat("Khoi luong (so tick) nen vua dong %I64d = %.2f lan trung binh 20 nen truoc (%.0f)", v1t,
+      Tr("Du lieu", 2, StringFormat("Khối lượng (số tick) nến vừa đóng %I64d = %.2f lần trung bình 20 nến trước (%.0f)", v1t,
                                     vNt > 0 && vSt > 0 ? (double)v1t / (vSt / vNt) : 0, vNt > 0 ? vSt / vNt : 0));
-      Tr("Du lieu", 2, StringFormat("ATR(%d) = %s gia; ADX(%d) = %.2f", P_ATRPeriod, Px(atr), P_ADXPeriod, adx));
-      Tr("Du lieu", 2, !tideOk ? StringFormat("Thuy trieu Dow %s: chua tinh duoc (thieu du lieu)", EnumToString(P_DowTF))
-                       : StringFormat("Thuy trieu Dow %s: %s, da pha %d lan; dinh gan nhat %s, day gan nhat %s%s", EnumToString(P_DowTF),
-                                      t.trend > 0 ? "TANG" : t.trend < 0 ? "GIAM" : "CHUA RO", t.legs, Px(t.ph), Px(t.pl),
-                                      t.pend != 0 ? " (dang canh bao doi chieu)" : ""));
-      Tr("Du lieu", 2, StringFormat("Hop %d nen gan nhat: dinh %s, day %s, cao %s gia = %.2f ATR", rb, Px(g_wHi), Px(g_wLo), Px(boxH), atr > 0 ? boxH / atr : 0));
-      Tr("Du lieu", 2, StringFormat("Bien do %d nen gan nhat: %s gia = %.2f ATR (cao nhat o nen %d, thap nhat o nen %d)", kb, Px(kHi - kLo),
+      Tr("Du lieu", 2, StringFormat("ATR(%d) = %s giá; ADX(%d) = %.2f", P_ATRPeriod, Px(atr), P_ADXPeriod, adx));
+      Tr("Du lieu", 2, !tideOk ? StringFormat("Thủy triều Dow %s: chưa tính được (thiếu dữ liệu)", TfName(P_DowTF))
+                       : StringFormat("Thủy triều Dow %s: %s, đã phá %d lần; đỉnh gần nhất %s, đáy gần nhất %s%s", TfName(P_DowTF),
+                                      t.trend > 0 ? "TĂNG" : t.trend < 0 ? "GIẢM" : "CHƯA RÕ", t.legs, Px(t.ph), Px(t.pl),
+                                      t.pend != 0 ? " (đang cảnh báo đổi chiều)" : ""));
+      Tr("Du lieu", 2, StringFormat("Hộp %d nến gần nhất: đỉnh %s, đáy %s, cao %s giá = %.2f ATR", rb, Px(g_wHi), Px(g_wLo), Px(boxH), atr > 0 ? boxH / atr : 0));
+      Tr("Du lieu", 2, StringFormat("Biên độ %d nến gần nhất: %s giá = %.2f ATR (cao nhất ở nến thứ %d, thấp nhất ở nến thứ %d tính lùi)", kb, Px(kHi - kLo),
                                     atr > 0 ? (kHi - kLo) / atr : 0, iH, iL));
-      Tr("Du lieu", 2, g_wVw > 0 ? StringFormat("VWAP hom nay %s, do lech chuan %s; gia dong cua cach VWAP %.2f do lech", Px(g_wVw), Px(g_wVsd),
-                                                g_wVsd > 0 ? (c1 - g_wVw) / g_wVsd : 0) : "VWAP: chua du nen trong ngay de tinh");
+      Tr("Du lieu", 2, g_wVw > 0 ? StringFormat("VWAP hôm nay %s, độ lệch chuẩn %s; giá đóng cửa cách VWAP %.2f độ lệch", Px(g_wVw), Px(g_wVsd),
+                                                g_wVsd > 0 ? (c1 - g_wVw) / g_wVsd : 0) : "VWAP: chưa đủ nến trong ngày để tính");
       string nmN = ""; double toN = MinutesToNews(24 * 60, nmN);
-      Tr("Du lieu", 2, toN >= 0 ? StringFormat("Tin My tiep theo: %s sau %.0f phut", nmN, toN) : "Tin My: khong co tin lon trong 24 gio toi (file tin_my.csv)");
+      Tr("Du lieu", 2, toN >= 0 ? StringFormat("Tin Mỹ tiếp theo: %s, sau %.0f phút", nmN, toN) : "Tin Mỹ: không có tin lớn trong 24 giờ tới (file tin_my.csv)");
       // Tung dieu kien chan doan, xet theo thu tu; dieu kien dau tien dat quyet dinh tinh huong
       bool kn = crashDn || spikeUp;
-      Tr("Tinh huong", toNewsA >= 0 ? 1 : 0, StringFormat("1. Sap co tin lon trong %d phut? %s", P_SmartNewsMin,
-                                                          toNewsA >= 0 ? StringFormat("CO: %s sau %.0f phut", nmA, toNewsA) : "khong"));
-      Tr("Tinh huong", lastNewsB > 0 ? 1 : 0, "2. Vua ra tin trong 4 gio? " + (lastNewsB > 0 ? "CO: " + nmB + " luc " + TimeToString(lastNewsB, TIME_MINUTES) : "khong"));
-      Tr("Tinh huong", kn ? 1 : 0, StringFormat("3. Cu sap / tang dung dung? bien do %d nen %.2f ATR %s nguong %.1f ATR, cuc tri o nen %d (can <= 10)", kb,
+      Tr("Tinh huong", toNewsA >= 0 ? 1 : 0, StringFormat("1. Sắp có tin lớn trong %d phút? %s", P_SmartNewsMin,
+                                                          toNewsA >= 0 ? StringFormat("CÓ: %s, sau %.0f phút", nmA, toNewsA) : "không"));
+      Tr("Tinh huong", lastNewsB > 0 ? 1 : 0, "2. Vừa ra tin trong 4 giờ? " + (lastNewsB > 0 ? "CÓ: " + nmB + " lúc " + TimeToString(lastNewsB, TIME_MINUTES) : "không"));
+      Tr("Tinh huong", kn ? 1 : 0, StringFormat("3. Cú sập / tăng dựng đứng? biên độ %d nến %.2f ATR %s ngưỡng %.1f ATR, cực trị ở nến thứ %d (cần ≤ 10)", kb,
                                                 atr > 0 ? (kHi - kLo) / atr : 0, kHi - kLo >= P_KnifeDropATR * atr ? ">=" : "<", P_KnifeDropATR,
-                                                (int)MathMin(iH, iL)) + (kn ? (crashDn ? " -> CO (giam)" : " -> CO (tang)") : " -> khong"));
+                                                (int)MathMin(iH, iL)) + (kn ? (crashDn ? " → CÓ (giảm)" : " → CÓ (tăng)") : " → không"));
       bool late = tideOk && t.trend != 0 && P_DowLateLegs > 0 && t.legs >= P_DowLateLegs;
-      Tr("Tinh huong", late ? 1 : 0, StringFormat("4. Xu huong giai doan cuoi? thuy trieu %s, da pha %d lan %s %d", !tideOk || t.trend == 0 ? "chua ro" : (t.trend > 0 ? "tang" : "giam"),
-                                                  t.legs, t.legs >= P_DowLateLegs ? ">=" : "<", P_DowLateLegs) + (late ? " -> CO" : " -> khong"));
+      Tr("Tinh huong", late ? 1 : 0, StringFormat("4. Xu hướng giai đoạn cuối? thủy triều %s, đã phá %d lần %s %d", !tideOk || t.trend == 0 ? "chưa rõ" : (t.trend > 0 ? "tăng" : "giảm"),
+                                                  t.legs, t.legs >= P_DowLateLegs ? ">=" : "<", P_DowLateLegs) + (late ? " → CÓ" : " → không"));
       bool trA = adx >= P_SmartTrendADX, trB = g_smartPrev == 4 && g_smartPrevDir == t.trend && adx >= P_SmartTrendADX - 3;
       bool trOk = tideOk && t.trend != 0 && (trA || trB);
-      Tr("Tinh huong", trOk ? 1 : 0, StringFormat("5. Xu huong manh? can thuy trieu ro (%s) va ADX %.2f %s %.0f", !tideOk || t.trend == 0 ? "CHUA" : "co",
+      Tr("Tinh huong", trOk ? 1 : 0, StringFormat("5. Xu hướng mạnh? cần thủy triều rõ (%s) và ADX %.2f %s %.0f", !tideOk || t.trend == 0 ? "CHƯA rõ" : "đã rõ",
                                                   adx, trA ? ">=" : "<", P_SmartTrendADX) +
-                                     (trA ? "" : trB ? StringFormat(", nhung nen truoc da la XU HUONG MANH va ADX >= %.0f (vung dem) nen giu", P_SmartTrendADX - 3)
-                                               : StringFormat(" (vung dem chi giu khi nen truoc da la xu huong manh cung chieu va ADX >= %.0f)", P_SmartTrendADX - 3)) +
-                                     (trOk ? " -> CO" : " -> khong"));
+                                     (trA ? "" : trB ? StringFormat(", nhưng nến trước đã là XU HƯỚNG MẠNH và ADX ≥ %.0f (vùng đệm) nên giữ", P_SmartTrendADX - 3)
+                                               : StringFormat(" (vùng đệm chỉ giữ khi nến trước đã là xu hướng mạnh cùng chiều và ADX ≥ %.0f)", P_SmartTrendADX - 3)) +
+                                     (trOk ? " → CÓ" : " → không"));
       bool rgA = adx < P_SmartRangeADX && boxH <= P_SmartRangeATR * atr;
       bool rgB = g_smartPrev == 6 && adx < P_SmartRangeADX + 3 && boxH <= P_SmartRangeATR * 1.15 * atr;
-      Tr("Tinh huong", rgA || rgB ? 1 : 0, StringFormat("6. Di ngang? ADX %.2f %s %.0f va hop %.2f ATR %s %.1f ATR", adx, adx < P_SmartRangeADX ? "<" : ">=", P_SmartRangeADX,
+      Tr("Tinh huong", rgA || rgB ? 1 : 0, StringFormat("6. Đi ngang? ADX %.2f %s %.0f và hộp %.2f ATR %s %.1f ATR", adx, adx < P_SmartRangeADX ? "<" : ">=", P_SmartRangeADX,
                                                         atr > 0 ? boxH / atr : 0, boxH <= P_SmartRangeATR * atr ? "<=" : ">", P_SmartRangeATR) +
-                                           (rgA ? "" : rgB ? StringFormat("; chua dat nhung nen truoc da la DI NGANG, ADX < %.0f va hop <= %.1f ATR (vung dem) nen giu", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)
-                                                     : StringFormat("; vung dem (ADX < %.0f, hop <= %.1f ATR) chi ap dung khi nen truoc da la di ngang", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)) +
-                                           (rgA || rgB ? " -> CO" : " -> khong"));
+                                           (rgA ? "" : rgB ? StringFormat("; chưa đạt nhưng nến trước đã là ĐI NGANG, ADX < %.0f và hộp ≤ %.1f ATR (vùng đệm) nên giữ", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)
+                                                     : StringFormat("; vùng đệm (ADX < %.0f, hộp ≤ %.1f ATR) chỉ áp dụng khi nến trước đã là đi ngang", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)) +
+                                           (rgA || rgB ? " → CÓ" : " → không"));
    }
    nm = nmA;
    if(toNewsA >= 0)
@@ -896,9 +917,11 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    g_smartName = SmartSitName(g_smartSit);
    string head = "Tinh huong: " + g_smartName;
    EvAdd("Tinh huong " + g_smartName + ": " + why);
-   Tr("Tinh huong", 3, g_smartName + ": " + why + (list == "" ? "" : " -> dung bo kien thuc: " + SmartListNames(list)) +
-                       (dir != 0 ? (dir > 0 ? "; chi lay setup MUA (theo thuy trieu)" : "; chi lay setup BAN (theo thuy trieu)") : ""));
-   if(list == "") Tr("Kien thuc", 2, g_smartSit == 1 ? "Khong soi kien thuc nao: dung ngoai cho tin ra" : "Khong co bo kien thuc cho tinh huong nay: dung ngoai");
+   Tr("Tinh huong", 3, "Tình huống: " + SmartSitNameVi(g_smartSit) +
+                       (g_smartSit == 7 ? " (không điều kiện nào ở trên đạt)" : StringFormat(" (điều kiện %d là điều kiện đầu tiên đạt)", g_smartSit == 4 ? 5 : g_smartSit == 5 ? 4 : g_smartSit)) +
+                       (list == "" ? "" : " → dùng bộ kiến thức: " + SmartListNames(list)) +
+                       (dir != 0 ? (dir > 0 ? "; chỉ lấy setup MUA (theo thủy triều)" : "; chỉ lấy setup BÁN (theo thủy triều)") : ""));
+   if(list == "") Tr("Kien thuc", 2, g_smartSit == 1 ? "Không xét kiến thức nào: đứng ngoài chờ tin ra" : "Không có bộ kiến thức cho tình huống này: đứng ngoài");
    if(list == "") { g_status = head + " | " + (g_smartSit == 1 ? "dung ngoai cho tin ra" : "khong co bo chien luoc phu hop, dung ngoai"); return true; }
    // Soi setup cua bo chien luoc tinh huong nay
    string ls[];
@@ -935,15 +958,15 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       if(!ok || (!b && !s))
       {
          g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~0";
-         Tr("Kien thuc", 0, ChainName(m) + ": chua co setup - " + (g_why != "" ? g_why : !ok ? "thieu du lieu de tinh" : SmartNoSetup(m) != "" ? SmartNoSetup(m) : "khong co mau hinh nao du dieu kien o nen nay"));
+         Tr("Kien thuc", 0, ChainNameVi(m) + ": chưa có setup – " + (g_why != "" ? g_why : !ok ? "thiếu dữ liệu để tính" : SmartNoSetup(m) != "" ? SmartNoSetup(m) : "không có mẫu hình nào đủ điều kiện ở nến này"));
          continue;
       }
       {
          string evM = StringSubstr(g_ev, evAt);
          if(StringFind(evM, " ; ") == 0) evM = StringSubstr(evM, 3);
-         Tr("Kien thuc", 1, ChainName(m) + ": CO setup " + (b ? "MUA" : "BAN") + (evM != "" ? " - " + evM : "") +
-                            StringFormat(" (SL cach %s gia%s)", Px(g_sigSL > 0 ? g_sigSL : atr * P_ATRMult), g_sigTP > 0 ? ", TP " + Px(g_sigTP) : ""));
-         if(dir != 0 && (b ? 1 : -1) != dir) Tr("Kien thuc", 0, ChainName(m) + ": setup " + (b ? "MUA" : "BAN") + " nguoc chieu thuy trieu -> se bo");
+         Tr("Kien thuc", 1, ChainNameVi(m) + ": CÓ setup " + (b ? "MUA" : "BÁN") + (evM != "" ? " – " + evM : "") +
+                            StringFormat(" (SL cách %s giá%s)", Px(g_sigSL > 0 ? g_sigSL : atr * P_ATRMult), g_sigTP > 0 ? ", TP " + Px(g_sigTP) : ""));
+         if(dir != 0 && (b ? 1 : -1) != dir) Tr("Kien thuc", 0, ChainNameVi(m) + ": setup " + (b ? "MUA" : "BÁN") + " ngược chiều thủy triều → bỏ");
       }
       // Hoc tu thuc chien (Learn.mqh): moi setup thay duoc la 1 lenh giay; ket qua da tich luy quyet dinh co dung chien luoc nay
       // trong tinh huong nay hay khong va voi bao nhieu rui ro
@@ -957,7 +980,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       string ruleWhy = "";
       bool ruleOk = KnowRulesOk(m, g_smartSit, feat, ruleWhy);
       LearnRegister(g_smartSit, m, dm, c1, sd, g_sigTP, feat + (ruleOk ? "" : ";luat=1"));
-      if(!ruleOk) { Tr("Kien thuc", 0, ChainName(m) + ": dieu kien bo sung (ban da duyet) khong thoa - " + ruleWhy + " -> khong dung"); g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "2" : "-2"); EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
+      if(!ruleOk) { Tr("Kien thuc", 0, ChainNameVi(m) + ": điều kiện bổ sung (bạn đã duyệt) không thỏa – " + ruleWhy + " → không dùng"); g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "2" : "-2"); EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
       double lf; string lt;
       int lv = LearnVerdict(g_smartSit, m, lf, lt);
       // Mac dinh (InpLearnApply = false) quyet dinh hoan toan theo KIEN THUC: ket qua thuc chien chi ghi vao bang chung de tham khao
@@ -965,7 +988,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       else
       {
          EvAdd("Hoc - " + ChainName(m) + " (" + g_smartName + "): " + lt);
-         if(lv == 3) { Tr("Kien thuc", 0, ChainName(m) + ": bi loai theo ket qua hoc - " + lt); g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "3" : "-3"); outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
+         if(lv == 3) { Tr("Kien thuc", 0, ChainNameVi(m) + ": bị loại theo kết quả học – " + lt); g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "3" : "-3"); outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
       }
       g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "1" : "-1");
       if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; bMem = m; } nb++; bF = MathMax(bF, lf); bN += (bN == "" ? "" : " + ") + ChainName(m); }
@@ -976,7 +999,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    if(outN != "") head += " | Khong dung: " + outN;
    LearnSetAgree(g_smartSit, nb, ns);                                // ghi so setup dong y / trai chieu vao lenh giay nen nay
    if(dir > 0) ns = 0; if(dir < 0) nb = 0;                          // xu huong: bo setup nguoc chieu thuy trieu (khong tinh la trai chieu)
-   Tr("Ket luan", 2, StringFormat("Dem setup hop le: MUA %d%s, BAN %d%s", nb, nb > 0 ? " (" + bN + ")" : "", ns, ns > 0 ? " (" + sN + ")" : ""));
+   Tr("Ket luan", 2, StringFormat("Đếm setup hợp lệ: MUA %d%s, BÁN %d%s", nb, nb > 0 ? " (" + bN + ")" : "", ns, ns > 0 ? " (" + sN + ")" : ""));
    if(nb == 0 && ns == 0) { g_status = head + " | chua co setup"; return true; }
    if(nb > 0 && ns > 0) { g_chainConflicts++; g_status = head + " | setup trai chieu (mua: " + bN + " / ban: " + sN + "), dung ngoai"; return true; }
    int agree = nb > 0 ? nb : ns;
@@ -991,7 +1014,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    g_sigRiskMult = mult;
    EvAdd(StringFormat("Kien thuc: %d setup %s dong y -> rui ro x%.2f (1 setup = x%.2f, tu %d setup = du)", agree, nb > 0 ? "MUA" : "BAN", mult,
                       P_ChainOneRisk, P_ChainFullCount));
-   Tr("Ket luan", 1, StringFormat("%d setup %s dong y -> he so rui ro x%.2f (1 setup = x%.2f, tu %d setup = du rui ro)", agree, nb > 0 ? "MUA" : "BAN", mult,
+   Tr("Ket luan", 1, StringFormat("%d setup %s đồng ý → hệ số rủi ro ×%.2f (1 setup = ×%.2f, từ %d setup = đủ rủi ro)", agree, nb > 0 ? "MUA" : "BÁN", mult,
                                   P_ChainOneRisk, P_ChainFullCount));
    g_chainHits++;
    g_chainWhy = head + StringFormat(" | %s: %s | rui ro x%.2f", nb > 0 ? "MUA" : "BAN", nb > 0 ? bN : sN, mult);
@@ -1082,8 +1105,8 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       }
       buyBase  = volOk && cb > chHigh + margin && bodyBuy  && c1 > trend && (b == 1 || c1 > chHigh);
       sellBase = volOk && cb < chLow  - margin && bodySell && c1 < trend && (b == 1 || c1 < chLow);
-      if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; Why(StringFormat("nen pha vo dai %.2f ATR > %.1f ATR (de la thanh ly day chuyen), bo qua", range / atr, P_BreakMaxATR)); return false; }
-      if((buyBase || sellBase) && BreakAtSessionOpen(iTime(_Symbol, P_TF, b))) { g_status = "Pha vo dau phien, bo qua"; Why("pha vo ngay dau phien, bo qua"); return false; }
+      if(tooLong && (buyBase || sellBase)) { g_status = "Nen pha vo qua dai, bo qua"; Why(StringFormat("nến phá vỡ dài %.2f ATR > %.1f ATR (dễ là thanh lý dây chuyền), bỏ qua", range / atr, P_BreakMaxATR)); return false; }
+      if((buyBase || sellBase) && BreakAtSessionOpen(iTime(_Symbol, P_TF, b))) { g_status = "Pha vo dau phien, bo qua"; Why("phá vỡ ngay đầu phiên, bỏ qua"); return false; }
       // Kieu 6: khong vao ngay khi vua pha. Cho gia hoi ve test lai mep kenh (trong InpBreakRetestATR ATR) va dong cua van
       // ngoai kenh, trong InpBreakRetestBars nen. Co nen dong cua quay lai trong kenh truoc khi test = pha vo that bai, bo.
       if(P_BreakRetest)
@@ -1110,15 +1133,15 @@ bool BaseSignals(const double atr, const double trend, const double fast,
                if(buyBase || sellBase)
                   EvAdd(StringFormat("Pha vo that: nen %d dong cua %s muc %s; nen vua dong test lai (%s %s) va dong cua %s van %s muc",
                                      j, buy ? "tren" : "duoi", Px(lvl), buy ? "day" : "dinh", Px(buy ? l1 : h1), Px(c1), buy ? "tren" : "duoi"));
-               else Why(StringFormat("co cu pha vo %s muc %s o nen %d nhung nen vua dong chua test lai dung cach (%s %s, dong cua %s, EMA%d %s; can cham trong %.2f ATR quanh muc va dong cua %s muc, %s EMA)",
-                                     buy ? "len" : "xuong", Px(lvl), j, buy ? "thap" : "cao", Px(buy ? l1 : h1), Px(c1), P_TrendEMA, Px(trend), P_BreakRetestATR,
-                                     buy ? "tren" : "duoi", buy ? "tren" : "duoi"));
+               else Why(StringFormat("có cú phá vỡ %s mức %s ở nến thứ %d nhưng nến vừa đóng chưa test lại đúng cách (%s %s, đóng cửa %s, EMA%d %s; cần chạm trong %.2f ATR quanh mức và đóng cửa %s mức, %s EMA)",
+                                     buy ? "lên" : "xuống", Px(lvl), j, buy ? "thấp" : "cao", Px(buy ? l1 : h1), Px(c1), P_TrendEMA, Px(trend), P_BreakRetestATR,
+                                     buy ? "trên" : "dưới", buy ? "trên" : "dưới"));
             }
          if(!buyBase && !sellBase && nBrk == 0)
-            Why(StringFormat("kenh %d nen: dinh %s / day %s, dong cua %s; trong %d nen gan nhat khong co cu pha vo that nao (dong cua vuot mep >= %.2f ATR, than >= %.0f%% bien do, khoi luong >= %.1f x TB)",
+            Why(StringFormat("kênh %d nến: đỉnh %s / đáy %s, đóng cửa %s; trong %d nến gần nhất không có cú phá vỡ thật nào (đóng cửa vượt mép ≥ %.2f ATR, thân ≥ %.0f%% biên độ, khối lượng ≥ %.1f × trung bình)",
                              P_DonchianPeriod, Px(chHigh), Px(chLow), Px(c1), P_BreakRetestBars + 1, P_BreakMinATR, P_BreakMinBody, P_BreakMinVol));
          else if(!buyBase && !sellBase && g_why == "")
-            Why(StringFormat("%d cu pha vo trong %d nen gan nhat deu da dong cua quay lai kenh hoac da test truoc do", nDead, P_BreakRetestBars + 1));
+            Why(StringFormat("%d cú phá vỡ trong %d nến gần nhất đều đã đóng cửa quay lại kênh hoặc đã test trước đó", nDead, P_BreakRetestBars + 1));
       }
       // Kieu 2 danh nguoc (InpFakeoutFade): nen 2 dong cua pha kenh, nen 1 dong cua quay nguoc vao trong -> nguoi vua mua pha vo
       // dang bi ket: vao chieu nguoc lai, SL ngoai dinh / day cua 2 nen + 0,25 ATR
@@ -1264,7 +1287,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
             }
          }
          if(!buyBase && !sellBase)
-            Why(StringFormat("quet %d nen: %d nen dai >= %.1f ATR, %d co khoi luong >= 1,5 x TB, %d de lai khoang trong (FVG), %d chua bi cham / thung; chua co mau nen xac nhan tai FVG con hieu luc",
+            Why(StringFormat("quét %d nến: %d nến dài ≥ %.1f ATR, %d có khối lượng ≥ 1,5 × trung bình, %d để lại khoảng trống (FVG), %d chưa bị chạm / thủng; chưa có mẫu nến xác nhận tại FVG còn hiệu lực",
                              P_FvgLookback, fBig, P_FvgBigATR, fVol, fGap, fFresh));
       }
       for(int k = 3; k <= P_FvgLookback + 2 && !buyBase && !sellBase && !P_FvgCandle; k++)
@@ -1626,7 +1649,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       int dH = iHighest(_Symbol, PERIOD_D1, MODE_HIGH, P_PDDays, 1), dL = iLowest(_Symbol, PERIOD_D1, MODE_LOW, P_PDDays, 1);
       if(dH < 0 || dL < 0) return false;
       double bxHi = iHigh(_Symbol, PERIOD_D1, dH), bxLo = iLow(_Symbol, PERIOD_D1, dL);
-      if(bxHi - bxLo < 3 * atr) { Why(StringFormat("hop D1 %d nen %s - %s chi cao %.2f ATR (< 3 ATR), qua hep", P_PDDays, Px(bxLo), Px(bxHi), (bxHi - bxLo) / atr)); return true; }
+      if(bxHi - bxLo < 3 * atr) { Why(StringFormat("hộp D1 %d nến %s – %s chỉ cao %.2f ATR (< 3 ATR), quá hẹp", P_PDDays, Px(bxLo), Px(bxHi), (bxHi - bxLo) / atr)); return true; }
       int L = P_PDLookback < 30 ? 30 : P_PDLookback;
       double hi[], lo[], op[], cl[], nh[], nl[], no[], nc[];
       datetime tm[];
@@ -1650,9 +1673,9 @@ bool BaseSignals(const double atr, const double trend, const double fast,
         EvAdd(StringFormat("Hop D1 %d nen: dinh %s / day %s / giua %s, gia %s o vung DAT; quet dinh len %s, dong cua thung day %s; FVG %s - %s",
                            P_PDDays, Px(bxHi), Px(bxLo), Px((bxHi + bxLo) / 2), Px(c1), Px(-g_pzA), Px(-g_pzB), Px(-g_pzD), Px(-g_pzC))); }
       if(!buyBase && !sellBase)
-         Why(StringFormat("hop D1 %d nen: day %s, giua %s, dinh %s; gia %s dang o nua %s; chua co du chuoi quet %s -> dong cua quay dau -> hoi ve FVG",
-                          P_PDDays, Px(bxLo), Px((bxHi + bxLo) / 2), Px(bxHi), Px(c1), c1 < (bxHi + bxLo) / 2 ? "RE (chi tim mua)" : "DAT (chi tim ban)",
-                          c1 < (bxHi + bxLo) / 2 ? "day" : "dinh"));
+         Why(StringFormat("hộp D1 %d nến: đáy %s, giữa %s, đỉnh %s; giá %s đang ở nửa %s; chưa đủ chuỗi quét %s → đóng cửa quay đầu → hồi về FVG",
+                          P_PDDays, Px(bxLo), Px((bxHi + bxLo) / 2), Px(bxHi), Px(c1), c1 < (bxHi + bxLo) / 2 ? "RẺ (chỉ tìm mua)" : "ĐẮT (chỉ tìm bán)",
+                          c1 < (bxHi + bxLo) / 2 ? "đáy" : "đỉnh"));
    }
    else if(P_Strategy == STRAT_NEWS)
    {
@@ -1665,12 +1688,12 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       //    -> Sell, SL tren dinh quet + 0,25 ATR. Quet xuong: nguoc lai. Chi trong InpNewsWindowMin phut sau tin, moi tin 1 lan.
       string nm;
       datetime nt = LastNewsTime(P_NewsWindowMin, nm);
-      if(nt == 0 || nt == g_newsUsedT) { Why(nt == 0 ? StringFormat("khong co tin nao vua ra trong %d phut", P_NewsWindowMin) : "tin " + nm + " da dung roi (moi tin 1 lan)"); return true; }
+      if(nt == 0 || nt == g_newsUsedT) { Why(nt == 0 ? StringFormat("không có tin nào vừa ra trong %d phút", P_NewsWindowMin) : "tin " + nm + " đã dùng rồi (mỗi tin 1 lần)"); return true; }
       int sNews = iBarShift(_Symbol, P_TF, nt, false), sFrom = iBarShift(_Symbol, P_TF, nt - P_NewsRangeMin * 60, false);
       if(sNews < 2 || sFrom <= sNews) return true;
       double rHi = 0, rLo = DBL_MAX;
       for(int q = sNews + 1; q <= sFrom; q++) { rHi = MathMax(rHi, iHigh(_Symbol, P_TF, q)); rLo = MathMin(rLo, iLow(_Symbol, P_TF, q)); }
-      if(rHi <= 0 || rHi - rLo > P_NewsRangeMaxATR * atr) { Why(StringFormat("vung %d phut truoc tin %s cao %.2f ATR > %.1f ATR: truoc tin khong di ngang", P_NewsRangeMin, nm, (rHi - rLo) / atr, P_NewsRangeMaxATR)); return true; }
+      if(rHi <= 0 || rHi - rLo > P_NewsRangeMaxATR * atr) { Why(StringFormat("vùng %d phút trước tin %s cao %.2f ATR > %.1f ATR: trước tin không đi ngang", P_NewsRangeMin, nm, (rHi - rLo) / atr, P_NewsRangeMaxATR)); return true; }
       int dir = 0, xs = -1; double ext = 0;
       for(int q = sNews; q >= 2; q--)
       {
@@ -1685,8 +1708,8 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       if(dir == -1 && l1 >= ext && c1 > rLo && c1 > iHigh(_Symbol, P_TF, xs) && c1 > o1)
       { buyBase = true; g_sigSL = MathMax(c1 - (ext - 0.25 * atr), 0.5 * atr); g_newsUsedT = nt; }
       if(!buyBase && !sellBase)
-         Why(StringFormat("tin %s: vung truoc tin %s - %s; %s; nen vua dong %s chua dong cua quay lai trong vung va thung nen tao cu quet", nm, Px(rLo), Px(rHi),
-                          dir == 0 ? "chua co cu quet ra ngoai vung" : (dir > 0 ? "da quet len " : "da quet xuong ") + Px(ext), Px(c1)));
+         Why(StringFormat("tin %s: vùng trước tin %s – %s; %s; nến vừa đóng %s chưa đóng cửa quay lại trong vùng và thủng nến tạo cú quét", nm, Px(rLo), Px(rHi),
+                          dir == 0 ? "chưa có cú quét ra ngoài vùng" : (dir > 0 ? "đã quét lên " : "đã quét xuống ") + Px(ext), Px(c1)));
    }
    else if(P_Strategy == STRAT_SIMPLE)
    {
@@ -1708,7 +1731,7 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       //   dong cua lai duoi dai 3) -> Sell, SL tren rau, TP = VWAP. Ngay xu huong rat manh gia bam dai xa rat lau: luon cho nen tu choi.
       // Bo qua neu loi toi TP < InpVwapMinRR x SL.
       double vw, sd, vw2, sd2;
-      if(!VwapAt(1, vw, sd) || !VwapAt(2, vw2, sd2)) { Why("chua du nen trong ngay de tinh VWAP"); return true; }
+      if(!VwapAt(1, vw, sd) || !VwapAt(2, vw2, sd2)) { Why("chưa đủ nến trong ngày để tính VWAP"); return true; }
       double o1 = iOpen(_Symbol, P_TF, 1), c2 = iClose(_Symbol, P_TF, 2), r1 = h1 - l1;
       double tol = 0.1 * atr, sl = 0, tp = 0;
       if(P_VwapMode != 2)
@@ -1727,12 +1750,12 @@ bool BaseSignals(const double atr, const double trend, const double fast,
          { sl = MathMax(c1 - (l1 - 0.1 * atr), 0.3 * atr); tp = vw; if(tp - c1 >= P_VwapMinRR * sl) { buyBase = true; g_sigSL = sl; g_sigTP = tp; } }
       }
       if(!buyBase && !sellBase)
-         Why(StringFormat("VWAP %s, dai 3: %s / %s; nen vua dong %s - %s dong cua %s (%+.2f do lech); %s%s", Px(vw), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
+         Why(StringFormat("VWAP %s, dải 3: %s / %s; nến vừa đóng %s – %s, đóng cửa %s (%+.2f độ lệch); %s%s", Px(vw), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
                           Px(l1), Px(h1), Px(c1), sd > 0 ? (c1 - vw) / sd : 0,
-                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "co cham VWAP nhung nen chua bat dung chieu / loi toi muc tieu < " + DoubleToString(P_VwapMinRR, 1) + " x SL"
-                                                                                          : StringFormat("chua hoi ve cham VWAP (cach %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
-                          P_VwapMode != 1 ? (h1 >= vw + P_VwapBand3 * sd || l1 <= vw - P_VwapBand3 * sd ? "; co cham dai 3 nhung chua co nen tu choi manh (rau >= 40%) / loi < " + DoubleToString(P_VwapMinRR, 1) + " x SL"
-                                                                                                    : StringFormat("; chua cham dai 3 (con cach %.2f ATR)", MathMin(MathAbs(vw + P_VwapBand3 * sd - h1), MathAbs(l1 - (vw - P_VwapBand3 * sd))) / atr)) : ""));
+                          P_VwapMode != 2 ? (MathAbs((c2 > vw2 ? l1 : h1) - vw) <= tol ? "có chạm VWAP nhưng nến chưa bật đúng chiều / lời tới mục tiêu < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
+                                                                                          : StringFormat("chưa hồi về chạm VWAP (cách %.2f ATR)", MathMin(MathAbs(l1 - vw), MathAbs(h1 - vw)) / atr)) : "",
+                          P_VwapMode != 1 ? (h1 >= vw + P_VwapBand3 * sd || l1 <= vw - P_VwapBand3 * sd ? "; có chạm dải 3 nhưng chưa có nến từ chối mạnh (râu ≥ 40%) / lời < " + DoubleToString(P_VwapMinRR, 1) + " × SL"
+                                                                                                    : StringFormat("; chưa chạm dải 3 (còn cách %.2f ATR)", MathMin(MathAbs(vw + P_VwapBand3 * sd - h1), MathAbs(l1 - (vw - P_VwapBand3 * sd))) / atr)) : ""));
       if(buyBase || sellBase)
          EvAdd(StringFormat("VWAP hom nay %s, do lech chuan %s (dai 2: %s / %s, dai 3: %s / %s); nen vua dong %s - %s, dong cua %s; muc tieu %s",
                             Px(vw), Px(sd), Px(vw + P_VwapBand2 * sd), Px(vw - P_VwapBand2 * sd), Px(vw + P_VwapBand3 * sd), Px(vw - P_VwapBand3 * sd),
@@ -1752,9 +1775,9 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       { sellBase = true; g_sigSL = MathMax((w.ph + 0.25 * atr) - c1, 0.5 * atr);
         EvAdd(StringFormat("Con song %s dang hoi len, nen dong cua %s thung day gan nhat cua con song; dinh con song %s", EnumToString(P_TF), Px(c1), Px(w.ph))); }
       if(!buyBase && !sellBase)
-         Why(StringFormat("con song %s: %s, dinh gan nhat %s, day gan nhat %s; nen vua dong %s -> chua co nen ket thuc con song hoi (can dong cua vuot dinh khi song dang hoi xuong, hoac thung day khi song dang hoi len)",
-                          EnumToString((ENUM_TIMEFRAMES)P_TF), w.trend > 0 ? "dang tang" : w.trend < 0 ? "dang giam" : "chua ro", Px(w.ph), Px(w.pl),
-                          w.brk == 1 ? "dong cua vuot dinh" : w.brk == -1 ? "dong cua thung day" : "khong pha dinh / day nao"));
+         Why(StringFormat("con sóng %s: %s, đỉnh gần nhất %s, đáy gần nhất %s; nến vừa đóng %s → chưa có nến kết thúc con sóng hồi (cần đóng cửa vượt đỉnh khi sóng đang hồi xuống, hoặc thủng đáy khi sóng đang hồi lên)",
+                          TfName(P_TF), w.trend > 0 ? "đang tăng" : w.trend < 0 ? "đang giảm" : "chưa rõ", Px(w.ph), Px(w.pl),
+                          w.brk == 1 ? "đóng cửa vượt đỉnh" : w.brk == -1 ? "đóng cửa thủng đáy" : "không phá đỉnh / đáy nào"));
    }
    else if(P_Strategy == STRAT_OB)
    {

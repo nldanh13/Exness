@@ -81,18 +81,19 @@ function Get-BotStatus {
             $tr = Join-Path $dir ($_.Name -replace '^TrendBot_trangthai_', 'TrendBot_phantich_')
             $o["PhanTich"] = @()
             if (Test-Path $tr) {
-                $o["PhanTich"] = @((Read-Shared $tr) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 48)
+                # Bot ghi Unicode (UTF-16) de giu dau tieng Viet
+                $o["PhanTich"] = @((Read-Shared $tr ([Text.Encoding]::Unicode)) -split "\r?\n" | Where-Object { $_ } | Select-Object -Last 48)
             }
             $o
         })
 }
 
-function Read-Shared([string]$path) {
-    # Doc file dang duoc tien trinh khac ghi (FileShare.ReadWrite)
+function Read-Shared([string]$path, [Text.Encoding]$enc = [Text.Encoding]::Default) {
+    # Doc file dang duoc tien trinh khac ghi (FileShare.ReadWrite); co BOM thi tu nhan dang ma
     if (-not (Test-Path $path)) { return "" }
     try {
         $fs = [IO.File]::Open($path, 'Open', 'Read', 'ReadWrite')
-        try { $sr = New-Object IO.StreamReader($fs, [Text.Encoding]::Default); return $sr.ReadToEnd() } finally { $fs.Close() }
+        try { $sr = New-Object IO.StreamReader($fs, $enc, $true); return $sr.ReadToEnd() } finally { $fs.Close() }
     } catch { return "" }
 }
 

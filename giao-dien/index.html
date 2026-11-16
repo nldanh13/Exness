@@ -698,6 +698,23 @@ function renderDecide(list) {
 // ---- Quá trình phân tích (v5.42): từng bước của mỗi lần phân tích nến vừa đóng ----
 // Mỗi dòng file: giờ nến (server) \t lúc phân tích (giờ máy) \t khung (phút) \t kết luận \t các bước (nhóm`trạng thái`nội dung, nối bằng ``)
 var TR_GRP = { 'Du lieu': 'Dữ liệu lấy vào', 'Tinh huong': 'Chẩn đoán tình huống (xét theo thứ tự, điều kiện đầu tiên đạt quyết định)', 'Kien thuc': 'Từng kiến thức', 'Ket luan': 'Kết luận' };
+// Câu trạng thái / bằng chứng cũ của bot là chữ không dấu: thêm dấu cho các cụm hay gặp (cụm dài trước)
+var VI_PH = [
+  ['Von qua nho cho SL nay, bo qua lenh', 'Vốn quá nhỏ cho SL này, bỏ qua lệnh'], ['Lenh nay co the lam lo ngay vuot tran, bo qua lenh', 'Lệnh này có thể làm lỗ ngày vượt trần, bỏ qua lệnh'],
+  ['Nhom BTC/ETH da dung het tran rui ro, bo qua lenh', 'Nhóm BTC/ETH đã dùng hết trần rủi ro, bỏ qua lệnh'], ['Cac lop dang mo con rui ro du 1 lenh, khong nhoi them', 'Các lớp đang mở còn rủi ro đủ 1 lệnh, không nhồi thêm'],
+  ['Cham gioi han lo ngay, nghi den mai', 'Chạm giới hạn lỗ ngày, nghỉ đến mai'], ['DUNG HAN (sut giam)', 'DỪNG HẲN (sụt giảm)'], ['Dang giu lenh', 'Đang giữ lệnh'],
+  ['Spread qua rong', 'Spread quá rộng'], ['Nghi sau lenh thua', 'Nghỉ sau lệnh thua'], ['Du so lenh trong ngay', 'Đủ số lệnh trong ngày'], ['Gan tin My: ', 'Gần tin Mỹ: '], ['Sap ra tin ', 'Sắp ra tin '],
+  ['Mua lon xon: dung ngoai', 'Mùa lộn xộn: đứng ngoài'], ['Pha vo dau phien, bo qua', 'Phá vỡ đầu phiên, bỏ qua'], ['Nen pha vo qua dai, bo qua', 'Nến phá vỡ quá dài, bỏ qua'], ['TP qua gan gia, bo qua', 'TP quá gần giá, bỏ qua'],
+  ['VUA CO CU SAP / TANG DUNG DUNG', 'VỪA CÓ CÚ SẬP / TĂNG DỰNG ĐỨNG'], ['XU HUONG GIAI DOAN CUOI', 'XU HƯỚNG GIAI ĐOẠN CUỐI'], ['XU HUONG MANH', 'XU HƯỚNG MẠNH'], ['DI NGANG', 'ĐI NGANG'],
+  ['KHONG RO', 'KHÔNG RÕ'], ['SAP CO TIN', 'SẮP CÓ TIN'], ['VUA RA TIN', 'VỪA RA TIN'], ['Tinh huong: ', 'Tình huống: '], ['Khong dung: ', 'Không dùng: '], ['Dung: ', 'Dùng: '],
+  ['khong co bo chien luoc phu hop, dung ngoai', 'không có bộ chiến lược phù hợp, đứng ngoài'], ['dung ngoai cho tin ra', 'đứng ngoài chờ tin ra'], ['setup trai chieu', 'setup trái chiều'],
+  ['chua co setup', 'chưa có setup'], ['dieu kien bo sung', 'điều kiện bổ sung'], ['dung ngoai', 'đứng ngoài'], ['| BAN:', '| BÁN:'], ['rui ro x', 'rủi ro ×'],
+  ['Bo lenh vi von: ', 'Bỏ lệnh vì vốn: '], ['Lam tron len ', 'Làm tròn lên '], ['SL cach ', 'SL cách '], [' gia; ', ' giá; '], [' gia, ', ' giá, '], ['lot nho nhat', 'lot nhỏ nhất'], ['dinh SL mat', 'dính SL mất'],
+  [' von, vuot tran ', ' vốn, vượt trần '], [' von (tran ', ' vốn (trần '], ['rui ro dinh dung', 'rủi ro định dùng'], ['muon vao duoc can SL <= ', 'muốn vào được cần SL ≤ '], [' hoac von >= ', ' hoặc vốn ≥ '],
+  ['bi kep boi tran nhom', 'bị kẹp bởi trần nhóm'], ['bi kep boi lo ngay con lai', 'bị kẹp bởi lỗ ngày còn lại'], ['bi kep boi chuoi nhoi', 'bị kẹp bởi chuỗi nhồi'], ['khoa lo ngay', 'khóa lỗ ngày'],
+  ['Kien thuc: ', 'Kiến thức: '], [' dong y -> ', ' đồng ý → '], [' -> chan', ' → chặn'], ['Cho tin hieu', 'Chờ tín hiệu'], ['Bo tin hieu ', 'Bỏ tín hiệu ']
+];
+function viText(s) { s = String(s || ''); VI_PH.forEach(function (p) { s = s.split(p[0]).join(p[1]); }); return s; }
 function parseTrace(l) {
   var a = String(l).split('\t');
   if (a.length < 5) return null;
@@ -714,7 +731,7 @@ function trStepsHtml(r) {
     return '<div class="tgrp"><h4>' + esc(TR_GRP[g] || g) + '</h4><ol>' + by[g].map(function (s) {
       var c = s.ok === 1 ? 'ok' : s.ok === 0 ? 'no' : s.ok === 3 ? 'res' : 'info';
       var ic = s.ok === 1 ? '✓' : s.ok === 0 ? '✕' : s.ok === 3 ? '⇒' : '•';
-      return '<li class="' + c + '"><span class="ic">' + ic + '</span><span>' + esc(s.x) + '</span></li>';
+      return '<li class="' + c + '"><span class="ic">' + ic + '</span><span>' + esc(s.g === 'Ket luan' ? viText(s.x) : s.x) + '</span></li>';
     }).join('') + '</ol></div>';
   }).join('');
 }
@@ -744,7 +761,7 @@ function renderTrace(list) {
       var k = 'tr-' + (x.ma || '') + r.bar, open = k in JR.open ? JR.open[k] : i === 0;
       var dup = i + 1 < rows.length && rows[i + 1].st === r.st;
       return '<details class="trow" data-k="' + esc(k) + '"' + (open ? ' open' : '') + '><summary><span class="t num">' + esc(String(r.at).slice(11, 16)) + ' · nến ' + esc(String(r.bar).slice(-5)) +
-        '</span><span class="x">' + esc(r.st) + '</span><span class="same">' + (dup ? 'giống lần trước' : 'thay đổi') + '</span></summary><div class="tbody">' + trStepsHtml(r) + '</div></details>';
+        '</span><span class="x">' + esc(viText(r.st)) + '</span><span class="same">' + (dup ? 'giống lần trước' : 'thay đổi') + '</span></summary><div class="tbody">' + trStepsHtml(r) + '</div></details>';
     }).join('');
     return '<div class="wcard">' + head + pulse + items + '</div>';
   }).join('');

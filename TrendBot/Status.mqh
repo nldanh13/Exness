@@ -112,7 +112,7 @@ void DecisionWrite()
    g_dlogDirty = false;
 }
 
-// Qua trinh phan tich (v5.42): TrendBot_phantich_<chart>.txt, moi dong 1 lan phan tich nen vua dong:
+// Qua trinh phan tich (v5.42): TrendBot_phantich_<chart>.txt (Unicode UTF-16 de giu dau tieng Viet), moi dong 1 lan phan tich nen vua dong:
 //   gio nen (server)<TAB>luc phan tich (gio may)<TAB>khung (phut)<TAB>ket luan<TAB>cac buoc (nhom`trang thai`noi dung, noi bang ``)
 // Giu 96 lan gan nhat (1 ngay M15). Ghi o lan WriteStatus ngay sau nen (cung tick phan tich da chay xong).
 string g_trLog[];
@@ -125,7 +125,7 @@ void TraceFlush()
    if(!g_trLoaded)
    {
       g_trLoaded = true;
-      int hr = FileOpen(TraceFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
+      int hr = FileOpen(TraceFile(), FILE_READ | FILE_TXT | FILE_UNICODE | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
       if(hr != INVALID_HANDLE)
       {
          while(!FileIsEnding(hr)) { string l = FileReadString(hr); if(l == "") continue; int k = ArraySize(g_trLog); ArrayResize(g_trLog, k + 1); g_trLog[k] = l; }
@@ -151,7 +151,7 @@ void TraceFlush()
    ArrayResize(g_trLog, n + 1);
    g_trLog[n] = TimeToString(g_trBar, TIME_DATE | TIME_MINUTES) + "\t" + TimeToString(g_trAt, TIME_DATE | TIME_SECONDS) + "\t" +
                 IntegerToString(PeriodSeconds((ENUM_TIMEFRAMES)P_TF) / 60) + "\t" + st + "\t" + steps;
-   int h = FileOpen(TraceFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   int h = FileOpen(TraceFile(), FILE_WRITE | FILE_TXT | FILE_UNICODE | FILE_COMMON | FILE_SHARE_READ);
    if(h == INVALID_HANDLE) return;
    for(int i = 0; i < ArraySize(g_trLog); i++) FileWriteString(h, g_trLog[i] + "\r\n");
    FileClose(h);

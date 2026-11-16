@@ -1278,6 +1278,8 @@ phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đ�
   3. **Từng kiến thức**: có setup thì ghi bằng chứng + SL / TP; không có thì ghi **vì sao** (ví dụ VWAP: chưa chạm dải 3, còn cách 2,1 ATR;
      Key Volume: có mấy vùng, nến có chạm vùng nào, vùng nào đủ dấu hiệu; FVG: quét bao nhiêu nến, bao nhiêu nến đạt từng điều kiện).
   4. **Kết luận**: đếm setup hợp lệ, hệ số rủi ro, các bộ lọc chung, tính lot (kể cả "Bỏ lệnh vì vốn") và quyết định cuối.
+- Các bước viết bằng **tiếng Việt có dấu** (file lưu dạng Unicode). Câu kết luận và các cụm hay gặp trong bằng chứng cũ được giao diện thêm
+  dấu; riêng bằng chứng chi tiết của từng setup (ví dụ mô tả vùng Key Volume) vẫn là chữ không dấu.
 - Nút **Sao chép gửi Claude** chép kèm lần phân tích gần nhất và kết luận 12 lần gần nhất.
 - Sửa hiển thị ADX: in 2 chữ số thập phân, không còn "ADX 20.0 < 20" khi ADX thật là 19,96. Không đổi logic giao dịch.
 - Cần mở lại giao diện (GiaoDien.cmd) sau khi cập nhật vì có thêm dữ liệu mới.
