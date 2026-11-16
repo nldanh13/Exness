@@ -32,6 +32,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .wrap { max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+header.top #btn-copy { margin-left: 8px; white-space: nowrap; }
 header.top .wrap { display: flex; align-items: center; gap: 16px; padding-block: 10px; flex-wrap: wrap; }
 .brand { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
 .brand small { font-weight: 500; color: var(--ink3); font-size: 12px; }
@@ -247,12 +248,18 @@ main { gap: 14px; padding-block: 14px 40px; }
     <a href="#ket-qua" id="tab-ket-qua">Mô phỏng</a>
     <a href="#thong-so" id="tab-thong-so">Thông số</a>
   </nav>
+  <button class="small primary" id="btn-copy" title="Chép toàn bộ tình trạng, quyết định, bằng chứng, nhật ký... thành chữ để dán cho Claude">Sao chép gửi Claude</button>
 </div></header>
 
 <div class="wrap">
 <div class="shared">
   <div class="banner warn" id="reopen-note" hidden><b>Giao diện vừa có bản mới.</b> Đóng cửa sổ PowerShell của giao diện rồi mở lại <span class="num">GiaoDien.cmd</span> để dùng đủ chức năng (cửa sổ đang chạy vẫn là bản cũ).</div>
   <div class="banner info" id="static-note" hidden><b>Bản xem trước.</b> Các nút chỉ hoạt động khi mở bằng <span class="num">GiaoDien.cmd</span> trên máy của bạn.</div>
+  <section class="sec" id="sec-copy" hidden>
+    <div class="sec-head"><h2>Thông tin để gửi Claude</h2><button class="small ghost" id="copy-close">Đóng</button></div>
+    <p class="muted" style="margin:0;font-size:12px" id="copy-msg">Trình duyệt không cho tự chép: bấm vào ô dưới, nhấn Ctrl+A rồi Ctrl+C, sau đó dán vào khung chat.</p>
+    <textarea id="copy-text" rows="12" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px" readonly></textarea>
+  </section>
   <section class="sec" id="sec-run" hidden>
     <div class="sec-head"><h2 id="run-title">Tiến trình</h2><span class="hint num" id="run-time"></span></div>
     <div class="prog" id="prog" hidden><i id="prog-bar"></i></div>
@@ -675,6 +682,74 @@ function renderLearn(list) {
     }).join('') + '</tbody></table></div><p class="muted" style="margin:8px 0 0;font-size:12px">' + open + ' lệnh giấy đang theo dõi. Đủ ' +
     'số lệnh giấy mới xếp loại. Đánh giá chỉ can thiệp quyết định khi bật InpLearnApply.</p>';
 }
+// ---- Nút "Sao chép gửi Claude": gom thông tin cần thiết thành chữ, chép vào clipboard ----
+function copyReport() {
+  var d = S.last || {}, g = d.Git || {}, j = d.Viec || {}, L = [], now = new Date();
+  function p2(n) { return ('0' + n).slice(-2); }
+  L.push('=== THONG TIN BOT gui Claude · ' + now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes()) + ' ===');
+  L.push('Giao dien API ' + (d.ApiVer || '?') + ' (trang ' + API_VER + ') · Git: ' + (g.Error ? 'LOI ' + g.Error : (g.Behind > 0 ? 'co ' + g.Behind + ' thay doi chua cap nhat' : 'moi nhat')) +
+    (g.Checked ? ' (kiem tra ' + g.Checked + ')' : '') + ' · MT5: ' + (d.MT5Mo ? 'dang mo' : 'dong'));
+  var b = bots(d);
+  if (!b.length) L.push('Khong co bot nao dang chay (khong thay file trang thai).');
+  b.forEach(function (x, i) {
+    L.push('');
+    L.push('--- Bot ' + (i + 1) + ': ' + (x.ma || '?') + ' · tai khoan ' + acctName(x) + ' · v' + (x.phienban || '?') + ' ---');
+    L.push('Chien luoc: ' + (x.chienluoc || ''));
+    L.push('Quyet dinh: ' + (x.quyetdinh || x.trangthai || ''));
+    if (x.bangchung) L.push('Bang chung: ' + x.bangchung);
+    if (x.lydovao) L.push('Lenh gan nhat' + (x.lydovaoluc ? ' (' + x.lydovaoluc + ')' : '') + ': ' + x.lydovao);
+    var skip = { NhatKy: 1, quyetdinh: 1, bangchung: 1, lydovao: 1, lydovaoluc: 1, chienluoc: 1, ma: 1, phienban: 1, hoc: 1 };
+    var kv = Object.keys(x).filter(function (k) { return !skip[k] && typeof x[k] !== 'object'; }).map(function (k) { return k + '=' + x[k]; });
+    if (kv.length) L.push('Chi so: ' + kv.join(' · '));
+    if (x.hoc) L.push('Hoc (tinh huong:chien luoc:n:TB R:thang%:danh gia:n that:TB that): ' + x.hoc);
+    var nk = (x.NhatKy || []).slice(-30);
+    if (nk.length) { L.push('Nhat ky (' + nk.length + ' dong gan nhat):'); nk.forEach(function (l) { L.push('  ' + l); }); }
+  });
+  // Chấm điểm (nếu đã tải ở tab Học & điều chỉnh)
+  (KN.data || []).forEach(function (e) {
+    var rows = knowParse(e.Dong), byS = {};
+    rows.forEach(function (r) { (byS[r.st] = byS[r.st] || []).push(r); });
+    var ks = Object.keys(byS);
+    L.push('');
+    L.push('--- Cham diem ' + e.Khoa + ': ' + rows.length + ' lan ap dung co ket qua ---');
+    ks.forEach(function (k) { var gg = knowGroup(byS[k]); L.push('  ' + (STR_NAME[k] || 'S' + k) + ': n=' + gg.n + ' A' + gg.A + ' B' + gg.B + ' C' + gg.C + ' D' + gg.D + ' F' + gg.F + ' diem TB ' + gg.pt.toFixed(2) + ' R TB ' + gg.r.toFixed(2)); });
+    var rl = knowRules(e);
+    if (rl.length) { L.push('  Dieu kien da duyet:'); rl.forEach(function (r) { L.push('    ' + r); }); }
+  });
+  // Việc gần nhất (cập nhật / mô phỏng) và lỗi nếu có
+  if (j.Viec) {
+    L.push('');
+    L.push('--- Viec gan nhat: ' + j.Viec + (j.Running ? ' (dang chay)' : '') + ' ---');
+    var rr = $('run-result'); if (rr && !rr.hidden) L.push('Ket qua: ' + rr.textContent.trim());
+    var lg = String(FULL_LOG || '').split(/\r?\n/).filter(Boolean);
+    var bad = lg.some(function (l) { return /loi|error|that bai|khong/i.test(l); });
+    var tail = lg.slice(bad ? -40 : -12);
+    if (tail.length) { L.push('Nhat ky ky thuat (' + tail.length + ' dong cuoi):'); tail.forEach(function (l) { L.push('  ' + l); }); }
+  }
+  var text = L.join('\n');
+  if (text.length > 12000) text = text.slice(0, 12000) + '\n... (cat bot)';
+  return text;
+}
+function copyShow(text, ok) {
+  var btn = $('btn-copy');
+  if (ok) { btn.textContent = 'Đã chép ✓ – dán vào chat'; setTimeout(function () { btn.textContent = 'Sao chép gửi Claude'; }, 2500); return; }
+  $('copy-text').value = text; $('sec-copy').hidden = false;
+  $('copy-text').focus(); $('copy-text').select();
+  $('sec-copy').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  $('copy-close').addEventListener('click', function () { $('sec-copy').hidden = true; });
+  $('btn-copy').addEventListener('click', function () {
+    var text = copyReport();
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { copyShow(text, true); }, function () { copyShow(text, false); });
+    else {
+      var ta = $('copy-text'); ta.value = text; $('sec-copy').hidden = false; ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      if (ok) { $('sec-copy').hidden = true; copyShow(text, true); } else copyShow(text, false);
+    }
+  });
+});
+
 // ---- Chấm điểm & điều chỉnh kiến thức (v5.39) ----
 var KN = { data: [], key: '', minN: 8 };
 var FEAT_NAME = { adx: 'ADX', slatr: 'SL dài (× ATR)', tpr: 'Lời / lỗ dự kiến (R)', than: 'Thân nến xác nhận (%)', vol: 'Khối lượng (× TB 20 nến)',

@@ -1236,3 +1236,9 @@ Bằng chứng ghi "(đổi từ ...)" hoặc "(giữ tình huống: vùng đệ
 4 tab theo thứ tự dùng: **Bot đang chạy** (tình trạng + nút Cập nhật bản mới, quyết định, nhật ký) · **Học & điều chỉnh** (chấm điểm,
 đề xuất điều chỉnh kiến thức, kết quả thực chiến theo tình huống) · **Mô phỏng** (ứng dụng MT5, chạy mô phỏng / xếp hạng, kết luận, bảng kết quả)
 · **Thông số**. Thanh tiến trình hiện ở mọi tab khi có việc chạy. Bỏ các nhóm mô phỏng cũ khỏi menu (vẫn chạy được bằng dòng lệnh).
+
+### Nút "Sao chép gửi Claude" (16/11/2026)
+Góc trên bên phải giao diện, tab nào cũng có. Bấm một lần là chép vào clipboard (rồi dán vào khung chat) bản tóm tắt dạng chữ: phiên bản,
+Git, MT5, mỗi bot (tài khoản, chiến lược, quyết định, bằng chứng, lệnh gần nhất, các chỉ số, kết quả học, 30 dòng nhật ký gần nhất),
+chấm điểm + điều kiện đã duyệt, việc gần nhất và các dòng cuối nhật ký kỹ thuật (40 dòng nếu có lỗi). Không chứa mật khẩu hay mã truy cập.
+Trình duyệt chặn tự chép thì hiện ô chữ để bạn tự chọn và chép.
