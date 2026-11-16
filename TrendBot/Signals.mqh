@@ -428,6 +428,7 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
          a = MathMax(a, pk - maxBins / 2); b = MathMin(b, a + maxBins - 1);
       }
       double bot = pLo + a * w, top = pLo + (b + 1) * w;
+      if(StringLen(g_wKV) < 200) g_wKV += (g_wKV == "" ? "" : "_") + DoubleToString(bot, _Digits) + "-" + DoubleToString(top, _Digits);
       if(l1 > top + 0.1 * atr || h1 < bot - 0.1 * atr) continue;       // nen vua dong khong ve vung nay
       // Dau hieu 1: di ngang trong vung lau roi chay manh ra
       int inside = 0; bool exitStrong = false;
@@ -754,6 +755,10 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    double kHi = iHigh(_Symbol, P_TF, iH), kLo = iLow(_Symbol, P_TF, iL), boxH = iHigh(_Symbol, P_TF, rH) - iLow(_Symbol, P_TF, rL);
    bool crashDn = kHi - kLo >= P_KnifeDropATR * atr && iL <= 10 && iH > iL;
    bool spikeUp = kHi - kLo >= P_KnifeDropATR * atr && iH <= 10 && iL > iH;
+   // Dang theo doi (v5.40): chup lai nhung gi bot canh o nen nay cho giao dien
+   g_wTime = TimeCurrent(); g_wHi = iHigh(_Symbol, P_TF, rH); g_wLo = iLow(_Symbol, P_TF, rL); g_wAtr = atr; g_wAdx = adx;
+   g_wTide = tideOk ? t.trend : 0; g_wBars = rb; g_wMem = ""; g_wKV = ""; g_wDir = 0;
+   if(!VwapAt(1, g_wVw, g_wVsd)) { g_wVw = 0; g_wVsd = 0; }
    if(MinutesToNews(P_SmartNewsMin, nm) >= 0)
    { g_smartSit = 1; why = "sap ra tin " + nm + " trong " + IntegerToString(P_SmartNewsMin) + " phut"; }
    else if(LastNewsTime(240, nm) > 0)
@@ -792,6 +797,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    if(g_smartSit != g_smartPrev && g_smartPrev != 0)
       why += StringFormat(" (doi tu %s)", SmartSitName(g_smartPrev));
    g_smartPrev = g_smartSit; g_smartPrevDir = tideOk ? t.trend : 0;
+   g_wDir = dir;
    g_smartName = SmartSitName(g_smartSit);
    string head = "Tinh huong: " + g_smartName;
    EvAdd("Tinh huong " + g_smartName + ": " + why);
@@ -826,7 +832,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
       g_inChain = false;
       P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw;
-      if(!ok || (!b && !s)) continue;
+      if(!ok || (!b && !s)) { g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~0"; continue; }
       // Hoc tu thuc chien (Learn.mqh): moi setup thay duoc la 1 lenh giay; ket qua da tich luy quyet dinh co dung chien luoc nay
       // trong tinh huong nay hay khong va voi bao nhieu rui ro
       double sd = g_sigSL > 0 ? g_sigSL : atr * P_ATRMult;
@@ -839,7 +845,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       string ruleWhy = "";
       bool ruleOk = KnowRulesOk(m, g_smartSit, feat, ruleWhy);
       LearnRegister(g_smartSit, m, dm, c1, sd, g_sigTP, feat + (ruleOk ? "" : ";luat=1"));
-      if(!ruleOk) { EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
+      if(!ruleOk) { g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "2" : "-2"); EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
       double lf; string lt;
       int lv = LearnVerdict(g_smartSit, m, lf, lt);
       // Mac dinh (InpLearnApply = false) quyet dinh hoan toan theo KIEN THUC: ket qua thuc chien chi ghi vao bang chung de tham khao
@@ -847,8 +853,9 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       else
       {
          EvAdd("Hoc - " + ChainName(m) + " (" + g_smartName + "): " + lt);
-         if(lv == 3) { outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
+         if(lv == 3) { g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "3" : "-3"); outN += (outN == "" ? "" : ", ") + ChainName(m); continue; }   // du lieu thuc chien cho thay khong hieu qua
       }
+      g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "1" : "-1");
       if(b) { if(nb == 0) { bSL = g_sigSL; bTP = g_sigTP; bPX = g_sigPartialPx; bM = g_sigRiskMult; bMem = m; } nb++; bF = MathMax(bF, lf); bN += (bN == "" ? "" : " + ") + ChainName(m); }
       if(s) { if(ns == 0) { sSL = g_sigSL; sTP = g_sigTP; sPX = g_sigPartialPx; sM = g_sigRiskMult; sMem = m; } ns++; sF = MathMax(sF, lf); sN += (sN == "" ? "" : " + ") + ChainName(m); }
    }

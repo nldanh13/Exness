@@ -146,7 +146,29 @@ void WriteStatus()
    FileWriteString(h, "lydovao=" + g_lastEntryWhy + "\r\n");
    FileWriteString(h, "bangchung=" + g_ev + "\r\n");
    if(P_Strategy == STRAT_SMART) FileWriteString(h, "hoc=" + LearnSummary() + "\r\n");
-   FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ? TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
+   // Dang theo doi (v5.40): nhung gi bot canh o nen vua phan tich + lenh giay dang chay (giao dien tinh R tam tinh theo gia hien tai)
+   if(P_Strategy == STRAT_SMART && g_wTime > 0)
+   {
+      string tf = EnumToString((ENUM_TIMEFRAMES)P_TF);
+      StringReplace(tf, "PERIOD_", "");
+      long left = (long)(iTime(_Symbol, P_TF, 0) + PeriodSeconds((ENUM_TIMEFRAMES)P_TF) - TimeCurrent());
+      int dg = _Digits;
+      FileWriteString(h, "theodoi=luc:" + TimeToString(g_wTime, TIME_MINUTES) +
+                      ";gia:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID), dg) + ";ask:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK), dg) +
+                      ";hi:" + DoubleToString(g_wHi, dg) + ";lo:" + DoubleToString(g_wLo, dg) + ";atr:" + DoubleToString(g_wAtr, dg) +
+                      StringFormat(";adx:%.1f;sit:%d;tide:%d;dir:%d;nen:%d;con:%I64d;tf:%s;adxT:%.0f;adxR:%.0f;boxR:%.2f;b3:%.2f;lmax:%d",
+                                   g_wAdx, g_smartSit, g_wTide, g_wDir, g_wBars, left < 0 ? (long)0 : left, tf, P_SmartTrendADX, P_SmartRangeADX,
+                                   P_SmartRangeATR, P_VwapBand3, P_LearnMaxBars) +
+                      ";vw:" + DoubleToString(g_wVw, dg) + ";vsd:" + DoubleToString(g_wVsd, dg) + ";tv:" + g_wMem + ";kv:" + g_wKV + "\r\n");
+      string gs = "";
+      if(P_Learn)
+         for(int i = 0; i < ArraySize(g_lvt) && i < 40; i++)
+            gs += (gs == "" ? "" : ",") + TimeToString(g_lvt[i].t, TIME_DATE | TIME_MINUTES) + StringFormat("~%d~%d~%d~", g_lvt[i].sit, g_lvt[i].strat, g_lvt[i].dir) +
+                  DoubleToString(g_lvt[i].entry, dg) + "~" + DoubleToString(g_lvt[i].sl, dg) + "~" + DoubleToString(g_lvt[i].tp, dg) + "~" +
+                  DoubleToString(g_lvt[i].risk, dg) + StringFormat("~%d~%.2f~%.2f~", g_lvt[i].bars, g_lvt[i].mfe, g_lvt[i].mae) + DoubleToString(g_lvt[i].cost, dg);
+      FileWriteString(h, "giay=" + gs + "\r\n");
+   }
+   FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ?TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
    if(st != g_dlogLastStatus) { DecisionLog("phan-tich", st + (g_ev != "" ? " || " + g_ev : "")); g_dlogLastStatus = st; }
    FileWriteString(h, "xuly=" + TickTimeText() + "\r\n");
    FileWriteString(h, "choGD=" + (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED) ? "1" : "0") + "\r\n");

@@ -41,6 +41,12 @@ datetime g_autoRead = 0;
 int      g_smartSit = 0;                 // tinh huong thi truong vua chan doan (chien luoc 24, Signals.mqh)
 string   g_smartName = "";
 int      g_smartPrev = 0, g_smartPrevDir = 0;   // tinh huong / chieu thuy trieu o nen truoc (vung dem)
+// Dang theo doi (v5.40): bot dang canh gi o nen vua phan tich (hop, VWAP, vung Key Volume, trang thai tung kien thuc).
+// Status.mqh ghi ra dong "theodoi=" de giao dien ve khung "Dang theo doi"; chi dung cho che do Theo tinh huong.
+datetime g_wTime = 0;
+double   g_wHi = 0, g_wLo = 0, g_wAtr = 0, g_wAdx = 0, g_wVw = 0, g_wVsd = 0;
+int      g_wTide = 0, g_wDir = 0, g_wBars = 0;
+string   g_wMem = "", g_wKV = "";
 double   g_pzA = 0, g_pzB = 0, g_pzC = 0, g_pzD = 0;   // so lieu tam do ham mau hinh tra ra (khong gian gia cua mau, co the doi dau)
 void EvReset() { g_ev = ""; }
 void EvAdd(const string s) { if(s == "" || StringLen(g_ev) > 1800) return; g_ev += (g_ev == "" ? "" : " ; ") + s; }

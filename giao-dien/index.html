@@ -157,6 +157,20 @@ svg text { fill: var(--ink3); font: 11px var(--font-num); }
 .steps li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
 .steps li .ic { font-weight: 700; } .steps li.ok .ic { color: var(--gain); } .steps li.no .ic { color: var(--loss); } .steps li.wait .ic { color: var(--ink3); }
 .dwhy { font-size: 12px; color: var(--ink2); overflow-wrap: anywhere; }
+/* Đang theo dõi (v5.40) */
+.watch { display: grid; gap: 12px; }
+.wcard { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.wcard h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
+.wbar { position: relative; height: 14px; border-radius: 7px; background: var(--accent-soft); margin: 18px 0 18px; }
+.wbar .px { position: absolute; top: -4px; width: 4px; height: 22px; margin-left: -2px; border-radius: 2px; background: var(--ink); }
+.wbar .pxl { position: absolute; top: -20px; transform: translateX(-50%); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.wbar .edge { position: absolute; top: 18px; font-size: 11px; color: var(--ink3); white-space: nowrap; }
+.wbar .edge.r { right: 0; } .wbar .edge.l { left: 0; }
+.wmem { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wmem li { display: grid; grid-template-columns: minmax(110px, 160px) auto 1fr; gap: 8px; align-items: baseline; font-size: 13px; }
+.wmem li .h { color: var(--ink2); font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .wmem li { grid-template-columns: 1fr; gap: 2px; } }
+.wnote { font-size: 12px; color: var(--ink2); }
 .jr { max-height: 440px; overflow: auto; border-top: 1px solid var(--line); }
 .jr-row { display: grid; grid-template-columns: 140px 96px 1fr; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
 .jr-row .t { color: var(--ink3); font-size: 12px; }
@@ -293,6 +307,11 @@ main { gap: 14px; padding-block: 14px 40px; }
   </section>
 
 
+
+  <section class="sec" id="sec-watch" hidden>
+    <div class="sec-head"><h2>Đang theo dõi</h2><span class="hint">Bot đang canh gì ở nến vừa đóng và các lệnh giấy đang chạy. Cập nhật mỗi 10 giây</span></div>
+    <div class="watch" id="watch-list"></div>
+  </section>
 
   <section class="sec" id="sec-journal">
     <div class="sec-head"><h2>Nhật ký quá trình</h2>
@@ -637,7 +656,7 @@ function evBlock(text, open, title, key) {
 function splitEv(text) { var a = String(text || '').split(' || '); return { main: a[0], ev: a.slice(1).join(' ; ') }; }
 function renderDecide(list) {
   var box = $('decide-list');
-  if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); return; }
+  if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); renderWatch(list); return; }
   box.innerHTML = list.map(function (x) {
     var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
     var q = x.quyetdinh || x.trangthai || '';
@@ -651,6 +670,107 @@ function renderDecide(list) {
   }).join('');
   renderJournal(list);
   renderLearn(list);
+  renderWatch(list);
+}
+// ---- Đang theo dõi (v5.40): bot canh gì ở nến vừa đóng + lệnh giấy đang chạy ----
+function parseWatch(s) {
+  var o = {};
+  String(s || '').split(';').forEach(function (p) { var i = p.indexOf(':'); if (i > 0) o[p.slice(0, i)] = p.slice(i + 1); });
+  return o;
+}
+function parsePaper(s) {
+  return String(s || '').split(',').filter(Boolean).map(function (e) {
+    var a = e.split('~');
+    return { t: a[0], sit: +a[1], st: +a[2], dir: +a[3], entry: +a[4], sl: +a[5], tp: +a[6], risk: +a[7], bars: +a[8], mfe: +a[9], mae: +a[10], cost: +a[11] || 0 };
+  }).filter(function (p) { return p.risk > 0; });
+}
+function px(v) { return fmt(+v, 2); }
+function watchHint(m, w) {
+  var lo = px(w.lo), hi = px(w.hi), vw = +w.vw, sd = +w.vsd, b3 = +w.b3 || 3;
+  var kv = String(w.kv || '').split('_').filter(Boolean).map(function (z) { var a = z.split('-'); return px(a[0]) + ' – ' + px(a[1]); });
+  switch (+m) {
+    case 6: return 'Giá thủng đáy hộp (' + lo + ') không sâu rồi đóng cửa quay lại trong hộp, test lại đáy, sau đó nến mạnh vượt nắp hộp → MUA. Ngược lại ở đỉnh hộp (' + hi + ') → BÁN.';
+    case 18: return kv.length ? 'Giá quay về vùng volume lớn (' + kv.join('; ') + ') rồi có nến phản ứng rõ, đóng cửa ra ngoài vùng. Vùng dưới giá = hỗ trợ (MUA), trên giá = kháng cự (BÁN).'
+      : 'Chưa có vùng volume lớn nào đủ điều kiện quanh giá hiện tại.';
+    case 17: if (!(vw > 0)) return 'Chưa đủ nến trong ngày để tính VWAP.';
+      return +w.sit === 6 ? 'Giá vọt chạm dải 3 (trên ' + px(vw + b3 * sd) + ' / dưới ' + px(vw - b3 * sd) + ') rồi có nến bị từ chối mạnh → đánh kéo về VWAP ' + px(vw) + '.'
+        : 'Giá hồi về VWAP (' + px(vw) + ') rồi nến bật theo chiều xu hướng, đóng cửa qua VWAP.';
+    case 19: return 'Cấu trúc đỉnh / đáy rõ ràng, giá về đúng đường ngang quan trọng rồi có nến bật mạnh (thân ≥ 60% biên độ).';
+    case 15: return 'Giá quay về order block (nến ngược chiều cuối cùng trước cú đẩy mạnh) và phản ứng.';
+    case 5: return 'Giá hồi về khoảng trống giá (FVG) rồi có mẫu nến xác nhận.';
+    case 1: return 'Nến đóng cửa phá kênh với thân lớn, volume tăng, rồi hồi về test mép vừa phá và giữ được.';
+    case 16: return 'Con sóng hồi ngược thủy triều kết thúc: nến đóng cửa vượt đỉnh / đáy gần nhất của con sóng.';
+    case 21: return 'Giá ở nửa rẻ (mua) / nửa đắt (bán) của hộp ngày: cú quét đỉnh / đáy, xác nhận quay đầu, rồi vào ở FVG.';
+    case 12: return 'Xu hướng đã đi xa: chờ dấu hiệu phân phối / tích lũy trong hộp rồi mới vào.';
+    case 14: return 'Sau cú sập / tăng dựng đứng: chờ giá dừng lại, đi ngang và tạo đáy (đỉnh) mới rồi mới vào, không bắt dao đang rơi.';
+    case 20: return 'Sau tin: chờ cú quét một phía rồi giá đảo chiều, đóng cửa ngược lại.';
+  }
+  return '';
+}
+function watchState(v, dir) {
+  v = +v;
+  if (v === 0) return ['Chưa có setup', 'na'];
+  var side = v > 0 ? 'MUA' : 'BÁN', a = Math.abs(v);
+  if (a === 2) return ['Có setup ' + side + ', điều kiện bổ sung chặn', 'zero'];
+  if (a === 3) return ['Có setup ' + side + ', bị loại theo kết quả học', 'zero'];
+  if (dir && (v > 0 ? 1 : -1) !== dir) return ['Setup ' + side + ' ngược thủy triều, bỏ', 'zero'];
+  return ['Có setup ' + side, 'ok'];
+}
+function renderWatch(list) {
+  var sec = $('sec-watch'), box = $('watch-list');
+  var has = (list || []).filter(function (x) { return /Theo tinh huong/.test(x.chienluoc || '') || 'theodoi' in x; });
+  if (!has.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+  box.innerHTML = has.map(function (x) {
+    var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
+    var head = '<div class="dcard-head"><span class="tag ' + cls + '">' + acctName(x) + '</span><b>' + esc(x.ma || '') + '</b></div>';
+    if (!('theodoi' in x)) return '<div class="wcard">' + head + '<p class="muted" style="margin:0">Cần bot bản 5.40 trở lên (bấm "Cập nhật bản mới" rồi tắt / mở lại MT5).</p></div>';
+    var w = parseWatch(x.theodoi), bid = +w.gia, ask = +w.ask, hi = +w.hi, lo = +w.lo, atr = +w.atr, adx = +w.adx, sit = +w.sit, dir = +w.dir;
+    var html = head;
+    // 1) Tình huống + khi nào đổi
+    var adxT = +w.adxT || 25, adxR = +w.adxR || 20, boxR = +w.boxR || 6, boxA = atr > 0 ? (hi - lo) / atr : 0;
+    var chg = sit === 6 ? 'Giữ ĐI NGANG khi ADX < ' + (adxR + 3) + ' và hộp ≤ ' + fmt(boxR * 1.15, 1) + ' ATR (hiện hộp ' + fmt(boxA, 1) + ' ATR). Vượt ra thì đổi sang xu hướng / không rõ.'
+      : sit === 4 ? 'Giữ XU HƯỚNG MẠNH khi ADX ≥ ' + (adxT - 3) + ' và thủy triều không đổi chiều.'
+      : sit === 7 ? 'Thành ĐI NGANG khi ADX < ' + adxR + ' và hộp ≤ ' + fmt(boxR, 1) + ' ATR (hiện ' + fmt(boxA, 1) + ' ATR); thành XU HƯỚNG MẠNH khi ADX ≥ ' + adxT + ' và thủy triều rõ.'
+      : sit === 1 ? 'Đứng ngoài tới khi tin ra.' : '';
+    var con = Math.max(0, Math.ceil((+w.con || 0) / 60));
+    html += '<div class="wnote"><b>' + esc(SIT_NAME[sit] || '?') + '</b> · ADX <span class="num">' + fmt(adx, 1) + '</span>' +
+      (+w.tide ? ' · thủy triều ' + (+w.tide > 0 ? 'tăng' : 'giảm') : '') + (dir ? ' · chỉ tìm lệnh <b>' + (dir > 0 ? 'MUA' : 'BÁN') + '</b>' : '') +
+      ' · phân tích lúc ' + esc(w.luc || '') + ' · nến ' + esc(w.tf || '') + ' tiếp theo đóng sau ~' + con + ' phút' + (chg ? '<br>' + esc(chg) : '') + '</div>';
+    // 2) Hộp giá: giá đang ở đâu so với đáy / đỉnh hộp
+    if (hi > lo && bid > 0) {
+      var pos = (bid - lo) / (hi - lo), cp = Math.max(0, Math.min(1, pos)) * 100;
+      var where = pos < 0 ? 'dưới đáy hộp' : pos > 1 ? 'trên đỉnh hộp' : pos < 0.25 ? 'gần đáy hộp' : pos > 0.75 ? 'gần đỉnh hộp' : 'giữa hộp, chưa tới mép';
+      html += '<div><h3>Hộp ' + esc(w.nen || '') + ' nến gần nhất</h3><div class="wbar"><span class="pxl num" style="left:' + cp.toFixed(1) + '%">' + px(bid) + '</span><i class="px" style="left:' + cp.toFixed(1) + '%"></i>' +
+        '<span class="edge l num">Đáy ' + px(lo) + '</span><span class="edge r num">Đỉnh ' + px(hi) + '</span></div>' +
+        '<div class="wnote">Giá ' + where + ': cách đáy <span class="num">' + fmt(bid - lo, 0) + '</span> (' + fmt(atr > 0 ? (bid - lo) / atr : 0, 1) + ' ATR), cách đỉnh <span class="num">' +
+        fmt(hi - bid, 0) + '</span> (' + fmt(atr > 0 ? (hi - bid) / atr : 0, 1) + ' ATR). 1 ATR ≈ <span class="num">' + fmt(atr, 0) + '</span> giá.</div></div>';
+    }
+    // 3) Từng kiến thức đang chờ gì
+    var mem = String(w.tv || '').split(',').filter(Boolean);
+    if (mem.length) {
+      html += '<div><h3>Kiến thức đang dùng và điều kiện chờ</h3><ul class="wmem">' + mem.map(function (e) {
+        var a = e.split('~'), st = watchState(a[1], dir);
+        return '<li><b>' + esc(STR_NAME[a[0]] || ('S' + a[0])) + '</b><span><span class="pill ' + st[1] + '">' + esc(st[0]) + '</span></span><span class="h">' + esc(watchHint(a[0], w)) + '</span></li>';
+      }).join('') + '</ul></div>';
+    } else if (sit) html += '<div class="wnote">Tình huống này không dùng kiến thức nào: bot đứng ngoài.</div>';
+    // 4) Lệnh giấy đang chạy
+    var pp = parsePaper(x.giay), lmax = +w.lmax || 48;
+    html += '<div><h3>Lệnh giấy đang chạy (' + pp.length + ')</h3>';
+    if (!pp.length) html += '<p class="muted" style="margin:0;font-size:12px">Chưa có. Mỗi khi một kiến thức thấy setup (kể cả lúc không vào lệnh thật), bot mở một lệnh giấy và theo dõi tới SL / TP để chấm điểm.</p>';
+    else {
+      function r2(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + 'R'; }
+      html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="l">Lúc</th><th class="l">Kiến thức</th><th class="l">Chiều</th><th class="r">Vào</th><th class="r">SL</th><th class="r">TP</th>' +
+        '<th class="r">R tạm</th><th class="r">Tốt nhất</th><th class="r">Xấu nhất</th><th class="r">Nến</th></tr></thead><tbody>' + pp.map(function (p) {
+          var cur = p.dir > 0 ? bid : ask, r = cur > 0 ? (cur - p.entry) * p.dir / p.risk - p.cost / p.risk : 0;
+          return '<tr><td class="l num">' + esc(p.t) + '</td><td class="l">' + esc(STR_NAME[p.st] || ('S' + p.st)) + ' <span class="muted">· ' + esc(SIT_NAME[p.sit] || '') + '</span></td>' +
+            '<td class="l">' + (p.dir > 0 ? 'MUA' : 'BÁN') + '</td><td class="r num">' + px(p.entry) + '</td><td class="r num">' + px(p.sl) + '</td><td class="r num">' + px(p.tp) + '</td>' +
+            '<td class="r num" style="color:var(' + (r >= 0 ? '--gain' : '--loss') + ')">' + r2(r) + '</td><td class="r num">' + r2(p.mfe) + '</td><td class="r num">' + r2(-p.mae) + '</td>' +
+            '<td class="r num">' + p.bars + ' / ' + lmax + '</td></tr>';
+        }).join('') + '</tbody></table></div><p class="muted" style="margin:6px 0 0;font-size:12px">R tạm = lời / lỗ theo giá hiện tại tính bằng số lần rủi ro (đã trừ spread). Tốt nhất / xấu nhất tính theo các nến đã đóng.</p>';
+    }
+    return '<div class="wcard">' + html + '</div></div>';
+  }).join('');
 }
 var SIT_NAME = { 0: 'Không phân loại', 1: 'Sắp có tin', 2: 'Vừa ra tin', 3: 'Vừa sập / tăng dựng đứng', 4: 'Xu hướng mạnh', 5: 'Xu hướng giai đoạn cuối', 6: 'Đi ngang', 7: 'Không rõ' };
 var STR_NAME = { 0: 'EMA hồi', 1: 'Phá vỡ thật', 5: 'FVG + nến', 6: 'Spring đủ', 9: 'Fib + VP', 12: 'Hộp phân phối', 14: 'Dao rơi', 15: 'Order block',
@@ -698,7 +818,9 @@ function copyReport() {
     L.push('Quyet dinh: ' + (x.quyetdinh || x.trangthai || ''));
     if (x.bangchung) L.push('Bang chung: ' + x.bangchung);
     if (x.lydovao) L.push('Lenh gan nhat' + (x.lydovaoluc ? ' (' + x.lydovaoluc + ')' : '') + ': ' + x.lydovao);
-    var skip = { NhatKy: 1, quyetdinh: 1, bangchung: 1, lydovao: 1, lydovaoluc: 1, chienluoc: 1, ma: 1, phienban: 1, hoc: 1 };
+    if (x.theodoi) L.push('Theo doi: ' + x.theodoi);
+    if ('giay' in x) L.push('Lenh giay dang chay (luc~tinhhuong~chienluoc~chieu~vao~SL~TP~rui ro~nen~MFE~MAE~phi): ' + (x.giay || '(khong co)'));
+    var skip = { NhatKy: 1, quyetdinh: 1, bangchung: 1, lydovao: 1, lydovaoluc: 1, chienluoc: 1, ma: 1, phienban: 1, hoc: 1, theodoi: 1, giay: 1 };
     var kv = Object.keys(x).filter(function (k) { return !skip[k] && typeof x[k] !== 'object'; }).map(function (k) { return k + '=' + x[k]; });
     if (kv.length) L.push('Chi so: ' + kv.join(' · '));
     if (x.hoc) L.push('Hoc (tinh huong:chien luoc:n:TB R:thang%:danh gia:n that:TB that): ' + x.hoc);

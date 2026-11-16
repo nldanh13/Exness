@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.39
+# Hướng dẫn bot BTC (MT5) v5.40
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1242,3 +1242,13 @@ Góc trên bên phải giao diện, tab nào cũng có. Bấm một lần là ch
 Git, MT5, mỗi bot (tài khoản, chiến lược, quyết định, bằng chứng, lệnh gần nhất, các chỉ số, kết quả học, 30 dòng nhật ký gần nhất),
 chấm điểm + điều kiện đã duyệt, việc gần nhất và các dòng cuối nhật ký kỹ thuật (40 dòng nếu có lỗi). Không chứa mật khẩu hay mã truy cập.
 Trình duyệt chặn tự chép thì hiện ô chữ để bạn tự chọn và chép.
+
+### v5.40: Khung "Đang theo dõi" trên giao diện (17/11/2026)
+Tab **Bot đang chạy**, ngay dưới *Quyết định của bot* (chỉ hiện với chế độ Theo tình huống). Bot ghi thêm 2 dòng `theodoi=` và `giay=` vào file
+trạng thái mỗi 10 giây; không đổi logic giao dịch.
+- **Tình huống**: ADX, thủy triều, chiều được phép, lúc phân tích, bao lâu nữa nến tiếp theo đóng, và điều kiện để đổi tình huống (có vùng đệm).
+- **Hộp giá**: đáy / đỉnh hộp `InpSmartRangeBars` nến, giá đang ở đâu, cách mỗi mép bao nhiêu (giá và ATR).
+- **Từng kiến thức**: trạng thái ở nến vừa đóng (chưa có setup / có setup MUA–BÁN / bị điều kiện bổ sung chặn / bị loại theo học / ngược thủy
+  triều) và điều kiện đang chờ, kèm mức giá cụ thể (mép hộp, VWAP + dải 3, các vùng Key Volume).
+- **Lệnh giấy đang chạy**: vào, SL, TP, R tạm theo giá hiện tại (đã trừ spread), tốt nhất / xấu nhất, số nến / hạn.
+Nút *Sao chép gửi Claude* chép kèm 2 dòng này.
