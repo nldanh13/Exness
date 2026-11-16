@@ -35,6 +35,7 @@ string StrategyName()
       case STRAT_CHAIN:      return "Chuoi phan tich: thuy trieu - vi tri - setup";
       case STRAT_AUTO:       return "Tu dong theo bang xep hang";
       case STRAT_SMART:      return "Theo tinh huong";
+      case STRAT_BOXEDGE:    return "Danh mep hop di ngang";
    }
    return "EMA pullback";
 }
@@ -204,7 +205,7 @@ void WriteStatus()
                       ";hi:" + DoubleToString(g_wHi, dg) + ";lo:" + DoubleToString(g_wLo, dg) + ";atr:" + DoubleToString(g_wAtr, dg) +
                       StringFormat(";adx:%.1f;sit:%d;tide:%d;dir:%d;nen:%d;con:%I64d;tf:%s;adxT:%.0f;adxR:%.0f;boxR:%.2f;b3:%.2f;lmax:%d",
                                    g_wAdx, g_smartSit, g_wTide, g_wDir, g_wBars, left < 0 ? (long)0 : left, tf, P_SmartTrendADX, P_SmartRangeADX,
-                                   P_SmartRangeATR, P_VwapBand3, P_LearnMaxBars) +
+                                   P_SmartRangeATR, g_smartSit == 6 && P_RangeVwapBand > 0 ? P_RangeVwapBand : P_VwapBand3, P_LearnMaxBars) +
                       ";vw:" + DoubleToString(g_wVw, dg) + ";vsd:" + DoubleToString(g_wVsd, dg) + ";tv:" + g_wMem + ";kv:" + g_wKV + "\r\n");
       string gs = "";
       if(P_Learn)

@@ -30,6 +30,7 @@ STRATEGY_LABELS = {
     "STRAT_CHAIN":        "Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung",
     "STRAT_AUTO":         "Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng",
     "STRAT_SMART":        "Thử nghiệm: theo tình huống – nhận diện thị trường rồi dùng đúng bộ kiến thức",
+    "STRAT_BOXEDGE":      "Thử nghiệm: đánh mép hộp đi ngang – mua mép dưới / bán mép trên khi có nến từ chối",
 }
 
 GROUPS = [
@@ -216,6 +217,10 @@ GROUPS = [
         ("InpSmartRangeBars", "Tình huống: hộp đi ngang (số nến)", ""),
         ("InpSmartRangeATR",  "Tình huống: hộp đi ngang cao tối đa (× ATR)", "ADX thấp VÀ hộp gần đây hẹp hơn mức này mới coi là đi ngang."),
         ("InpSmartNewsMin",   "Tình huống: đứng ngoài trước tin lớn (phút)", ""),
+        ("InpBoxEdgePct",     "Đi ngang: vùng mép hộp (% chiều cao)", "Giá phải chạm phần này tính từ đáy / đỉnh hộp thì mới xét đánh mép hộp."),
+        ("InpBoxMinRR",       "Đi ngang: lời tới giữa hộp tối thiểu (× SL)", "Đánh mép hộp chỉ vào khi lời tới giữa hộp, đã trừ spread, đạt mức này."),
+        ("InpRangeVwapBand",  "Đi ngang: dải VWAP bắt nhịp kéo về", "Khi đi ngang dùng dải này thay dải 3 (dải 2 chạm thường xuyên hơn)."),
+        ("InpRangeMinSLATR",  "Đi ngang: SL tối thiểu (× ATR)", "Thay InpMinSLATRMult khi tình huống là đi ngang, để SL ngắn ở mép hộp còn vừa vốn nhỏ."),
         ("InpChainList",      "Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)", "Chiến lược 22 lồng ghép các chiến lược thành 1 chuỗi trên cùng khung: B1 thủy triều (Dow khung lớn: tăng chỉ mua, giảm chỉ bán, chưa rõ hoặc giai đoạn cuối = đứng ngoài) → B2 vị trí (vùng rẻ / đắt của hộp D1) → B3 setup (các chiến lược trong danh sách cùng soi nến vừa đóng; có setup ngược chiều = đứng ngoài) → B4 bộ lọc chung → B5 khối lượng theo số setup đồng thuận. Mã: 0 EMA hồi, 1 phá vỡ + test lại, 5 FVG + nến, 6 Spring đủ, 9 Fib + VP, 12 hộp phân phối, 14 dao rơi, 15 order block, 16 sóng Dow, 17 VWAP, 18 Key Volume, 19 3 câu hỏi, 21 premium / discount. SL / TP theo setup đứng trước trong danh sách."),
         ("InpChainPD",        "Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)", "Dùng số nến D1 của 'Premium / discount: hộp giá khung ngày'."),
         ("InpChainFullCount", "Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)", ""),

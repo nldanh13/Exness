@@ -223,6 +223,18 @@ class MqlSafetyRegression(unittest.TestCase):
         # backtest khong ghi qua trinh
         self.assertIn("g_trOn = !MQLInfoInteger(MQL_TESTER);", source("TrendBot/Core.mqh"))
 
+    def test_range_trading_keeps_risk_caps(self):
+        main = source("BTC_EMA_Pullback_v2.mq5")
+        sig = source("TrendBot/Signals.mqh")
+        # di ngang co danh mep hop + VWAP dai rieng; SL toi thieu rieng chi khi Theo tinh huong o tinh huong 6
+        self.assertIn('list = "25,17,6,18,19"', sig)
+        self.assertIn("P_Strategy == STRAT_SMART && g_smartSit == 6 && P_RangeMinSLATR > 0", main)
+        box = function("BoxEdgeSignal", "TrendBot/Signals.mqh")
+        self.assertIn("rr >= P_BoxMinRR", box)
+        self.assertIn("SYMBOL_SPREAD", box)
+        # tran rui ro / lo ngay van nam trong CalcLots, khong bi bo qua
+        self.assertIn("dayStartEquity * P_MaxDailyLossPct / 100.0 + DayPL() - own", function("CalcLots", "TrendBot/Risk.mqh"))
+
     def test_round_up_respects_daily_loss_room(self):
         lots = function("CalcLots", "TrendBot/Risk.mqh")
         self.assertIn("dayStartEquity * P_MaxDailyLossPct / 100.0 + DayPL() - own", lots)

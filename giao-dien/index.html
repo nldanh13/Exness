@@ -783,11 +783,12 @@ function watchHint(m, w) {
   var lo = px(w.lo), hi = px(w.hi), vw = +w.vw, sd = +w.vsd, b3 = +w.b3 || 3;
   var kv = String(w.kv || '').split('_').filter(Boolean).map(function (z) { var a = z.split('-'); return px(a[0]) + ' – ' + px(a[1]); });
   switch (+m) {
+    case 25: return 'Giá về vùng mép dưới hộp (gần ' + lo + ') rồi có nến từ chối (râu dưới dài, đóng cửa nửa trên nến) → MUA, chốt ở giữa hộp. Ngược lại ở mép trên (gần ' + hi + ') → BÁN.';
     case 6: return 'Giá thủng đáy hộp (' + lo + ') không sâu rồi đóng cửa quay lại trong hộp, test lại đáy, sau đó nến mạnh vượt nắp hộp → MUA. Ngược lại ở đỉnh hộp (' + hi + ') → BÁN.';
     case 18: return kv.length ? 'Giá quay về vùng volume lớn (' + kv.join('; ') + ') rồi có nến phản ứng rõ, đóng cửa ra ngoài vùng. Vùng dưới giá = hỗ trợ (MUA), trên giá = kháng cự (BÁN).'
       : 'Chưa có vùng volume lớn nào đủ điều kiện quanh giá hiện tại.';
     case 17: if (!(vw > 0)) return 'Chưa đủ nến trong ngày để tính VWAP.';
-      return +w.sit === 6 ? 'Giá vọt chạm dải 3 (trên ' + px(vw + b3 * sd) + ' / dưới ' + px(vw - b3 * sd) + ') rồi có nến bị từ chối mạnh → đánh kéo về VWAP ' + px(vw) + '.'
+      return +w.sit === 6 ? 'Giá vọt chạm dải ' + b3 + ' (trên ' + px(vw + b3 * sd) + ' / dưới ' + px(vw - b3 * sd) + ') rồi có nến bị từ chối mạnh → đánh kéo về VWAP ' + px(vw) + '.'
         : 'Giá hồi về VWAP (' + px(vw) + ') rồi nến bật theo chiều xu hướng, đóng cửa qua VWAP.';
     case 19: return 'Cấu trúc đỉnh / đáy rõ ràng, giá về đúng đường ngang quan trọng rồi có nến bật mạnh (thân ≥ 60% biên độ).';
     case 15: return 'Giá quay về order block (nến ngược chiều cuối cùng trước cú đẩy mạnh) và phản ứng.';
@@ -868,7 +869,7 @@ function renderWatch(list) {
 }
 var SIT_NAME = { 0: 'Không phân loại', 1: 'Sắp có tin', 2: 'Vừa ra tin', 3: 'Vừa sập / tăng dựng đứng', 4: 'Xu hướng mạnh', 5: 'Xu hướng giai đoạn cuối', 6: 'Đi ngang', 7: 'Không rõ' };
 var STR_NAME = { 0: 'EMA hồi', 1: 'Phá vỡ thật', 5: 'FVG + nến', 6: 'Spring đủ', 9: 'Fib + VP', 12: 'Hộp phân phối', 14: 'Dao rơi', 15: 'Order block',
-  16: 'Sóng Dow', 17: 'VWAP', 18: 'Key Volume', 19: '3 câu hỏi', 20: 'Quét tin', 21: 'Premium / discount' };
+  16: 'Sóng Dow', 17: 'VWAP', 18: 'Key Volume', 19: '3 câu hỏi', 20: 'Quét tin', 21: 'Premium / discount', 25: 'Đánh mép hộp' };
 var LEARN_VERDICT = { 0: ['Đang thử', 'na'], 1: ['Tin dùng', 'ok'], 2: ['Chưa chắc', 'zero'], 3: ['Loại', 'no'] };
 function renderLearn(list) {
   var rows = [], open = 0;

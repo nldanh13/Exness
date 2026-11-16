@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.42.1"
-#property version   "5.4210"
+#define  BOT_VERSION "5.43.0"
+#property version   "5.4300"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -37,7 +37,8 @@ enum ENUM_STRATEGY
    STRAT_PD           = 21,  // Thử nghiệm: premium / discount khung ngày + quét, xác nhận, FVG khung chính
    STRAT_CHAIN        = 22,  // Thử nghiệm: chuỗi phân tích – thủy triều → vị trí → setup đồng thuận trên 1 khung
    STRAT_AUTO         = 23,  // Tự động: 1 chart tự chuyển sang chiến lược đứng đầu bảng xếp hạng
-   STRAT_SMART        = 24   // Thử nghiệm: theo tình huống – nhận diện thị trường rồi dùng đúng bộ kiến thức
+   STRAT_SMART        = 24,  // Thử nghiệm: theo tình huống – nhận diện thị trường rồi dùng đúng bộ kiến thức
+   STRAT_BOXEDGE      = 25   // Thử nghiệm: đánh mép hộp đi ngang – mua mép dưới / bán mép trên khi có nến từ chối
 };
 
 input group "1. Chiến lược và khung thời gian"
@@ -223,6 +224,10 @@ input double          InpSmartRangeADX    = 20;         // Tình huống: đi ng
 input int             InpSmartRangeBars   = 40;         // Tình huống: hộp đi ngang (số nến)
 input double          InpSmartRangeATR    = 6.0;        // Tình huống: hộp đi ngang cao tối đa (× ATR)
 input int             InpSmartNewsMin     = 60;         // Tình huống: đứng ngoài trước tin lớn (phút)
+input double          InpBoxEdgePct       = 20.0;       // Đi ngang: vùng mép hộp (% chiều cao hộp tính từ mép)
+input double          InpBoxMinRR         = 1.5;        // Đi ngang: đánh mép hộp khi lời tới giữa hộp ≥ (× SL)
+input double          InpRangeVwapBand    = 2.0;        // Đi ngang: VWAP bắt nhịp kéo về từ dải (× độ lệch chuẩn, thay dải 3)
+input double          InpRangeMinSLATR    = 0.4;        // Đi ngang: SL tối thiểu (× ATR, thay InpMinSLATRMult)
 input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
 input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
 input int             InpChainFullCount   = 2;          // Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)
@@ -360,6 +365,7 @@ int             P_PDDays, P_PDLookback, P_ChainFullCount;
 string          P_ChainList;
 bool            P_ChainPD;
 double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR, P_LearnTryRisk;
+double          P_BoxEdgePct, P_BoxMinRR, P_RangeVwapBand, P_RangeMinSLATR;
 bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin;
@@ -533,6 +539,7 @@ void LoadParams()
    P_Learn = InpLearn; P_LearnApply = InpLearnApply; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
    P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
    P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin;
+   P_BoxEdgePct = InpBoxEdgePct; P_BoxMinRR = InpBoxMinRR; P_RangeVwapBand = InpRangeVwapBand; P_RangeMinSLATR = InpRangeMinSLATR;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
    P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
    P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
@@ -668,6 +675,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartRangeBars") { P_SmartRangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
    if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
+   if(k == "InpBoxEdgePct") { P_BoxEdgePct = StringToDouble(v); return true; }
+   if(k == "InpBoxMinRR") { P_BoxMinRR = StringToDouble(v); return true; }
+   if(k == "InpRangeVwapBand") { P_RangeVwapBand = StringToDouble(v); return true; }
+   if(k == "InpRangeMinSLATR") { P_RangeMinSLATR = StringToDouble(v); return true; }
    if(k == "InpChainList") { P_ChainList = v; return true; }
    if(k == "InpChainPD") { P_ChainPD = (v == "true" || v == "1"); return true; }
    if(k == "InpChainFullCount") { P_ChainFullCount = (int)StringToInteger(v); return true; }
@@ -1764,7 +1775,14 @@ int SendEntry(const bool buySignal, const double atr, const bool fromPending)
          if(d > 0) slDist = MathMax(d, P_SLStructMinATR * slAtr);
       }
    }
-   if(P_MinSLATRMult > 0 && slAtr > 0) slDist = MathMax(slDist, slAtr * P_MinSLATRMult);
+   // v5.43: tinh huong DI NGANG dung SL toi thieu rieng (mep hop cho SL ngan, von nho moi vao duoc); tran rui ro / lo ngay giu nguyen
+   double minSLm = P_Strategy == STRAT_SMART && g_smartSit == 6 && P_RangeMinSLATR > 0 ? P_RangeMinSLATR : P_MinSLATRMult;
+   if(minSLm > 0 && slAtr > 0)
+   {
+      if(slDist < slAtr * minSLm) EvAdd(StringFormat("SL %s gia < toi thieu %.1f ATR%s -> noi ra %s gia", Px(slDist), minSLm,
+                                                     minSLm != P_MinSLATRMult ? " (di ngang)" : "", Px(slAtr * minSLm)));
+      slDist = MathMax(slDist, slAtr * minSLm);
+   }
    double minStops = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
    if(slDist < minStops * 1.1) slDist = minStops * 1.1;
 
