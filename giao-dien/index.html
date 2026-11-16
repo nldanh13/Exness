@@ -171,6 +171,23 @@ svg text { fill: var(--ink3); font: 11px var(--font-num); }
 .wmem li .h { color: var(--ink2); font-size: 12px; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .wmem li { grid-template-columns: 1fr; gap: 2px; } }
 .wnote { font-size: 12px; color: var(--ink2); }
+/* Quá trình phân tích (v5.42) */
+.trace { display: grid; gap: 12px; }
+.tpulse { border-radius: 8px; padding: 10px 12px; font-size: 13px; background: var(--gain-soft); overflow-wrap: anywhere; }
+.tpulse.late { background: var(--loss-soft); color: var(--loss); font-weight: 600; }
+.trow { border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.trow > summary { cursor: pointer; padding: 9px 12px; display: grid; grid-template-columns: 150px 1fr auto; gap: 10px; align-items: baseline; font-size: 13px; }
+.trow > summary .t { color: var(--ink3); font-size: 12px; }
+.trow > summary .x { overflow-wrap: anywhere; font-weight: 600; }
+.trow > summary .same { font-size: 11px; color: var(--ink3); white-space: nowrap; }
+@media (max-width: 640px) { .trow > summary { grid-template-columns: 1fr; gap: 2px; } }
+.tbody { padding: 0 12px 12px; display: grid; gap: 12px; }
+.tgrp h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink3); font-weight: 600; }
+.tgrp ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.tgrp li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
+.tgrp li .ic { font-weight: 700; color: var(--ink3); }
+.tgrp li.ok .ic { color: var(--gain); } .tgrp li.no .ic { color: var(--loss); } .tgrp li.res { font-weight: 600; } .tgrp li.res .ic { color: var(--accent); }
+.tgrp li.no { color: var(--ink2); }
 .jr { max-height: 440px; overflow: auto; border-top: 1px solid var(--line); }
 .jr-row { display: grid; grid-template-columns: 140px 96px 1fr; gap: 10px; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
 .jr-row .t { color: var(--ink3); font-size: 12px; }
@@ -307,6 +324,11 @@ main { gap: 14px; padding-block: 14px 40px; }
   </section>
 
 
+
+  <section class="sec" id="sec-trace" hidden>
+    <div class="sec-head"><h2>Quá trình phân tích</h2><span class="hint">Mỗi lần nến đóng: bot lấy dữ liệu gì, tính ra số nào, so với ngưỡng nào, từng kiến thức kết luận gì</span></div>
+    <div class="trace" id="trace-list"></div>
+  </section>
 
   <section class="sec" id="sec-watch" hidden>
     <div class="sec-head"><h2>Đang theo dõi</h2><span class="hint">Bot đang canh gì ở nến vừa đóng và các lệnh giấy đang chạy. Cập nhật mỗi 10 giây</span></div>
@@ -581,7 +603,7 @@ function renderOptions() {
   } else w.hidden = true;
 }
 
-var API_VER = 5;   // khớp $ApiVer trong GiaoDien.ps1
+var API_VER = 6;   // khớp $ApiVer trong GiaoDien.ps1
 function renderStatus(d) {
   S.last = d;
   $('reopen-note').hidden = !(d.CanMoLai || (d.ApiVer || 1) < API_VER);
@@ -656,7 +678,7 @@ function evBlock(text, open, title, key) {
 function splitEv(text) { var a = String(text || '').split(' || '); return { main: a[0], ev: a.slice(1).join(' ; ') }; }
 function renderDecide(list) {
   var box = $('decide-list');
-  if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); renderWatch(list); return; }
+  if (!list.length) { box.innerHTML = '<span class="muted">Chưa có bot nào đang chạy trên tài khoản thật / demo.</span>'; renderJournal(list); renderWatch(list); renderTrace(list); return; }
   box.innerHTML = list.map(function (x) {
     var cls = x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other';
     var q = x.quyetdinh || x.trangthai || '';
@@ -671,6 +693,78 @@ function renderDecide(list) {
   renderJournal(list);
   renderLearn(list);
   renderWatch(list);
+  renderTrace(list);
+}
+// ---- Quá trình phân tích (v5.42): từng bước của mỗi lần phân tích nến vừa đóng ----
+// Mỗi dòng file: giờ nến (server) \t lúc phân tích (giờ máy) \t khung (phút) \t kết luận \t các bước (nhóm`trạng thái`nội dung, nối bằng ``)
+var TR_GRP = { 'Du lieu': 'Dữ liệu lấy vào', 'Tinh huong': 'Chẩn đoán tình huống (xét theo thứ tự, điều kiện đầu tiên đạt quyết định)', 'Kien thuc': 'Từng kiến thức', 'Ket luan': 'Kết luận' };
+// Câu trạng thái / bằng chứng cũ của bot là chữ không dấu: thêm dấu cho các cụm hay gặp (cụm dài trước)
+var VI_PH = [
+  ['Von qua nho cho SL nay, bo qua lenh', 'Vốn quá nhỏ cho SL này, bỏ qua lệnh'], ['Lenh nay co the lam lo ngay vuot tran, bo qua lenh', 'Lệnh này có thể làm lỗ ngày vượt trần, bỏ qua lệnh'],
+  ['Nhom BTC/ETH da dung het tran rui ro, bo qua lenh', 'Nhóm BTC/ETH đã dùng hết trần rủi ro, bỏ qua lệnh'], ['Cac lop dang mo con rui ro du 1 lenh, khong nhoi them', 'Các lớp đang mở còn rủi ro đủ 1 lệnh, không nhồi thêm'],
+  ['Cham gioi han lo ngay, nghi den mai', 'Chạm giới hạn lỗ ngày, nghỉ đến mai'], ['DUNG HAN (sut giam)', 'DỪNG HẲN (sụt giảm)'], ['Dang giu lenh', 'Đang giữ lệnh'],
+  ['Spread qua rong', 'Spread quá rộng'], ['Nghi sau lenh thua', 'Nghỉ sau lệnh thua'], ['Du so lenh trong ngay', 'Đủ số lệnh trong ngày'], ['Gan tin My: ', 'Gần tin Mỹ: '], ['Sap ra tin ', 'Sắp ra tin '],
+  ['Mua lon xon: dung ngoai', 'Mùa lộn xộn: đứng ngoài'], ['Pha vo dau phien, bo qua', 'Phá vỡ đầu phiên, bỏ qua'], ['Nen pha vo qua dai, bo qua', 'Nến phá vỡ quá dài, bỏ qua'], ['TP qua gan gia, bo qua', 'TP quá gần giá, bỏ qua'],
+  ['VUA CO CU SAP / TANG DUNG DUNG', 'VỪA CÓ CÚ SẬP / TĂNG DỰNG ĐỨNG'], ['XU HUONG GIAI DOAN CUOI', 'XU HƯỚNG GIAI ĐOẠN CUỐI'], ['XU HUONG MANH', 'XU HƯỚNG MẠNH'], ['DI NGANG', 'ĐI NGANG'],
+  ['KHONG RO', 'KHÔNG RÕ'], ['SAP CO TIN', 'SẮP CÓ TIN'], ['VUA RA TIN', 'VỪA RA TIN'], ['Tinh huong: ', 'Tình huống: '], ['Khong dung: ', 'Không dùng: '], ['Dung: ', 'Dùng: '],
+  ['khong co bo chien luoc phu hop, dung ngoai', 'không có bộ chiến lược phù hợp, đứng ngoài'], ['dung ngoai cho tin ra', 'đứng ngoài chờ tin ra'], ['setup trai chieu', 'setup trái chiều'],
+  ['chua co setup', 'chưa có setup'], ['dieu kien bo sung', 'điều kiện bổ sung'], ['dung ngoai', 'đứng ngoài'], ['| BAN:', '| BÁN:'], ['rui ro x', 'rủi ro ×'],
+  ['Bo lenh vi von: ', 'Bỏ lệnh vì vốn: '], ['Lam tron len ', 'Làm tròn lên '], ['SL cach ', 'SL cách '], [' gia; ', ' giá; '], [' gia, ', ' giá, '], ['lot nho nhat', 'lot nhỏ nhất'], ['dinh SL mat', 'dính SL mất'],
+  [' von, vuot tran ', ' vốn, vượt trần '], [' von (tran ', ' vốn (trần '], ['rui ro dinh dung', 'rủi ro định dùng'], ['muon vao duoc can SL <= ', 'muốn vào được cần SL ≤ '], [' hoac von >= ', ' hoặc vốn ≥ '],
+  ['bi kep boi tran nhom', 'bị kẹp bởi trần nhóm'], ['bi kep boi lo ngay con lai', 'bị kẹp bởi lỗ ngày còn lại'], ['bi kep boi chuoi nhoi', 'bị kẹp bởi chuỗi nhồi'], ['khoa lo ngay', 'khóa lỗ ngày'],
+  ['Kien thuc: ', 'Kiến thức: '], [' dong y -> ', ' đồng ý → '], [' -> chan', ' → chặn'], ['Cho tin hieu', 'Chờ tín hiệu'], ['Bo tin hieu ', 'Bỏ tín hiệu ']
+];
+function viText(s) { s = String(s || ''); VI_PH.forEach(function (p) { s = s.split(p[0]).join(p[1]); }); return s; }
+function parseTrace(l) {
+  var a = String(l).split('\t');
+  if (a.length < 5) return null;
+  var steps = a.slice(4).join(' ').split('``').map(function (s) { var p = s.split('`'); return { g: p[0], ok: +p[1], x: p.slice(2).join('`') }; });
+  return { bar: a[0], at: a[1], tf: +a[2] || 15, st: a[3], steps: steps };
+}
+function trDate(s) { var d = new Date(String(s || '').replace(/\./g, '-').replace(' ', 'T')); return isNaN(d) ? null : d; }
+function hm(d) { return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function trStepsHtml(r) {
+  var order = ['Du lieu', 'Tinh huong', 'Kien thuc', 'Ket luan'], by = {};
+  r.steps.forEach(function (s) { (by[s.g] = by[s.g] || []).push(s); });
+  Object.keys(by).forEach(function (g) { if (order.indexOf(g) < 0) order.push(g); });
+  return order.filter(function (g) { return by[g]; }).map(function (g) {
+    return '<div class="tgrp"><h4>' + esc(TR_GRP[g] || g) + '</h4><ol>' + by[g].map(function (s) {
+      var c = s.ok === 1 ? 'ok' : s.ok === 0 ? 'no' : s.ok === 3 ? 'res' : 'info';
+      var ic = s.ok === 1 ? '✓' : s.ok === 0 ? '✕' : s.ok === 3 ? '⇒' : '•';
+      return '<li class="' + c + '"><span class="ic">' + ic + '</span><span>' + esc(s.g === 'Ket luan' ? viText(s.x) : s.x) + '</span></li>';
+    }).join('') + '</ol></div>';
+  }).join('');
+}
+function renderTrace(list) {
+  var sec = $('sec-trace'), box = $('trace-list');
+  sec.hidden = !(list || []).length;
+  if (!(list || []).length) { box.innerHTML = ''; return; }
+  box.innerHTML = (list || []).map(function (x) {
+    var head = '<div class="dcard-head"><span class="tag ' + (x.taikhoan === 'that' ? 'real' : x.taikhoan === 'demo' ? 'demo' : 'other') + '">' + acctName(x) + '</span><b>' +
+      esc(x.ma || '') + '</b><span class="muted">' + esc(x.chienluoc || '') + '</span></div>';
+    if (!('PhanTich' in x)) return '<div class="wcard">' + head + '<p class="muted" style="margin:0">Cần bot bản 5.42 trở lên (bấm "Cập nhật bản mới" rồi tắt / mở lại MT5).</p></div>';
+    var rows = (x.PhanTich || []).map(parseTrace).filter(Boolean).reverse();
+    if (!rows.length) return '<div class="wcard">' + head + '<p class="muted" style="margin:0">Chưa có lần phân tích nào. Bot ghi lần đầu khi nến tiếp theo đóng.</p></div>';
+    var last = rows[0], at = trDate(last.at), now = new Date(), tf = last.tf;
+    var same = 1; while (same < rows.length && rows[same].st === last.st) same++;
+    var since = rows[same - 1];
+    var pulse;
+    if (at) {
+      var ageMin = (now - at) / 60000, next = new Date(at.getTime() + tf * 60000);
+      var late = ageMin > tf + 5;
+      pulse = '<div class="tpulse' + (late ? ' late' : '') + '">' + (late
+        ? 'Đã ' + Math.round(ageMin) + ' phút chưa có lần phân tích mới (lần cuối ' + hm(at) + ', nến ' + tf + ' phút). MT5 hoặc bot có thể đã dừng, mất kết nối, hoặc thị trường không có giá.'
+        : 'Phân tích lần cuối lúc ' + hm(at) + ' (nến ' + esc(String(last.bar).slice(-5)) + ' vừa đóng) · lần sau khoảng ' + hm(next) +
+          ' · ' + (same > 1 ? 'kết luận giữ nguyên ' + same + ' lần liên tiếp, từ ' + esc(String(since.at).slice(11, 16)) : 'kết luận mới so với lần trước')) + '</div>';
+    } else pulse = '';
+    var items = rows.map(function (r, i) {
+      var k = 'tr-' + (x.ma || '') + r.bar, open = k in JR.open ? JR.open[k] : i === 0;
+      var dup = i + 1 < rows.length && rows[i + 1].st === r.st;
+      return '<details class="trow" data-k="' + esc(k) + '"' + (open ? ' open' : '') + '><summary><span class="t num">' + esc(String(r.at).slice(11, 16)) + ' · nến ' + esc(String(r.bar).slice(-5)) +
+        '</span><span class="x">' + esc(viText(r.st)) + '</span><span class="same">' + (dup ? 'giống lần trước' : 'thay đổi') + '</span></summary><div class="tbody">' + trStepsHtml(r) + '</div></details>';
+    }).join('');
+    return '<div class="wcard">' + head + pulse + items + '</div>';
+  }).join('');
 }
 // ---- Đang theo dõi (v5.40): bot canh gì ở nến vừa đóng + lệnh giấy đang chạy ----
 function parseWatch(s) {
@@ -820,7 +914,14 @@ function copyReport() {
     if (x.lydovao) L.push('Lenh gan nhat' + (x.lydovaoluc ? ' (' + x.lydovaoluc + ')' : '') + ': ' + x.lydovao);
     if (x.theodoi) L.push('Theo doi: ' + x.theodoi);
     if ('giay' in x) L.push('Lenh giay dang chay (luc~tinhhuong~chienluoc~chieu~vao~SL~TP~rui ro~nen~MFE~MAE~phi): ' + (x.giay || '(khong co)'));
-    var skip = { NhatKy: 1, quyetdinh: 1, bangchung: 1, lydovao: 1, lydovaoluc: 1, chienluoc: 1, ma: 1, phienban: 1, hoc: 1, theodoi: 1, giay: 1 };
+    var pt = (x.PhanTich || []).map(parseTrace).filter(Boolean);
+    if (pt.length) {
+      var lt = pt[pt.length - 1];
+      L.push('Phan tich gan nhat (nen ' + lt.bar + ', luc ' + lt.at + ', ' + pt.length + ' lan trong file):');
+      lt.steps.forEach(function (s) { L.push('  [' + s.g + (s.ok === 1 ? ' dat' : s.ok === 0 ? ' khong' : s.ok === 3 ? ' =>' : '') + '] ' + s.x); });
+      L.push('Ket luan ' + Math.min(pt.length, 12) + ' lan gan nhat: ' + pt.slice(-12).map(function (r) { return String(r.at).slice(11, 16) + ' ' + r.st; }).join(' || '));
+    }
+    var skip = { PhanTich: 1, NhatKy: 1, quyetdinh: 1, bangchung: 1, lydovao: 1, lydovaoluc: 1, chienluoc: 1, ma: 1, phienban: 1, hoc: 1, theodoi: 1, giay: 1 };
     var kv = Object.keys(x).filter(function (k) { return !skip[k] && typeof x[k] !== 'object'; }).map(function (k) { return k + '=' + x[k]; });
     if (kv.length) L.push('Chi so: ' + kv.join(' · '));
     if (x.hoc) L.push('Hoc (tinh huong:chien luoc:n:TB R:thang%:danh gia:n that:TB that): ' + x.hoc);
@@ -1012,7 +1113,7 @@ function renderJournal(list) {
 }
 document.addEventListener('toggle', function (e) {
   var d = e.target;
-  if (d && d.matches && d.matches('details.ev[data-k]')) JR.open[d.dataset.k] = d.open;
+  if (d && d.matches && d.matches('details.ev[data-k], details.trow[data-k]')) JR.open[d.dataset.k] = d.open;
 }, true);
 document.addEventListener('click', function (e) {
   var c = e.target.closest && e.target.closest('#jr-filter .chip');

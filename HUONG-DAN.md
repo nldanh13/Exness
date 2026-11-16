@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.41
+# Hướng dẫn bot BTC (MT5) v5.42
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1263,3 +1263,23 @@ Nút *Sao chép gửi Claude* chép kèm 2 dòng này.
 - **Bộ 33:** trước đây ghi 6% nhưng trần nhóm 1,5% nên thật ra chỉ vào lệnh khi SL mất ≤ 1,5% vốn (SL ≤ ~45 USD giá). Nay `InpMaxGroupRiskPct = 6`
   và `InpMaxDailyLossPct = 6` để 6% có tác dụng thật: vào được khi SL ≤ ~175 USD giá; một ngày xấu có thể mất tới ~6% vốn (~46 nghìn VND).
   Nạp lại bộ 33 trong MT5 để nhận thông số mới.
+
+### v5.42: Quá trình phân tích chi tiết (16/11/2026)
+Bot vẫn phân tích **mỗi khi một nến đóng** (M15: 4 lần một giờ), nhưng trước đây nhật ký chỉ ghi khi kết luận đổi, nên trông như bot "không
+phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đủ từng bước**, kể cả khi kết luận giống lần trước, vào
+`Common\Files\TrendBot_phantich_<chart>.txt` (96 lần gần nhất, 1 ngày M15). Giao diện, tab **Bot đang chạy**, có khung **Quá trình phân tích**:
+- **Dòng nhịp**: phân tích lần cuối lúc mấy giờ, lần sau khoảng mấy giờ, kết luận đã giữ nguyên bao nhiêu lần liên tiếp. Quá 1 nến + 5 phút
+  chưa có lần mới thì dòng này chuyển **đỏ** (MT5 / bot có thể đã dừng hoặc mất kết nối).
+- Mỗi lần phân tích (mới nhất mở sẵn), chia 4 phần:
+  1. **Dữ liệu lấy vào**: nến vừa đóng (mở / cao / thấp / đóng, thân %, khối lượng so với trung bình 20 nến), ATR, ADX (2 chữ số thập phân),
+     thủy triều Dow D1, hộp 40 nến, biên độ gần đây, VWAP, tin Mỹ tiếp theo.
+  2. **Chẩn đoán tình huống**: 6 điều kiện xét theo thứ tự (sắp có tin, vừa ra tin, cú sập, giai đoạn cuối, xu hướng mạnh, đi ngang), mỗi điều
+     kiện ghi con số so với ngưỡng và đạt / không đạt (có ghi khi được giữ nhờ vùng đệm), rồi tình huống được chọn và bộ kiến thức dùng.
+  3. **Từng kiến thức**: có setup thì ghi bằng chứng + SL / TP; không có thì ghi **vì sao** (ví dụ VWAP: chưa chạm dải 3, còn cách 2,1 ATR;
+     Key Volume: có mấy vùng, nến có chạm vùng nào, vùng nào đủ dấu hiệu; FVG: quét bao nhiêu nến, bao nhiêu nến đạt từng điều kiện).
+  4. **Kết luận**: đếm setup hợp lệ, hệ số rủi ro, các bộ lọc chung, tính lot (kể cả "Bỏ lệnh vì vốn") và quyết định cuối.
+- Các bước viết bằng **tiếng Việt có dấu** (file lưu dạng Unicode). Câu kết luận và các cụm hay gặp trong bằng chứng cũ được giao diện thêm
+  dấu; riêng bằng chứng chi tiết của từng setup (ví dụ mô tả vùng Key Volume) vẫn là chữ không dấu.
+- Nút **Sao chép gửi Claude** chép kèm lần phân tích gần nhất và kết luận 12 lần gần nhất.
+- Sửa hiển thị ADX: in 2 chữ số thập phân, không còn "ADX 20.0 < 20" khi ADX thật là 19,96. Không đổi logic giao dịch.
+- Cần mở lại giao diện (GiaoDien.cmd) sau khi cập nhật vì có thêm dữ liệu mới.
