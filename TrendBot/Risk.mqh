@@ -261,14 +261,22 @@ double CalcLots(const double slDistance)
    {
       g_roundUps++;
       PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, P_MaxRiskRoundUp);
+      EvAdd(StringFormat("Lam tron len %.2f lot: SL cach %s gia, dinh SL mat %.0f %s = %.1f%% von (tran %.1f%%)", minL, Px(slDistance),
+                         minL * lossPerLot, AccountInfoString(ACCOUNT_CURRENCY), minL * lossPerLot / riskBase * 100.0, P_MaxRiskRoundUp));
       lots = minL;
    }
    if(lots < minL)
    {
-      g_status = "Von qua nho cho SL nay, bo qua lenh";
       g_minLotSkips++;
       // VON TOI THIEU PHU THUOC THUC TE vao tick value, volume min va SL/ATR - khong dung muc USD co dinh.
       double minLoss = minL * lossPerLot;
+      double pctMin = riskBase > 0 ? minLoss / riskBase * 100.0 : 0;
+      g_status = StringFormat("Von qua nho cho SL nay, bo qua lenh (%.2f lot mat %.1f%% von > tran %.1f%%)", minL, pctMin, P_MaxRiskRoundUp);
+      EvAdd(StringFormat("Bo lenh vi von: SL cach %s gia; lot nho nhat %.2f dinh SL mat %.0f %s = %.1f%% von, vuot tran %.1f%% (rui ro dinh dung %.0f %s); "
+                         "muon vao duoc can SL <= %s gia hoac von >= %.0f %s",
+                         Px(slDistance), minL, minLoss, AccountInfoString(ACCOUNT_CURRENCY), pctMin, P_MaxRiskRoundUp, riskMoney,
+                         AccountInfoString(ACCOUNT_CURRENCY), Px(P_MaxRiskRoundUp > 0 ? slDistance * (riskBase * P_MaxRiskRoundUp / 100.0) / minLoss : 0),
+                         P_MaxRiskRoundUp > 0 ? minLoss / (P_MaxRiskRoundUp / 100.0) : minLoss / (P_RiskPercent / 100.0), AccountInfoString(ACCOUNT_CURRENCY)));
       PrintFormat("Can %.4f lot < min %.2f. SL=%.2f: minlot rui ro %.2f %s; can von >= %.2f (1%%) hoac %.2f (2%%). BO lenh.",
                   riskMoney / lossPerLot, minL, slDistance, minLoss, AccountInfoString(ACCOUNT_CURRENCY),
                   minLoss / 0.01, minLoss / 0.02);

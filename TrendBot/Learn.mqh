@@ -263,11 +263,12 @@ int LearnVerdict(const int sit, const int st, double &factor, string &txt)
    double lb = n > 1 ? m - 1.28 * MathSqrt(MathMax(var, 0)) / MathSqrt(n) : m;
    string real = g_rn[sit][st] > 0 ? StringFormat("; lenh that %d lan TB %+.2fR", g_rn[sit][st], g_rs[sit][st] / g_rn[sit][st]) : "";
    if(n < P_LearnMinN)
-   { txt = StringFormat("%d/%d lenh giay%s -> dang thu (rui ro x%.2f)", n, P_LearnMinN, n > 0 ? StringFormat(", TB %+.2fR", m) : "", factor); txt += real; return 0; }
+   { txt = StringFormat("%d/%d lenh giay%s -> dang thu%s", n, P_LearnMinN, n > 0 ? StringFormat(", TB %+.2fR", m) : "",
+                        P_LearnApply ? StringFormat(" (rui ro x%.2f)", factor) : " (chua du du lieu)"); txt += real; return 0; }
    int v = m <= 0 ? 3 : lb > 0 ? 1 : 2;
    factor = v == 1 ? 1.0 : v == 2 ? 0.75 : 0;
    txt = StringFormat("%d lenh giay, TB %+.2fR, thang %.0f%%, can duoi %+.2fR -> %s", n, m, 100.0 * g_lw[sit][st] / n, lb,
-                      v == 1 ? "TIN DUNG" : v == 2 ? "chua chac (rui ro x0.75)" : "LOAI") + real;
+                      v == 1 ? "TIN DUNG" : v == 2 ? (P_LearnApply ? "chua chac (rui ro x0.75)" : "chua chac") : "LOAI") + real;
    return v;
 }
 // Ket qua lenh that (FinalizeClosed): khoa LS_<vi the> = tinh huong x 100 + chien luoc, gan luc vao lenh

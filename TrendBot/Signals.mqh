@@ -856,7 +856,8 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    if(nb > 0) { buyBase = true; g_sigSL = bSL; g_sigTP = bTP; g_sigPartialPx = bPX; }
    else       { sellBase = true; g_sigSL = sSL; g_sigTP = sTP; g_sigPartialPx = sPX; }
    g_sigRiskMult = mult;
-   EvAdd(StringFormat("%d setup %s dong y -> rui ro x%.2f", agree, nb > 0 ? "MUA" : "BAN", mult));
+   EvAdd(StringFormat("Kien thuc: %d setup %s dong y -> rui ro x%.2f (1 setup = x%.2f, tu %d setup = du)", agree, nb > 0 ? "MUA" : "BAN", mult,
+                      P_ChainOneRisk, P_ChainFullCount));
    g_chainHits++;
    g_chainWhy = head + StringFormat(" | %s: %s | rui ro x%.2f", nb > 0 ? "MUA" : "BAN", nb > 0 ? bN : sN, mult);
    g_status = g_chainWhy;
