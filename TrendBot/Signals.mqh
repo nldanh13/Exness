@@ -765,10 +765,25 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    // Vung dem (v5.39.1): da o tinh huong nao thi giu cho toi khi chi so ra han khoi nguong (+-3 ADX), tranh doi bo kien thuc moi nen
    // khi ADX dao dong quanh nguong ("nhin gon song tuong thuy trieu"). Xu huong: giu khi ADX >= nguong - 3 va thuy trieu khong doi chieu.
    else if(tideOk && t.trend != 0 && (adx >= P_SmartTrendADX || (g_smartPrev == 4 && g_smartPrevDir == t.trend && adx >= P_SmartTrendADX - 3)))
-   { g_smartSit = 4; dir = t.trend; why = StringFormat("Dow %s %s (lan pha %d), ADX %.1f >= %.0f", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs, adx, P_SmartTrendADX); list = "1,16,5,15,21"; }
+   {
+      g_smartSit = 4; dir = t.trend; list = "1,16,5,15,21";
+      // v5.39.3: chi ghi "ADX >= nguong" khi dung that; neu dang giu nho vung dem thi noi ro (chi doi cau chu, khong doi logic)
+      string adxTxt = adx >= P_SmartTrendADX ? StringFormat("ADX %.1f >= %.0f", adx, P_SmartTrendADX)
+                    : StringFormat("ADX %.1f, duoi %.0f nhung con trong vung dem (>= %.0f) nen giu XU HUONG MANH", adx, P_SmartTrendADX, P_SmartTrendADX - 3);
+      why = StringFormat("Dow %s %s (lan pha %d), ", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs) + adxTxt;
+   }
    else if((adx < P_SmartRangeADX && boxH <= P_SmartRangeATR * atr) ||
            (g_smartPrev == 6 && adx < P_SmartRangeADX + 3 && boxH <= P_SmartRangeATR * 1.15 * atr))
-   { g_smartSit = 6; why = StringFormat("ADX %.1f < %.0f, hop %d nen cao %.1f ATR", adx, P_SmartRangeADX, rb, boxH / atr); list = "6,18,17,19"; }
+   {
+      g_smartSit = 6; list = "6,18,17,19";
+      // v5.39.3: tach ro phan nao dat nguong that, phan nao chi duoc giu nho vung dem
+      bool adxIn = adx < P_SmartRangeADX, boxIn = boxH <= P_SmartRangeATR * atr;
+      string adxTxt = adxIn ? StringFormat("ADX %.1f < %.0f", adx, P_SmartRangeADX)
+                    : StringFormat("ADX %.1f, tren %.0f nhung con trong vung dem (< %.0f)", adx, P_SmartRangeADX, P_SmartRangeADX + 3);
+      string boxTxt = boxIn ? StringFormat("hop %d nen cao %.1f ATR", rb, boxH / atr)
+                    : StringFormat("hop %d nen cao %.1f ATR, tren %.1f nhung con trong vung dem (<= %.1f)", rb, boxH / atr, P_SmartRangeATR, P_SmartRangeATR * 1.15);
+      why = adxTxt + ", " + boxTxt + (adxIn && boxIn ? "" : " nen giu DI NGANG");
+   }
    else
    {
       g_smartSit = 7; why = StringFormat("ADX %.1f, hop %d nen cao %.1f ATR, thuy trieu %s", adx, rb, boxH / atr, !tideOk || t.trend == 0 ? "chua ro" : (t.trend > 0 ? "tang" : "giam"));
@@ -776,8 +791,6 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    }
    if(g_smartSit != g_smartPrev && g_smartPrev != 0)
       why += StringFormat(" (doi tu %s)", SmartSitName(g_smartPrev));
-   else if(g_smartSit == g_smartPrev && (g_smartSit == 4 || g_smartSit == 6))
-      why += " (giu tinh huong: vung dem +-3 ADX)";
    g_smartPrev = g_smartSit; g_smartPrevDir = tideOk ? t.trend : 0;
    g_smartName = SmartSitName(g_smartSit);
    string head = "Tinh huong: " + g_smartName;
