@@ -1,4 +1,4 @@
-# Hướng dẫn bot BTC (MT5) v5.40
+# Hướng dẫn bot BTC (MT5) v5.41
 
 > Bot chỉ để thử nghiệm và không đảm bảo có lãi. Luôn backtest, rồi chạy demo vài tuần trước khi dùng tiền thật.
 
@@ -1224,7 +1224,7 @@ Mỗi nến mới bot **chẩn đoán** thị trường, rồi chỉ dùng bộ 
 ### Bộ 33: Theo tình huống cho vốn ~770 nghìn VND (16/11/2026) – rủi ro cao
 0,01 lot BTC là lot nhỏ nhất (1 USD giá = 0,01 USD). Với ~29 USD vốn, SL H1 (500–900 USD giá) mất 17–30% vốn mỗi lệnh nên bị bỏ.
 Bộ `33-Theo-tinh-huong-von-770-nghin-M15-THU-NGHIEM`: phân tích M15 (SL ngắn hơn), `InpMaxRiskRoundUp = 6` – chỉ vào 0,01 lot khi dính SL
-mất ≤ 6% vốn (SL ≤ ~175 USD giá), còn lại bỏ; lỗ ngày 3% (thua 1 lệnh là nghỉ tới hết ngày), dừng hẳn khi sụt 15%; không chốt từng phần
+mất ≤ 6% vốn (SL ≤ ~175 USD giá), còn lại bỏ; từ v5.41 lỗ ngày và trần nhóm cũng 6% (thua 1 lệnh là nghỉ tới hết ngày), dừng hẳn khi sụt 15%; không chốt từng phần
 (không chia được 0,01 lot). Spread ~6,4 USD / BTC ≈ 3–4% của 1R mỗi lệnh. Khung nhỏ chưa có lợi thế khi backtest Donchian vì phí.
 
 ### v5.39.1: Vùng đệm tình huống
@@ -1252,3 +1252,14 @@ trạng thái mỗi 10 giây; không đổi logic giao dịch.
   triều) và điều kiện đang chờ, kèm mức giá cụ thể (mép hộp, VWAP + dải 3, các vùng Key Volume).
 - **Lệnh giấy đang chạy**: vào, SL, TP, R tạm theo giá hiện tại (đã trừ spread), tốt nhất / xấu nhất, số nến / hạn.
 Nút *Sao chép gửi Claude* chép kèm 2 dòng này.
+
+### v5.41: Trần rủi ro thật cho vốn nhỏ (16/11/2026)
+- **Lệnh mới không được làm lỗ ngày vượt `InpMaxDailyLossPct`.** Trước khi tính lot, bot lấy phần lỗ ngày còn lại = giới hạn lỗ ngày + lãi/lỗ
+  hôm nay (đã tính lỗ đang chạy) − rủi ro còn mở của các lớp của bot. Rủi ro lệnh mới, kể cả khi làm tròn lên 0,01 lot, không được vượt phần
+  này; hết chỗ thì bỏ tín hiệu. Trước đây 1 lệnh làm tròn 6% có thể mất gấp đôi khóa lỗ ngày 3%.
+- **Bằng chứng ghi trần thật.** Trần làm tròn `InpMaxRiskRoundUp` vẫn bị kẹp bởi trần nhóm BTC/ETH, chuỗi nhồi và (mới) phần lỗ ngày còn lại.
+  Câu "Bỏ lệnh vì vốn" giờ ghi trần sau khi kẹp và lý do, ví dụ *vượt trần 1,5% (InpMaxRiskRoundUp 6,0% bị kẹp bởi trần nhóm 1,5%)*, và mức
+  SL / vốn cần thiết tính theo trần thật.
+- **Bộ 33:** trước đây ghi 6% nhưng trần nhóm 1,5% nên thật ra chỉ vào lệnh khi SL mất ≤ 1,5% vốn (SL ≤ ~45 USD giá). Nay `InpMaxGroupRiskPct = 6`
+  và `InpMaxDailyLossPct = 6` để 6% có tác dụng thật: vào được khi SL ≤ ~175 USD giá; một ngày xấu có thể mất tới ~6% vốn (~46 nghìn VND).
+  Nạp lại bộ 33 trong MT5 để nhận thông số mới.

@@ -185,6 +185,7 @@ int g_minLotSkips = 0;
 int g_roundUps    = 0;   // So lenh vao lot toi thieu (rui ro that > InpRiskPercent nhung <= InpMaxRiskRoundUp)
 int g_ddScaled   = 0;   // So lenh bi giam co vi dang sut giam
 // g_groupSkips khai bao truoc GroupGuardRiskAllowed de dung duoc trong module.
+int g_dayRoomSkips = 0;  // So tin hieu bi bo vi lenh moi co the lam lo ngay vuot InpMaxDailyLossPct (v5.41)
 int g_chainSkips  = 0;   // So lan nhoi bi bo vi cac lop cu cua bot con rui ro (chua o hoa von) da bang 1 lenh chuan
 double g_maxOpenRiskPct = 0;   // Rui ro mo lon nhat cua bot (moi lop, ngay sau khi vao lop moi), % von cua bot
 double CalcLots(const double slDistance)
@@ -250,19 +251,45 @@ double CalcLots(const double slDistance)
       }
       if(riskMoney > allowed) riskMoney = allowed;
    }
+   // v5.41: Lenh moi khong duoc lam lo trong ngay vuot InpMaxDailyLossPct.
+   // Phan con lai = tran lo ngay + lai/lo hom nay (DayPL, da tinh lo dang chay) - rui ro con mo cua cac lop cua bot.
+   // Truoc day 1 lenh 0,01 lot lam tron len (vd 6%) co the mat gap doi khoa lo ngay 3%.
+   string capWhy = "";   // gioi han nao dang kep tran lam tron (de ghi bang chung)
+   if(allowed < DBL_MAX) capWhy = InGroup() && P_MaxGroupRiskPct > 0 ? StringFormat("tran nhom %.1f%%", P_MaxGroupRiskPct) : "chuoi nhoi";
+   if(P_MaxDailyLossPct > 0 && dayStartEquity > 0)
+   {
+      double dayRoom = dayStartEquity * P_MaxDailyLossPct / 100.0 + DayPL() - own;
+      if(dayRoom <= 0)
+      {
+         g_dayRoomSkips++;
+         g_status = "Lenh nay co the lam lo ngay vuot tran, bo qua lenh";
+         PrintFormat("Lo ngay con lai %.2f (tran %.1f%%). Bo qua tin hieu.", dayRoom, P_MaxDailyLossPct);
+         return 0;
+      }
+      if(dayRoom < allowed)
+      {
+         allowed = dayRoom;
+         capWhy  = StringFormat("lo ngay con lai %.1f%% (khoa lo ngay %.1f%%)", dayRoom / riskBase * 100.0, P_MaxDailyLossPct);
+      }
+      if(riskMoney > allowed) riskMoney = allowed;
+   }
    double lossPerLot = slDistance / tickSize * tickValue;
    double lots       = NormalizeVolume(riskMoney / lossPerLot);
    double minL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxL = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
    // Lam tron len cung bi gioi han boi he so nhom va tran nhom, khong duoc vuot qua cac gioi han do
    double roundCap = riskBase * P_MaxRiskRoundUp / 100.0 * (corr != "" ? MathMin(1.0, MathMax(P_CorrRiskScale, 0.0)) : 1.0);
-   if(roundCap > allowed) roundCap = allowed;
+   bool capClipped = roundCap > allowed;
+   if(capClipped) roundCap = allowed;
+   double capPct = riskBase > 0 ? roundCap / riskBase * 100.0 : 0;   // tran lam tron THAT sau moi gioi han
+   string capTxt = capClipped && capWhy != "" ? StringFormat("%.1f%% (InpMaxRiskRoundUp %.1f%% bi kep boi %s)", capPct, P_MaxRiskRoundUp, capWhy)
+                                              : StringFormat("%.1f%%", capPct);
    if(lots < minL && P_MaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= roundCap)
    {
       g_roundUps++;
-      PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %.2f%%).", minL, minL * lossPerLot / riskBase * 100.0, P_MaxRiskRoundUp);
-      EvAdd(StringFormat("Lam tron len %.2f lot: SL cach %s gia, dinh SL mat %.0f %s = %.1f%% von (tran %.1f%%)", minL, Px(slDistance),
-                         minL * lossPerLot, AccountInfoString(ACCOUNT_CURRENCY), minL * lossPerLot / riskBase * 100.0, P_MaxRiskRoundUp));
+      PrintFormat("Lam tron len %.2f lot: rui ro that %.2f%% (tran %s).", minL, minL * lossPerLot / riskBase * 100.0, capTxt);
+      EvAdd(StringFormat("Lam tron len %.2f lot: SL cach %s gia, dinh SL mat %.0f %s = %.1f%% von (tran %s)", minL, Px(slDistance),
+                         minL * lossPerLot, AccountInfoString(ACCOUNT_CURRENCY), minL * lossPerLot / riskBase * 100.0, capTxt));
       lots = minL;
    }
    if(lots < minL)
@@ -271,12 +298,14 @@ double CalcLots(const double slDistance)
       // VON TOI THIEU PHU THUOC THUC TE vao tick value, volume min va SL/ATR - khong dung muc USD co dinh.
       double minLoss = minL * lossPerLot;
       double pctMin = riskBase > 0 ? minLoss / riskBase * 100.0 : 0;
-      g_status = StringFormat("Von qua nho cho SL nay, bo qua lenh (%.2f lot mat %.1f%% von > tran %.1f%%)", minL, pctMin, P_MaxRiskRoundUp);
-      EvAdd(StringFormat("Bo lenh vi von: SL cach %s gia; lot nho nhat %.2f dinh SL mat %.0f %s = %.1f%% von, vuot tran %.1f%% (rui ro dinh dung %.0f %s); "
+      g_status = StringFormat("Von qua nho cho SL nay, bo qua lenh (%.2f lot mat %.1f%% von > tran %.1f%%)", minL, pctMin, capPct);
+      // Muc can thiet tinh theo tran THAT (capPct), khong theo InpMaxRiskRoundUp - tran nay co the da bi tran nhom / lo ngay kep nho lai.
+      double needPct = capPct > 0 ? capPct : P_RiskPercent;
+      EvAdd(StringFormat("Bo lenh vi von: SL cach %s gia; lot nho nhat %.2f dinh SL mat %.0f %s = %.1f%% von, vuot tran %s (rui ro dinh dung %.0f %s); "
                          "muon vao duoc can SL <= %s gia hoac von >= %.0f %s",
-                         Px(slDistance), minL, minLoss, AccountInfoString(ACCOUNT_CURRENCY), pctMin, P_MaxRiskRoundUp, riskMoney,
-                         AccountInfoString(ACCOUNT_CURRENCY), Px(P_MaxRiskRoundUp > 0 ? slDistance * (riskBase * P_MaxRiskRoundUp / 100.0) / minLoss : 0),
-                         P_MaxRiskRoundUp > 0 ? minLoss / (P_MaxRiskRoundUp / 100.0) : minLoss / (P_RiskPercent / 100.0), AccountInfoString(ACCOUNT_CURRENCY)));
+                         Px(slDistance), minL, minLoss, AccountInfoString(ACCOUNT_CURRENCY), pctMin, capTxt, riskMoney,
+                         AccountInfoString(ACCOUNT_CURRENCY), Px(capPct > 0 ? slDistance * roundCap / minLoss : 0),
+                         minLoss / (needPct / 100.0), AccountInfoString(ACCOUNT_CURRENCY)));
       PrintFormat("Can %.4f lot < min %.2f. SL=%.2f: minlot rui ro %.2f %s; can von >= %.2f (1%%) hoac %.2f (2%%). BO lenh.",
                   riskMoney / lossPerLot, minL, slDistance, minLoss, AccountInfoString(ACCOUNT_CURRENCY),
                   minLoss / 0.01, minLoss / 0.02);

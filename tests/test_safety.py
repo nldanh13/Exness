@@ -208,6 +208,15 @@ class MqlSafetyRegression(unittest.TestCase):
         self.assertIn("return DBL_MAX;", function("OwnOpenRisk", "TrendBot/Risk.mqh"))
         self.assertIn("MathMin(BotEquity(), AccountInfoDouble(ACCOUNT_EQUITY))", risk)
 
+    def test_round_up_respects_daily_loss_room(self):
+        lots = function("CalcLots", "TrendBot/Risk.mqh")
+        self.assertIn("dayStartEquity * P_MaxDailyLossPct / 100.0 + DayPL() - own", lots)
+        self.assertIn("if(dayRoom <= 0)", lots)
+        # tran lam tron luon bi kep boi allowed (nhom / chuoi nhoi / lo ngay) va dat SAU khi tinh lo ngay
+        self.assertLess(lots.index("double dayRoom"), lots.index("if(capClipped) roundCap = allowed;"))
+        # bang chung ghi tran THAT, khong ghi InpMaxRiskRoundUp tho
+        self.assertNotIn("vuot tran %.1f%%", lots)
+
     def test_margin_preflight_covers_every_entry_path(self):
         core = source("TrendBot/Core.mqh")
         checker = function("EntryMarginOk", "TrendBot/Core.mqh")
