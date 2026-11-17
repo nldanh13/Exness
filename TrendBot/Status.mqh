@@ -195,6 +195,10 @@ void WriteStatus()
    {
       FileWriteString(h, "hoc=" + LearnSummary() + "\r\n");
       FileWriteString(h, "huong=" + g_dirLastSummary + "\r\n");
+      FileWriteString(h, "huongdongbo=" + g_syncText + "\r\n");
+      FileWriteString(h, StringFormat("huonglenh=%d;huong9=%d;tang9=%d;giam9=%d;huong4=%d;dongbo=%d;m15=%I64d\r\n",
+                                    g_syncDir, g_syncNineDir, g_syncNineUp, g_syncNineDn,
+                                    g_dirLastVote, g_syncReady ? 1 : 0, (long)g_syncBar));
       FileWriteString(h, StringFormat("huongso=%d;hoantat=%d;dangcho=%d;tf=M15;chan=4,8,16\r\n", g_dirLogged, g_dirResolved, ArraySize(g_dirOpen)));
    }
    // Dang theo doi (v5.40): nhung gi bot canh o nen vua phan tich + lenh giay dang chay (giao dien tinh R tam tinh theo gia hien tai)
