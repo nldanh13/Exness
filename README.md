@@ -10,6 +10,8 @@ Expert Advisor cho MT5 (sàn Exness, mã `BTCUSDm`), kèm bộ script PowerShell
 
 **Mới v5.43.0 – đánh giá hướng chỉ quan sát:** [Dow D1 + EMA H4/D1 + MACD H4 + cấu trúc giá H4, kiểm tra sau 4/8/16 nến M15](THEO-DOI-HUONG-5.43.0.md). Bộ này không tự vào lệnh, đổi hướng giao dịch hay tăng rủi ro. Phân tích CSV bằng `python cong-cu/danh_gia_huong.py <file.csv>`.
 
+**Mới v5.44.0 – đồng bộ hướng M15 cho chiến lược Theo tình huống:** [một quyết định vào lệnh chung từ 9 khung EMA, 4 nguồn và Dow D1](DONG-BO-HUONG-5.44.0.md). Nếu không đồng thuận thì **đứng ngoài**, không nới rủi ro, không ép dự đoán thành BUY/SELL. Cần kiểm thử MetaEditor F7 và demo trước khi dùng tài khoản thật.
+
 ## Bắt đầu nhanh
 
 1. Clone repo về máy Windows có MT5 (Exness) và VS Code.
