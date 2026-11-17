@@ -13,6 +13,11 @@ ENUM_TIMEFRAMES g_tbTF[9]   = { PERIOD_M1, PERIOD_M3, PERIOD_M5, PERIOD_M10, PER
 string          g_tbName[9] = { "M1", "M3", "M5", "M10", "M15", "M30", "H1", "H4", "D1" };
 int             g_tbE20[9], g_tbE50[9];
 bool            g_tbReady = false;
+// Snapshot used by the 9-frame display AND the synchronized SMART gate.
+int             g_tbSnapshotVotes[9];
+datetime        g_tbSnapshotBar = 0;
+bool            g_tbSnapshotReady = false;
+string          g_tbSnapshotLabel = "CHO DU LIEU M15";
 string          g_meArmed = "";        // nut dang cho bam lan 2
 datetime        g_meArmedAt = 0;
 datetime        g_meLastDraw = 0;
@@ -84,6 +89,28 @@ int TrendOf(const int i)
    return 0;
 }
 
+// The last COMPLETED candle of each timeframe at the end of a specific
+// closed M15 bar (NOT current live M1 or an unfinished H4/D1 candle).
+int TrendAtM15Close(const int i, const datetime closeAt)
+{
+   if(i < 0 || i >= 9 || closeAt <= 0 || !g_tbReady) return 0;
+   ENUM_TIMEFRAMES tf = g_tbTF[i];
+   int seconds = PeriodSeconds(tf);
+   if(seconds <= 0) return 0;
+   int shift = iBarShift(_Symbol, tf, closeAt - 1, false);
+   if(shift < 0) return 0;
+   datetime opened = iTime(_Symbol, tf, shift);
+   if(opened <= 0) return 0;
+   if(opened + seconds > closeAt) shift++; // unfinished HTF bar
+   double e20, e50;
+   if(!GetValue(g_tbE20[i], 0, shift, e20) || !GetValue(g_tbE50[i], 0, shift, e50)) return 0;
+   double c = iClose(_Symbol, tf, shift);
+   if(c <= 0) return 0;
+   if(c > e20 && e20 > e50) return 1;
+   if(c < e20 && e20 < e50) return -1;
+   return 0;
+}
+
 void MEBox(const string name, const int x, const int y, const int w, const int h)
 {
    string n = ME_PFX + name;
@@ -109,21 +136,30 @@ void DrawTrendBoard(int &y)
 {
    if(!g_tbReady) return;
    int w = 210, lh = 16;
-   MEBox("tb_bg", 8, y, w, 26 + 9 * lh + 22);          // tao truoc cac nhan de nam duoi chu
+   MEBox("tb_bg", 8, y, w, 26 + 9 * lh + 44);          // tao truoc cac nhan de nam duoi chu
    y += 6;
-   MELabel("tb_h", 18, y, "XU HƯỚNG  (nến đã đóng, EMA20/50)", C'130,138,152', 8, "Segoe UI"); y += 20;
+   MELabel("tb_h", 18, y, "XU HƯỚNG (EMA20/50, đã đóng)", C'130,138,152', 8, "Segoe UI"); y += 20;
+   bool snap = P_Strategy == STRAT_SMART;
+   bool fresh = snap && g_tbSnapshotReady &&
+                g_tbSnapshotBar == iTime(_Symbol, PERIOD_M15, 1);
    int up = 0, dn = 0;
    for(int i = 0; i < 9; i++)
    {
-      int t = TrendOf(i);
+      int t = snap ? (fresh ? g_tbSnapshotVotes[i] : 0) : TrendOf(i);
       if(t > 0) up++; else if(t < 0) dn++;
-      string s = t > 0 ? "TĂNG   ▲" : t < 0 ? "GIẢM   ▼" : "NGANG  –";
+      string s = snap && !fresh ? "CHỜ    –" :
+                 t > 0 ? "TĂNG   ▲" : t < 0 ? "GIẢM   ▼" : "NGANG  –";
       color  c = t > 0 ? C'90,200,120' : t < 0 ? C'235,95,85' : C'130,138,152';
       MELabel("tb_" + g_tbName[i], 18, y, StringFormat("%-4s %s", g_tbName[i], s), c, 9, "Consolas"); y += lh;
    }
    y += 4;
-   string sum = StringFormat("Tăng %d · Giảm %d · Ngang %d", up, dn, 9 - up - dn);
-   MELabel("tb_sum", 18, y, sum, up >= 7 ? C'90,200,120' : dn >= 7 ? C'235,95,85' : C'205,210,220', 8, "Segoe UI"); y += 24;
+   string sum = snap && !fresh ? "Đang đợi nến M15 đã đóng" :
+                StringFormat("Tăng %d · Giảm %d · Ngang %d", up, dn, 9 - up - dn);
+   MELabel("tb_sum", 18, y, sum, up >= 7 ? C'90,200,120' : dn >= 7 ? C'235,95,85' : C'205,210,220', 8, "Segoe UI"); y += 22;
+   string final = snap ? (fresh ? g_tbSnapshotLabel : "CHỜ DỮ LIỆU M15") : "9 khung: chỉ báo độc lập";
+   MELabel("tb_sync", 18, y, final, snap && fresh && (SyncEntryAllowed(true) || SyncEntryAllowed(false)) ?
+           C'90,200,120' : C'240,180,60', 8, "Segoe UI");
+   y += 24;
 }
 
 //--- Tu nhoi lenh tay theo xu huong (v5.10.4, InpGuardPyramidMax > 1, chi tai khoan hedging)
@@ -209,6 +245,7 @@ void GuardPyramid()
       if(OrderGetTicket(i) != 0 && IsManualPendingSelected()) return;
 
    bool buy = dir > 0;
+   if(P_Strategy == STRAT_SMART && !SyncEntryAllowed(buy)) return; // no new auto pyramid against common direction
    double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double spr = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
    if((buy ? px - lastOpen : lastOpen - px) < InpGuardPyramidStepR * lastR) return;
@@ -552,6 +589,7 @@ void GuardAutoEntry()
    if(dir == 0) return;
    // Khung lon phai cung chieu: tranh truong hop 6/9 khung nho (M1..M30) quay len trong khi H1/H4 van giam
    if(InpGuardAutoNeedHTF && (TrendOf(6) != dir || TrendOf(7) != dir)) return;   // g_tbTF[6] = H1, [7] = H4
+   if(P_Strategy == STRAT_SMART && !SyncEntryAllowed(dir > 0)) return; // no contradictory auto magic0 order
    // Bo loc thi truong cua chien luoc chinh (v5.10.16): tin My (InpAvoidUSNews), funding, Fear & Greed, su chu y, Nasdaq.
    // Cac ham nay ghi g_status cua chien luoc chinh, nen giu lai trang thai cu.
    string keepStatus = g_status;
@@ -706,6 +744,8 @@ void ManualUIDelete()
    ObjectsDeleteAll(0, ME_PFX);
    if(g_tbReady) for(int i = 0; i < 9; i++) { IndicatorRelease(g_tbE20[i]); IndicatorRelease(g_tbE50[i]); }
    g_tbReady = false;
+   g_tbSnapshotReady = false;
+   g_tbSnapshotBar = 0;
 }
 
 // Bam BUY / SELL: kiem tra gioi han, roi gui lenh nhu bot tu vao (lot theo rui ro, SL x ATR)

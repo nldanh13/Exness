@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.43.0"
-#property version   "5.430"
+#define  BOT_VERSION "5.44.0"
+#property version   "5.440"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -909,6 +909,10 @@ bool ApplyPreset(const int id)
 // Vao lenh cho gia hoi (Report.mqh ghi ra): gia cham muc cho / het nen chua hoi / bi huy khi kiem tra lai / lenh khop that
 int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 
+// Shared direction gate is implemented after ManualEntry.mqh, but also
+// called from Manage.mqh and ManualEntry.mqh (new layers only).
+bool SyncEntryAllowed(const bool buy);
+
 //--- Cac module (thu muc TrendBot/ canh file nay) ---------------------
 #include "TrendBot/Core.mqh"
 #include "TrendBot/Notify.mqh"
@@ -927,6 +931,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
 #include "TrendBot/ManualEntry.mqh"
+#include "TrendBot/DirectionSync.mqh"
 #include "TrendBot/Status.mqh"
 #include "TrendBot/LiveR.mqh"
 #include "TrendBot/Panel.mqh"
@@ -1068,6 +1073,14 @@ void ResetRuntimeState()
    g_guardRiskLoaded = false;
    g_dirLoaded    = false;
    g_dirLastBar   = 0;
+   g_dirLastVote = g_dirLastAgree = g_dirLastDisagree = 0;
+   g_dirLastDow = g_dirLastEma = g_dirLastMacd = g_dirLastStructure = 0;
+   g_dirLastSummary = "chua co du lieu";
+   g_syncDir = g_syncNineDir = g_syncNineUp = g_syncNineDn = 0;
+   g_syncBar = 0; g_syncReady = false;
+   g_syncText = "CHUA CO DU LIEU M15";
+   g_tbSnapshotBar = 0; g_tbSnapshotReady = false;
+   g_tbSnapshotLabel = "CHO DU LIEU M15";
    ArrayResize(g_dirOpen, 0);
    currentDay     = -1;
    dayStartEquity = 0;
@@ -1169,6 +1182,12 @@ void CheckPendingEntry()
    MqlTick tk;
    if(!SymbolInfoTick(_Symbol, tk)) return;
    bool buy = g_pendDir > 0;
+   if(P_Strategy == STRAT_SMART && !SyncEntryAllowed(buy))
+   {
+      g_pendDir = 0; g_pendBlocked++;
+      g_status = "Huy lenh cho do huong mat dong thuan: " + g_syncText;
+      return;
+   }
    bool hit = buy ? tk.ask <= g_pendPrice : tk.bid >= g_pendPrice;
    bool expired = TimeCurrent() >= g_pendExpire;
    if(!hit && !expired) return;
@@ -1430,7 +1449,8 @@ void OnTickBody()
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    AutoSwitch();                    // che do Tu dong: doi sang chien luoc dung dau bang xep hang (khi dang dung ngoai)
    SafetyStep();
-   DirectionStep();               // OBSERVATION ONLY: 4/8/16 M15, never affects risk or trading gates
+   DirectionStep();               // 4-source immutable forecasts + 4/8/16 M15 labels (still independent)
+   SyncDirectionStep();           // STRICT AUTO-ENTRY GATE: 9TF + 4-source + Dow must agree
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
@@ -1545,6 +1565,13 @@ void OnTickBody()
       if(P_UseCandle && !(bb ? BullCandle() : BearCandle())) { EvAdd("Khong co mau nen xac nhan -> chan"); cut += " thieu mau nen;"; }
       if(P_MTFAlign > 0 && !MTFOk(bb)) { EvAdd(StringFormat("Chua du %d khung dong thuan -> chan", P_MTFAlign)); cut += " da khung chua dong thuan;"; }
       if(!buySignal && !sellSignal) { g_status = "Bo tin hieu " + (bb ? "MUA" : "BAN") + ":" + cut; return; }
+   }
+   if(P_Strategy == STRAT_SMART && (buySignal || sellSignal) && !SyncEntryAllowed(buySignal))
+   {
+      g_status = "Bo setup chua dong bo huong: " + g_syncText;
+      EvAdd("CHAN HUONG: " + g_syncText);
+      Tr("Dong bo", 0, "Khong cho vao lenh moi: ba bo chi bao chua thong nhat huong MUA/BAN");
+      return;
    }
    if((buySignal || sellSignal) && !FundingOk(buySignal, P_Strategy == STRAT_DONCHIAN)) return;
 
@@ -1665,13 +1692,27 @@ void ScalePlace(const bool buy, const double entry, const double slDist, const d
 // Huy phan giai von chua khop: qua InpScaleBars nen, hoac khong con lenh nao (lenh dau da dong)
 void ScaleCleanup()
 {
-   if(P_ScaleParts <= 1) return;
+   // Even if user reduces scale parts to 1 on reconfiguration, a previous
+   // Smart SCALE pending order must be cancelled when direction disagrees.
+   if(P_ScaleParts <= 1 && P_Strategy != STRAT_SMART) return;
    bool has = HasOwnPosition();
    for(int i = OrdersTotal() - 1; i >= 0; i--)
    {
       ulong t = OrderGetTicket(i);
       if(t == 0 || OrderGetString(ORDER_SYMBOL) != _Symbol || OrderGetInteger(ORDER_MAGIC) != (long)P_Magic) continue;
       if(StringFind(OrderGetString(ORDER_COMMENT), "SCALE") < 0) continue;
+      // Scaling LIMIT orders can fill later even after the new direction
+      // gate turns neutral/opposite. Cancel only this EA's SCALE orders.
+      if(P_Strategy == STRAT_SMART)
+      {
+         ENUM_ORDER_TYPE typ = (ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+         if((typ == ORDER_TYPE_BUY_LIMIT || typ == ORDER_TYPE_SELL_LIMIT) &&
+            !SyncEntryAllowed(typ == ORDER_TYPE_BUY_LIMIT))
+         {
+            TradeDone(PrepSend() && trade.OrderDelete(t), "Huy SCALE mat dong thuan huong", "#" + (string)t);
+            continue;
+         }
+      }
       datetime ts = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       if(!has || TimeCurrent() - ts >= (long)P_ScaleBars * PeriodSeconds(P_TF) || HedgeActive())
          TradeDone(PrepSend() && trade.OrderDelete(t), "Huy phan giai von chua khop", "#" + (string)t);
@@ -1742,6 +1783,12 @@ void CheckReEntry()
    lastReBar = bt;
    if(LastOwnDealProfit() >= 0) { g_reDir = 0; return; }   // lenh truoc dong co lai (trailing): xong tin hieu, khong vao lai
    bool buy = g_reDir > 0;
+   if(P_Strategy == STRAT_SMART && !SyncEntryAllowed(buy))
+   {
+      g_reDir = 0;
+      g_status = "Huy vao lai do huong mat dong thuan: " + g_syncText;
+      return;
+   }
    double c = iClose(_Symbol, tf, 1), fast, atr;
    if(!GetValue(hFast, 0, 1, fast) || !GetValue(hATR, 0, 1, atr)) return;
    if(buy ? (c <= g_reLevel || c <= fast) : (c >= g_reLevel || c >= fast)) return;
@@ -1757,6 +1804,13 @@ void CheckReEntry()
 // Tra ve 1 = server da khop, 0 = chua lay duoc khoa chung (thu lai o tick sau), -1 = khong vao (lot, TP, server tu choi...).
 int SendEntry(const bool buySignal, const double atr, const bool fromPending)
 {
+   // Last-line veto covers immediate, pullback, re-entry, and manually
+   // triggered automated EA calls. Explicit manual button mode is separate.
+   if(P_Strategy == STRAT_SMART && !P_ManualEntry && !SyncEntryAllowed(buySignal))
+   {
+      g_status = "BO LENH: HUONG CHUA DONG BO | " + g_syncText;
+      return -1;
+   }
    // Mot so chien luoc luot song tu dat SL (theo cau truc gia) va TP (gia cu the)
    double slAtr = SLAtr(atr);
    double slDist   = g_sigSL > 0 ? g_sigSL : slAtr * P_ATRMult;

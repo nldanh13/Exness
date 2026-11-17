@@ -1287,3 +1287,7 @@ phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đ�
 ## Quan sát hướng 4 nguồn (v5.43.0)
 
 Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/Direction.mqh` ghi dự đoán **chỉ để đo**, không sử dụng khi vào lệnh hay tính lot. Cứ mỗi nến M15 **đã đóng**, quan sát Dow D1, EMA50 H4+D1, MACD H4 và cấu trúc đỉnh đáy H4; tối thiểu 3 phiếu cùng chiều và không có phiếu trái mới ra TĂNG/GIẢM. Nếu không thì đứng ngoài. Đánh giá sau 4/8/16 nến M15 đã đóng, lưu vào `Terminal\Common\Files\TrendBot_huong_*_M15.csv`. Xem [mô tả kiểm thử và cách đọc kết quả](THEO-DOI-HUONG-5.43.0.md). Bản này chưa có native MetaEditor compile, không thay thế Strategy Tester/demo.
+
+## Đồng bộ hướng M15 v5.44.0
+
+Đã có [quy tắc hướng thống nhất và chặn mọi đường vào lệnh tự động mới khi thiếu đồng thuận](DONG-BO-HUONG-5.44.0.md). Bảng 9 khung hiển thị snapshot cùng nến M15; bộ 4 nguồn vẫn ghi kết quả độc lập để kiểm chứng. Vào lệnh tự động của chiến lược 24 chỉ khi cả 9 khung (6/9 và H1/H4/D1 cùng hướng), 4 nguồn (ít nhất 3/4, không phiếu ngược), Dow D1 đồng thuận. Không sửa rủi ro, không ép vào lệnh.
