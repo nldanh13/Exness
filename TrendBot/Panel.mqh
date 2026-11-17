@@ -225,7 +225,11 @@ void UpdatePanel()
                                g_syncNineUp, g_syncNineDn, DirName(g_dirLastVote),
                                g_dirLastAgree, g_dirLastDisagree);
          col[n++] = cDim;
-         txt[n] = "Bộ dự đoán 4 nguồn vẫn theo dõi đúng/sai +4/+8/+16 M15";
+         txt[n] = "Engine v5.45 [THỬ, KHÔNG VÀO LỆNH]: " +
+                  (g_engineReady ? EngineName(g_engineDir) : "CHỜ DỮ LIỆU");
+         col[n++] = cDim;
+         txt[n] = StringFormat("Engine: điểm MUA %d / BÁN %d (không phải xác suất), lệnh thật vẫn theo v5.44",
+                               g_engineUp, g_engineDown);
          col[n++] = cDim;
       }
       if(haveLiveR && g_lrN > 0)
