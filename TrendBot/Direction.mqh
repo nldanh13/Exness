@@ -34,6 +34,24 @@ string DirPendingFile()
 }
 string DirName(const int v) { return v > 0 ? "TANG" : v < 0 ? "GIAM" : "DUNG NGOAI"; }
 
+// Show the same four votes before and AFTER restart. The most recent
+// pending forecast is authoritative for the last CLOSED M15 bar.
+void DirApplySnapshot(const DirForecast &r)
+{
+   int votes[4]; votes[0] = r.dow; votes[1] = r.ema;
+   votes[2] = r.macd; votes[3] = r.structure;
+   int up = 0, down = 0;
+   for(int i = 0; i < 4; i++) { if(votes[i] > 0) up++; else if(votes[i] < 0) down++; }
+   g_dirLastAgree = MathMax(up, down); g_dirLastDisagree = MathMin(up, down);
+   g_dirLastVote = r.ensemble;
+   g_dirLastDow = r.dow; g_dirLastEma = r.ema;
+   g_dirLastMacd = r.macd; g_dirLastStructure = r.structure;
+   g_dirLastSummary = StringFormat("M15: %s (%d/4, nguoc %d), Dow %s | EMA %s | MACD %s | H4 %s. CHI QUAN SAT",
+                                  DirName(g_dirLastVote), g_dirLastAgree, g_dirLastDisagree,
+                                  DirName(g_dirLastDow), DirName(g_dirLastEma),
+                                  DirName(g_dirLastMacd), DirName(g_dirLastStructure));
+}
+
 bool DirInitHandles()
 {
    if(g_dirEmaH4 == INVALID_HANDLE) g_dirEmaH4 = iMA(_Symbol, PERIOD_H4, 50, 0, MODE_EMA, PRICE_CLOSE);
@@ -122,6 +140,7 @@ void DirLoadPending()
          int k = ArraySize(g_dirOpen);
          ArrayResize(g_dirOpen, k + 1);
          g_dirOpen[k] = r;
+         if(r.t == g_dirLastBar) DirApplySnapshot(r);
       }
    }
    FileClose(h);
@@ -232,11 +251,7 @@ void DirectionStep()
    rec.spread = SymbolInfoTick(_Symbol, tick) ? MathMax(0.0, tick.ask - tick.bid) : 0.0;
    int n = ArraySize(g_dirOpen); ArrayResize(g_dirOpen, n + 1); g_dirOpen[n] = rec;
    g_dirLastBar = bar;
-   g_dirLastVote = vote; g_dirLastAgree = agree; g_dirLastDisagree = disagree;
-   g_dirLastDow = dow; g_dirLastEma = ema; g_dirLastMacd = macd; g_dirLastStructure = structure;
-   g_dirLastSummary = StringFormat("M15: %s (%d/4, nguoc %d), Dow %s | EMA %s | MACD %s | H4 %s. CHI QUAN SAT",
-                                  DirName(vote), agree, disagree, DirName(dow), DirName(ema),
-                                  DirName(macd), DirName(structure));
+   DirApplySnapshot(rec);
    DirAppend(DirRow("F", rec, 0, 0, "PENDING"));
    DirSavePending();
    g_dirLogged++;
