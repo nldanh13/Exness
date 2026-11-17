@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.44.0"
-#property version   "5.440"
+#define  BOT_VERSION "5.45.0"
+#property version   "5.450"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -932,6 +932,7 @@ bool SyncEntryAllowed(const bool buy);
 #include "TrendBot/Journal.mqh"
 #include "TrendBot/ManualEntry.mqh"
 #include "TrendBot/DirectionSync.mqh"
+#include "TrendBot/DirectionEngine.mqh"   // SHADOW ONLY: does not modify SyncEntryAllowed or risk
 #include "TrendBot/Status.mqh"
 #include "TrendBot/LiveR.mqh"
 #include "TrendBot/Panel.mqh"
@@ -1081,6 +1082,14 @@ void ResetRuntimeState()
    g_syncText = "CHUA CO DU LIEU M15";
    g_tbSnapshotBar = 0; g_tbSnapshotReady = false;
    g_tbSnapshotLabel = "CHO DU LIEU M15";
+   g_engineLoaded = false; g_engineReady = false; g_engineIoWarned = false;
+   g_engineBar = 0;
+   g_engineDir = g_engineLegacy = g_engineUp = g_engineDown = 0;
+   g_engineTrend = g_engineEMA = g_engineMomentum = 0;
+   g_engineADX = 0;
+   g_engineSummary = "CHUA CO DU LIEU M15";
+   g_engineForecastCount = g_engineOutcomeCount = 0;
+   ArrayResize(g_enginePending, 0);
    ArrayResize(g_dirOpen, 0);
    currentDay     = -1;
    dayStartEquity = 0;
@@ -1161,6 +1170,7 @@ void OnDeinit(const int reason)
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
+   if(P_Strategy == STRAT_SMART && g_engineLoaded) EngineSavePending();
    if(P_Strategy == STRAT_SMART && g_dirLoaded) DirSavePending();
    DirRelease();
    ReleaseHandles();
@@ -1450,7 +1460,8 @@ void OnTickBody()
    AutoSwitch();                    // che do Tu dong: doi sang chien luoc dung dau bang xep hang (khi dang dung ngoai)
    SafetyStep();
    DirectionStep();               // 4-source immutable forecasts + 4/8/16 M15 labels (still independent)
-   SyncDirectionStep();           // STRICT AUTO-ENTRY GATE: 9TF + 4-source + Dow must agree
+   SyncDirectionStep();           // v5.44: still the ONLY auto-entry gate
+   DirectionEngineStep();          // v5.45 SHADOW: compare single score against v5.44 on SAME M15
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
