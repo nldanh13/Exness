@@ -48,3 +48,15 @@ jobs:
             echo "::error::tao_cai_dat.py sinh ra file .set moi chua duoc commit."
             exit 1
           fi
+
+  kiem-tra-powershell:
+    name: Windows PowerShell / mock MetaEditor compile
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Parse PowerShell 5.1 and reproduce compile.log lock
+        shell: powershell
+        run: |
+          & powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_compile_windows.ps1
