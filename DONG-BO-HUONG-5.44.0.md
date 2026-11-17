@@ -27,6 +27,7 @@ Bộ lọc cuối cùng (`SyncEntryAllowed`) kiểm tra lại **đúng nến M15
 - Setup tự động mới của `Theo tình huống`, kể cả khi tín hiệu tìm được trước khi các bộ đồng thuận.
 - Lệnh chờ **giá hồi** và cơ chế **vào lại sau thua**, nếu đồng thuận mất đi thì hủy dự định.
 - Các lệnh **tự nhồi** của chiến lược chính.
+- Những **lệnh SCALE BUY LIMIT/SELL LIMIT** do EA đặt từ tín hiệu đã đồng thuận trước đó nhưng còn chưa khớp: nếu hướng thay đổi/mất đồng thuận thì chủ động hủy các lệnh SCALE thuộc Magic của EA để tránh khớp ngược khi đang chờ.
 - Chế độ tự mở lệnh và tự nhồi từ phần bảo vệ lệnh tay (`InpGuardAutoEntry`, `InpGuardPyramidMax`) **khi EA đang dùng `STRAT_SMART`**.
 
 **Không chặn** thao tác thoát lệnh, dời SL, chốt lời, bảo vệ tài khoản hoặc các vị thế đang mở. Lệnh **bấm BUY/SELL thủ công** vẫn do người dùng quyết định (các quy tắc rủi ro hiện hữu vẫn áp dụng). Các chiến lược khác ngoài `STRAT_SMART` giữ nguyên điều kiện của chúng.
