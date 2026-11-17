@@ -1699,6 +1699,18 @@ void ScaleCleanup()
       ulong t = OrderGetTicket(i);
       if(t == 0 || OrderGetString(ORDER_SYMBOL) != _Symbol || OrderGetInteger(ORDER_MAGIC) != (long)P_Magic) continue;
       if(StringFind(OrderGetString(ORDER_COMMENT), "SCALE") < 0) continue;
+      // Scaling LIMIT orders can fill later even after the new direction
+      // gate turns neutral/opposite. Cancel only this EA's SCALE orders.
+      if(P_Strategy == STRAT_SMART)
+      {
+         ENUM_ORDER_TYPE typ = (ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+         if((typ == ORDER_TYPE_BUY_LIMIT || typ == ORDER_TYPE_SELL_LIMIT) &&
+            !SyncEntryAllowed(typ == ORDER_TYPE_BUY_LIMIT))
+         {
+            TradeDone(PrepSend() && trade.OrderDelete(t), "Huy SCALE mat dong thuan huong", "#" + (string)t);
+            continue;
+         }
+      }
       datetime ts = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
       if(!has || TimeCurrent() - ts >= (long)P_ScaleBars * PeriodSeconds(P_TF) || HedgeActive())
          TradeDone(PrepSend() && trade.OrderDelete(t), "Huy phan giai von chua khop", "#" + (string)t);
