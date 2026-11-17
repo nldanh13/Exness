@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.42.0"
-#property version   "5.4200"
+#define  BOT_VERSION "5.43.0"
+#property version   "5.4300"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -919,6 +919,7 @@ int      g_pendHit = 0, g_pendMissed = 0, g_pendBlocked = 0, g_pendFilled = 0;
 #include "TrendBot/Dow.mqh"
 #include "TrendBot/Signals.mqh"
 #include "TrendBot/Learn.mqh"
+#include "TrendBot/Direction.mqh"
 #include "TrendBot/Risk.mqh"
 #include "TrendBot/Manage.mqh"
 #include "TrendBot/Grid.mqh"
@@ -1040,6 +1041,8 @@ int OnInit()
       else hMkt = iMA(g_mktSym, PERIOD_D1, 200, 0, MODE_EMA, PRICE_CLOSE);
    }
    if(!InitHandles()) return INIT_FAILED;
+   if(P_Strategy == STRAT_SMART && !DirInitHandles())
+      Print("QUAN SAT HUONG: chua tao du chi bao M15/H4/D1, se thu lai tren nen tiep theo.");
    if(P_MTFAlign > 0 && !InitMTF()) { Print("Khong tao duoc EMA20 da khung"); return INIT_FAILED; }
    if(P_TrendBoard && MEActive() && !TrendBoardInit()) Print("Khong tao duoc bang xu huong (EMA cac khung)");
    trade.SetExpertMagicNumber(P_Magic);
@@ -1063,6 +1066,9 @@ void ResetRuntimeState()
    g_stateReady   = false;
    g_botRiskLoaded = false;
    g_guardRiskLoaded = false;
+   g_dirLoaded    = false;
+   g_dirLastBar   = 0;
+   ArrayResize(g_dirOpen, 0);
    currentDay     = -1;
    dayStartEquity = 0;
    g_plDirty      = true;
@@ -1142,6 +1148,8 @@ void OnDeinit(const int reason)
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
+   if(P_Strategy == STRAT_SMART && g_dirLoaded) DirSavePending();
+   DirRelease();
    ReleaseHandles();
    if(hMkt != INVALID_HANDLE) IndicatorRelease(hMkt);
    ReleaseMTF();
@@ -1422,6 +1430,7 @@ void OnTickBody()
    if(!TryInitState()) return;      // chua dang nhap: chua lam gi ca
    AutoSwitch();                    // che do Tu dong: doi sang chien luoc dung dau bang xep hang (khi dang dung ngoai)
    SafetyStep();
+   DirectionStep();               // OBSERVATION ONLY: 4/8/16 M15, never affects risk or trading gates
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)

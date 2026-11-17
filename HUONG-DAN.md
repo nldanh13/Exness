@@ -1283,3 +1283,7 @@ phân tích". Từ v5.42 mỗi lần phân tích được ghi lại **đầy đ�
 - Nút **Sao chép gửi Claude** chép kèm lần phân tích gần nhất và kết luận 12 lần gần nhất.
 - Sửa hiển thị ADX: in 2 chữ số thập phân, không còn "ADX 20.0 < 20" khi ADX thật là 19,96. Không đổi logic giao dịch.
 - Cần mở lại giao diện (GiaoDien.cmd) sau khi cập nhật vì có thêm dữ liệu mới.
+
+## Quan sát hướng 4 nguồn (v5.43.0)
+
+Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/Direction.mqh` ghi dự đoán **chỉ để đo**, không sử dụng khi vào lệnh hay tính lot. Cứ mỗi nến M15 **đã đóng**, quan sát Dow D1, EMA50 H4+D1, MACD H4 và cấu trúc đỉnh đáy H4; tối thiểu 3 phiếu cùng chiều và không có phiếu trái mới ra TĂNG/GIẢM. Nếu không thì đứng ngoài. Đánh giá sau 4/8/16 nến M15 đã đóng, lưu vào `Terminal\Common\Files\TrendBot_huong_*_M15.csv`. Xem [mô tả kiểm thử và cách đọc kết quả](THEO-DOI-HUONG-5.43.0.md). Bản này chưa có native MetaEditor compile, không thay thế Strategy Tester/demo.

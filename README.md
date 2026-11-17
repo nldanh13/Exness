@@ -8,6 +8,8 @@ Expert Advisor cho MT5 (sàn Exness, mã `BTCUSDm`), kèm bộ script PowerShell
 
 **Rà soát riêng v5.10.20:** [vốn tối thiểu theo ATR, bộ lọc Donchian, nhồi giảm lot, risk buckets 1%/2% và kế hoạch kiểm thử](RA-SOAT-RUI-RO-5.10.20.md). Với BTC và vốn khoảng 1 triệu VND, mức lot nhỏ nhất có thể khiến EA bỏ hoàn toàn các tín hiệu; không nên nâng rủi ro chỉ để vào được lệnh. Phiên bản hiện tại ghi ở dòng đầu của file đó.
 
+**Mới v5.43.0 – đánh giá hướng chỉ quan sát:** [Dow D1 + EMA H4/D1 + MACD H4 + cấu trúc giá H4, kiểm tra sau 4/8/16 nến M15](THEO-DOI-HUONG-5.43.0.md). Bộ này không tự vào lệnh, đổi hướng giao dịch hay tăng rủi ro. Phân tích CSV bằng `python cong-cu/danh_gia_huong.py <file.csv>`.
+
 ## Bắt đầu nhanh
 
 1. Clone repo về máy Windows có MT5 (Exness) và VS Code.

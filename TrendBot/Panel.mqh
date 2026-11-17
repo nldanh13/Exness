@@ -213,6 +213,12 @@ void UpdatePanel()
       txt[n] = StringFormat("Đã đóng hôm nay: %s  ·  Lệnh: %d", PNMoney(g_closedToday, cur), TradesToday());  col[n++] = cTxt;
       txt[n] = StringFormat("DD giới hạn (bỏ qua lãi thả nổi): %.2f%% / %.1f%%", dd, P_MaxDrawdownPct); col[n++] = dd > P_MaxDrawdownPct * 0.6 ? cWarn : cTxt;
       txt[n] = StringFormat("DD mark-to-market (cả lãi thả nổi): %.2f%% (chỉ báo)", BotMtmDrawdownPct()); col[n++] = cDim;
+      if(P_Strategy == STRAT_SMART)
+      {
+         txt[n] = "Hướng 4 nguồn [chỉ quan sát]: " + DirName(g_dirLastVote) +
+                  StringFormat(" %d/4, trái %d; theo dõi +4/+8/+16 M15", g_dirLastAgree, g_dirLastDisagree);
+         col[n++] = cDim;
+      }
       if(haveLiveR && g_lrN > 0)
       {
          txt[n] = StringFormat("Tổng R thật: %+.1fR / %d lệnh  ·  ngưỡng xem lại %+.1fR", g_lrSum, g_lrN, g_lrLimit);
