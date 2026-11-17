@@ -117,9 +117,10 @@ bool EngineAppend(const string row)
    FileSeek(h, 0, SEEK_END);
    if(fresh)
       FileWriteString(h, "event,t_m15_server_epoch,horizon,entry,close,delta_price,atr_m15,spread,engine,legacy,structure,ema,momentum,up_score,down_score,adx,label\r\n");
-   FileWriteString(h, row + "\r\n");
+   uint written = FileWriteString(h, row + "\r\n");
+   FileFlush(h);
    FileClose(h);
-   return true;
+   return written > 0;
 }
 // Preserve last processed bar and unresolved forecasts after MT5 restart.
 void EngineSavePending()
