@@ -342,6 +342,9 @@ void PyramidStep(const bool addOnly = false)
       return;
    }
    if(cnt >= P_PyramidMax || IsHalted() || GuardHalted() || DailyLossHit() || (P_GuardAlgoDayPct > 0 && GuardBucketLocked(2))) return;
+   // Existing positions still get exits and protection above. Only NEW layers
+   // must pass the same unified direction gate as the original Smart order.
+   if(P_Strategy == STRAT_SMART && !SyncEntryAllowed(buy)) return;
    if(!MTFOk(buy)) return;                                   // cac khung nho/lon chua dong thuan thi chua nhoi
    if(buy ? (c1 - lastOpen < P_PyramidStepATR * atr || c1 <= fast) : (lastOpen - c1 < P_PyramidStepATR * atr || c1 >= fast)) return;
    // Chi nhoi khi gia PHA DINH MOI roi HOI VE cham lai vung vua pha va giu duoc (InpPyramidRetest), khong mua duoi nen dang tang:
