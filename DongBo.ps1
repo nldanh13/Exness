@@ -17,7 +17,9 @@ function Deploy([string]$file, $mt5) {
     } else {
         Write-Host "[$stamp] $($r.Name) : COMPILE LOI" -ForegroundColor Red
         $r.Errors | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+        Write-Host "    Nhat ky MetaEditor: $($r.Log)" -ForegroundColor Yellow
         [console]::Beep(400, 300)
+        throw "MetaEditor compile that bai. Chi tiet: $($r.Log)"
     }
 }
 
