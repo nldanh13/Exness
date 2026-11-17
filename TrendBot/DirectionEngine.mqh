@@ -98,11 +98,10 @@ string EngineCsvRow(const string event, const EngineForecast &r,
                        r.engine, r.legacy, r.structure, r.ema, r.momentum,
                        r.up, r.down, r.adx, label);
 }
-void EngineAppend(const string row)
+bool EngineAppend(const string row)
 {
-   if(MQLInfoInteger(MQL_TESTER)) return;
+   if(MQLInfoInteger(MQL_TESTER)) return true;
    string file = EngineFile();
-   bool fresh = !FileIsExist(file, FILE_COMMON);
    int h = FileOpen(file, FILE_READ | FILE_WRITE | FILE_TXT | FILE_ANSI |
                    FILE_COMMON | FILE_SHARE_READ);
    if(h == INVALID_HANDLE)
@@ -112,13 +111,15 @@ void EngineAppend(const string row)
          Print("ENGINE: khong ghi duoc CSV ", file, " err=", GetLastError());
          g_engineIoWarned = true;
       }
-      return;
+      return false;
    }
+   bool fresh = FileSize(h) == 0;
    FileSeek(h, 0, SEEK_END);
    if(fresh)
       FileWriteString(h, "event,t_m15_server_epoch,horizon,entry,close,delta_price,atr_m15,spread,engine,legacy,structure,ema,momentum,up_score,down_score,adx,label\r\n");
    FileWriteString(h, row + "\r\n");
    FileClose(h);
+   return true;
 }
 // Preserve last processed bar and unresolved forecasts after MT5 restart.
 void EngineSavePending()
@@ -190,7 +191,8 @@ void EngineResolve()
          double band = MathMax(2.0 * r.spread, 0.10 * r.atr);
          double delta = close - r.entry;
          string label = MathAbs(delta) <= band ? "FLAT" : delta > 0 ? "UP" : "DOWN";
-         EngineAppend(EngineCsvRow("R", r, horizons[j], close, label));
+         // Never mark a horizon as resolved if its result was not saved.
+         if(!EngineAppend(EngineCsvRow("R", r, horizons[j], close, label))) continue;
          r.done |= mask; g_engineOutcomeCount++;
       }
       if(r.done == 7) ArrayRemove(g_enginePending, i, 1);
@@ -229,11 +231,20 @@ void DirectionEngineStep()
    if(hADX != INVALID_HANDLE) GetValue(hADX, 0, 1, r.adx);
    MqlTick tick;
    if(SymbolInfoTick(_Symbol, tick)) r.spread = MathMax(0.0, tick.ask - tick.bid);
+   // The F event must be durable before recording this bar as processed.
+   // If CSV is busy/unwritable, retry on the next tick; never invent a
+   // successful forecast or emit orphan R outcomes.
+   if(!EngineAppend(EngineCsvRow("F", r, 0, 0, "PENDING")))
+   {
+      g_engineReady = false;
+      g_engineSummary = "ENGINE: KHONG GHI DUOC CSV, THU LAI TICK SAU";
+      EngineSavePending();
+      return;
+   }
    int n = ArraySize(g_enginePending);
    ArrayResize(g_enginePending, n + 1);
    g_enginePending[n] = r;
    EngineApply(r);
-   EngineAppend(EngineCsvRow("F", r, 0, 0, "PENDING"));
    EngineSavePending();
    g_engineForecastCount++;
 }
