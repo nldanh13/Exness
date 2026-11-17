@@ -66,7 +66,7 @@ void DirAppend(const string row)
       return;
    }
    FileSeek(h, 0, SEEK_END);
-   if(fresh) FileWriteString(h, "event,t_m15_utc_server,horizon,entry,close,delta_price,atr_m15,spread,ensemble,dow,ema,macd,structure,label\r\n");
+   if(fresh) FileWriteString(h, "event,t_m15_server_epoch,horizon,entry,close,delta_price,atr_m15,spread,ensemble,dow,ema,macd,structure,label\r\n");
    FileWriteString(h, row + "\r\n");
    FileClose(h);
 }
