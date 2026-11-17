@@ -196,6 +196,12 @@ void WriteStatus()
       FileWriteString(h, "hoc=" + LearnSummary() + "\r\n");
       FileWriteString(h, "huong=" + g_dirLastSummary + "\r\n");
       FileWriteString(h, "huongdongbo=" + g_syncText + "\r\n");
+      FileWriteString(h, "engine=" + g_engineSummary + "\r\n");
+      FileWriteString(h, StringFormat("engineso=%d;hoantat=%d;dangcho=%d;huong=%d;huongcu=%d;mua=%d;ban=%d;ketcau=%d;ema=%d;macd=%d;adx=%.2f;thu=1;m15=%I64d\r\n",
+                                    g_engineForecastCount, g_engineOutcomeCount, ArraySize(g_enginePending),
+                                    g_engineDir, g_engineLegacy, g_engineUp, g_engineDown,
+                                    g_engineTrend, g_engineEMA, g_engineMomentum,
+                                    g_engineADX, (long)g_engineBar));
       FileWriteString(h, StringFormat("huonglenh=%d;huong9=%d;tang9=%d;giam9=%d;huong4=%d;dongbo=%d;m15=%I64d\r\n",
                                     g_syncDir, g_syncNineDir, g_syncNineUp, g_syncNineDn,
                                     g_dirLastVote, g_syncReady ? 1 : 0, (long)g_syncBar));
