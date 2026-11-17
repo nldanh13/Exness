@@ -65,8 +65,22 @@ function Invoke-BotCompile($mt5, [string]$src) {
     $name   = [IO.Path]::GetFileNameWithoutExtension($src)
     $target = Join-Path $mt5.Experts "$name.mq5"
     $ex5    = Join-Path $mt5.Experts "$name.ex5"
-    $log    = Join-Path $env:TEMP "$name-compile.log"
+    # Moi lan compile dung log RIENG; khong duoc xoa log dang duoc
+    # MetaEditor / cua so VS Code khac giu mo.
+    $log    = Join-Path $env:TEMP ("{0}-compile-{1}-{2}.log" -f $name, $PID, [guid]::NewGuid().ToString("N"))
     $bak    = "$ex5.bak"
+    # Khoa theo duong dan .ex5: watcher va nut cap nhat khong duoc
+    # copy module / di chuyen .ex5 cung luc vao mot terminal.
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try {
+        $key = [BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($ex5.ToLowerInvariant()))).Replace("-", "")
+    } finally { $hash.Dispose() }
+    $mutex = [System.Threading.Mutex]::new($false, ("Local\TrendBotCompile_" + $key))
+    $locked = $false
+    try {
+        try { $locked = $mutex.WaitOne(120000) }
+        catch [System.Threading.AbandonedMutexException] { $locked = $true }
+        if (-not $locked) { throw "Dang co MetaEditor/VS Code khac compile vao $ex5 qua 120 giay; hay dung task trung roi thu lai." }
     Copy-Item $src $target -Force
     # Cac module .mqh (thu muc TrendBot/ canh file .mq5) phai nam canh file .mq5 trong MQL5\Experts
     $modSrc = Join-Path (Split-Path $src -Parent) "TrendBot"
@@ -93,13 +107,33 @@ function Invoke-BotCompile($mt5, [string]$src) {
             if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
         }
     }
-    if (Test-Path $log) { Remove-Item $log -Force }
+    # Khong bao gio Remove-Item mot file log chung cua lan compile khac.
     # Giu ban .ex5 cu: compile loi thi tra lai, bot tren chart khong bi mat file chay
     if (Test-Path $ex5) { Move-Item $ex5 $bak -Force }
-    Start-Process -FilePath $mt5.Editor -ArgumentList "/compile:`"$target`"", "/log:`"$log`"" -Wait
-    $lines = if (Test-Path $log) { Get-Content $log } else { @() }
+    try {
+        Start-Process -FilePath $mt5.Editor -ArgumentList "/compile:`"$target`"", "/log:`"$log`"" -Wait -ErrorAction Stop
+    } catch {
+        # Khong de mat .ex5 dang dung neu MetaEditor khong khoi dong duoc.
+        if (Test-Path $bak) { Move-Item $bak $ex5 -Force }
+        throw
+    }
+    # Doi MetaEditor nha file log; khong dung ket qua rong / log cu.
+    $lines = @()
+    $logReadable = $false
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        try {
+            if (Test-Path $log) {
+                $lines = @(Get-Content -LiteralPath $log -ErrorAction Stop)
+                if ($lines.Count -gt 0) { $logReadable = $true; break }
+            }
+        } catch [System.IO.IOException] { }
+        Start-Sleep -Milliseconds 200
+    }
     $errors = @($lines | Where-Object { $_ -match "(?i):\s*error\s" })
-    $ok = (Test-Path $ex5) -and ($errors.Count -eq 0)
+    if (-not $logReadable) {
+        $errors += "MetaEditor khong tao/khong doc duoc log compile moi: $log"
+    }
+    $ok = (Test-Path $ex5) -and $logReadable -and ($errors.Count -eq 0)
     if ($ok) { if (Test-Path $bak) { Remove-Item $bak -Force } }
     elseif (Test-Path $bak) {
         Move-Item $bak $ex5 -Force
@@ -112,6 +146,10 @@ function Invoke-BotCompile($mt5, [string]$src) {
         Warnings = @($lines | Where-Object { $_ -match "(?i):\s*warning\s" })
         Summary  = ($lines | Where-Object { $_ -match "(?i)result|errors" } | Select-Object -Last 1)
         Log      = $log
+    }
+    } finally {
+        if ($locked) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
     }
 }
 
