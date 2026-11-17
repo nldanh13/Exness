@@ -215,8 +215,17 @@ void UpdatePanel()
       txt[n] = StringFormat("DD mark-to-market (cả lãi thả nổi): %.2f%% (chỉ báo)", BotMtmDrawdownPct()); col[n++] = cDim;
       if(P_Strategy == STRAT_SMART)
       {
-         txt[n] = "Hướng 4 nguồn [chỉ quan sát]: " + DirName(g_dirLastVote) +
-                  StringFormat(" %d/4, trái %d; theo dõi +4/+8/+16 M15", g_dirLastAgree, g_dirLastDisagree);
+         // One final actionable direction. Raw 9TF / four-source votes are
+         // independent evidence, NOT separate permissions to open trades.
+         txt[n] = "HƯỚNG LỆNH THỐNG NHẤT (M15): " +
+                  (g_syncReady && g_syncDir > 0 ? "CHỈ MUA" :
+                   g_syncReady && g_syncDir < 0 ? "CHỈ BÁN" : "CHỜ ĐỒNG THUẬN");
+         col[n++] = g_syncDir != 0 && g_syncReady ? cOk : cWarn;
+         txt[n] = StringFormat("9 khung EMA: %d tăng / %d giảm; 4 nguồn: %s %d/4, ngược %d",
+                               g_syncNineUp, g_syncNineDn, DirName(g_dirLastVote),
+                               g_dirLastAgree, g_dirLastDisagree);
+         col[n++] = cDim;
+         txt[n] = "Bộ dự đoán 4 nguồn vẫn theo dõi đúng/sai +4/+8/+16 M15";
          col[n++] = cDim;
       }
       if(haveLiveR && g_lrN > 0)
