@@ -1291,3 +1291,7 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 ## Đồng bộ hướng M15 v5.44.0
 
 Đã có [quy tắc hướng thống nhất và chặn mọi đường vào lệnh tự động mới khi thiếu đồng thuận](DONG-BO-HUONG-5.44.0.md). Bảng 9 khung hiển thị snapshot cùng nến M15; bộ 4 nguồn vẫn ghi kết quả độc lập để kiểm chứng. Vào lệnh tự động của chiến lược 24 chỉ khi cả 9 khung (6/9 và H1/H4/D1 cùng hướng), 4 nguồn (ít nhất 3/4, không phiếu ngược), Dow D1 đồng thuận. Không sửa rủi ro, không ép vào lệnh.
+
+## DirectionEngine v5.45.0 (bộ não thử nghiệm)
+
+[Giải thích bộ gộp 3 nhóm và cách so sánh v5.45 với v5.44](DIRECTION-ENGINE-5.45.0.md). Các bộ 9 khung EMA, 4 nguồn Dow/EMA/MACD/cấu trúc và Dow riêng vẫn bảo vệ lệnh thật như v5.44. Engine chỉ ghi dự báo/điểm theo nến M15 đã đóng và chấm ở +4/+8/+16, không mở lệnh hay nới risk. Sau khi đủ dữ liệu CSV chạy `python cong-cu/so_sanh_direction_engine.py <file.csv>`.
