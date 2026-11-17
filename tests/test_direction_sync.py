@@ -78,6 +78,8 @@ class UnifiedDirectionTests(unittest.TestCase):
         self.assertIn("!SyncEntryAllowed(buySignal)", main)
         self.assertIn("!SyncEntryAllowed(buy)", main)
         self.assertIn("g_pendDir = 0; g_pendBlocked++;", main)
+        self.assertIn('"Huy SCALE mat dong thuan huong"', main)
+        self.assertIn("!SyncEntryAllowed(typ == ORDER_TYPE_BUY_LIMIT)", main)
         self.assertIn("g_reDir = 0;", main)
         self.assertIn("!SyncEntryAllowed(dir > 0)", me)
         self.assertIn("!SyncEntryAllowed(buy)", me)
