@@ -12,6 +12,8 @@ Expert Advisor cho MT5 (sàn Exness, mã `BTCUSDm`), kèm bộ script PowerShell
 
 **Mới v5.44.0 – đồng bộ hướng M15 cho chiến lược Theo tình huống:** [một quyết định vào lệnh chung từ 9 khung EMA, 4 nguồn và Dow D1](DONG-BO-HUONG-5.44.0.md). Nếu không đồng thuận thì **đứng ngoài**, không nới rủi ro, không ép dự đoán thành BUY/SELL. Cần kiểm thử MetaEditor F7 và demo trước khi dùng tài khoản thật.
 
+**Mới v5.45.0 — DirectionEngine tập trung (chạy thử song song):** [3 nhóm không đếm trùng Dow/EMA/MACD, điểm MUA/BÁN và đánh giá đúng hạn 4/8/16 nến M15](DIRECTION-ENGINE-5.45.0.md). **Không đổi lệnh tự động hoặc mức rủi ro đang áp dụng của v5.44.** So sánh kết quả bằng `python cong-cu/so_sanh_direction_engine.py <CSV>`.
+
 ## Bắt đầu nhanh
 
 1. Clone repo về máy Windows có MT5 (Exness) và VS Code.
