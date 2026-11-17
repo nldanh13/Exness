@@ -1041,6 +1041,8 @@ int OnInit()
       else hMkt = iMA(g_mktSym, PERIOD_D1, 200, 0, MODE_EMA, PRICE_CLOSE);
    }
    if(!InitHandles()) return INIT_FAILED;
+   if(P_Strategy == STRAT_SMART && !DirInitHandles())
+      Print("QUAN SAT HUONG: chua tao du chi bao M15/H4/D1, se thu lai tren nen tiep theo.");
    if(P_MTFAlign > 0 && !InitMTF()) { Print("Khong tao duoc EMA20 da khung"); return INIT_FAILED; }
    if(P_TrendBoard && MEActive() && !TrendBoardInit()) Print("Khong tao duoc bang xu huong (EMA cac khung)");
    trade.SetExpertMagicNumber(P_Magic);
