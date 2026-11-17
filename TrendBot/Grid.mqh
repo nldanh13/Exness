@@ -57,7 +57,7 @@ void GridOff(const bool cut, const string why)
    GridCancel();
    if(cut && HasOwnPosition()) { CloseAll(); g_gridCuts++; }
    g_gridOn = false;
-   g_gridOffUntil = TimeCurrent() + (long)MathMax(1, P_GridBars / 2) * PeriodSeconds(P_TF);
+   g_gridOffUntil = (datetime)(TimeCurrent() + (long)MathMax(1, P_GridBars / 2) * PeriodSeconds(P_TF));
    GridSave();
    g_status = "Luoi: " + why;
    Notify("[" + _Symbol + "] Tat luoi: " + why);
