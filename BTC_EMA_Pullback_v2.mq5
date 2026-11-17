@@ -1692,7 +1692,9 @@ void ScalePlace(const bool buy, const double entry, const double slDist, const d
 // Huy phan giai von chua khop: qua InpScaleBars nen, hoac khong con lenh nao (lenh dau da dong)
 void ScaleCleanup()
 {
-   if(P_ScaleParts <= 1) return;
+   // Even if user reduces scale parts to 1 on reconfiguration, a previous
+   // Smart SCALE pending order must be cancelled when direction disagrees.
+   if(P_ScaleParts <= 1 && P_Strategy != STRAT_SMART) return;
    bool has = HasOwnPosition();
    for(int i = OrdersTotal() - 1; i >= 0; i--)
    {
