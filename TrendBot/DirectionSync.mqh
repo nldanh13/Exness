@@ -27,6 +27,8 @@ void SyncDirectionStep()
    // A missing/stale shadow forecast is NEVER interpreted as approval.
    if(lastClosed <= 0 || g_dirLastBar != lastClosed)
    {
+      g_tbSnapshotReady = false; g_tbSnapshotBar = 0;
+      g_tbSnapshotLabel = "CHO DU DOAN M15";
       g_syncReady = false; g_syncDir = 0; g_syncBar = 0;
       g_syncText = "CHO DU DOAN 4 NGUON TREN NEN M15 DA DONG";
       return;
@@ -34,6 +36,8 @@ void SyncDirectionStep()
    if(g_syncReady && g_syncBar == lastClosed) return;
    if(!g_tbReady && !TrendBoardInit())
    {
+      g_tbSnapshotReady = false; g_tbSnapshotBar = 0;
+      g_tbSnapshotLabel = "THIEU EMA 9 KHUNG";
       g_syncReady = false; g_syncDir = 0; g_syncBar = 0;
       g_syncText = "THIEU DU LIEU EMA 9 KHUNG: DUNG NGOAI";
       return;
@@ -45,6 +49,7 @@ void SyncDirectionStep()
    for(int i = 0; i < 9; i++)
    {
       votes[i] = TrendAtM15Close(i, at);
+      g_tbSnapshotVotes[i] = votes[i];
       if(votes[i] > 0) up++;
       else if(votes[i] < 0) dn++;
    }
@@ -56,6 +61,10 @@ void SyncDirectionStep()
    g_syncNineUp = up; g_syncNineDn = dn; g_syncNineDir = nine;
    g_syncDir = SyncCombine(nine, g_dirLastVote, g_dirLastDow);
    g_syncBar = lastClosed; g_syncReady = true;
+   g_tbSnapshotBar = lastClosed; g_tbSnapshotReady = true;
+   g_tbSnapshotLabel = g_syncDir > 0 ? "KET LUAN: CHI XET MUA" :
+                       g_syncDir < 0 ? "KET LUAN: CHI XET BAN" :
+                       "KET LUAN: CHO DONG THUAN";
    string reason = g_syncDir != 0 ? "DONG THUAN - MOI XET SETUP" :
                    nine == 0 ? "9 KHUNG CHUA DU 6/9 + H1/H4/D1" :
                    g_dirLastVote == 0 ? "4 NGUON CHUA DU 3/4 HOAC CO PHIEU NGUOC" :
