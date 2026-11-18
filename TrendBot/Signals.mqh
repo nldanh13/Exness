@@ -848,6 +848,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    buyBase = false; sellBase = false;
    string nm = "", list = "", why = "";
    int dir = 0;                                                     // chieu cho phep: +1 mua, -1 ban, 0 ca hai (theo setup)
+   double sitRisk = 1.0;                                            // v5.49: he so rui ro rieng cua tinh huong
    g_smartSit = 0;
    DowState t;
    bool tideOk = DowTide(t);
@@ -948,6 +949,16 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    { nm = nmB; g_smartSit = 2; why = "tin " + nm + " vua ra (< 4 gio)"; list = "20"; }
    else if(crashDn || spikeUp)
    { g_smartSit = 3; why = StringFormat("%s %.1f ATR trong %d nen", crashDn ? "giam" : "tang", (kHi - kLo) / atr, kb); list = "14"; }
+   // v5.49: giai doan cuoi (D1) nhung M15 dang manh (ADX >= nguong): khong bo het kien thuc theo xu huong. Bo 2 kieu vao duoi
+   // (pha vo + test lai, song Dow), giu 3 kieu bat nhip hoi (FVG + nen, order block, premium / discount), rui ro x InpSmartLateStrongRisk.
+   else if(tideOk && t.trend != 0 && ((P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) || stretched) &&
+           P_SmartLateStrongRisk > 0 && adx >= P_SmartTrendADX)
+   {
+      g_smartSit = 4; dir = t.trend; list = "5,15,21"; sitRisk = MathMin(1.0, P_SmartLateStrongRisk);
+      why = StringFormat("Dow %s %s giai doan cuoi (pha %d lan%s) nhung ADX %.2f >= %.0f: chi bat nhip hoi theo xu huong, rui ro x%.2f",
+                         EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs, stretched ? StringFormat(", cach moc %.1f ATR", stretch) : "",
+                         adx, P_SmartTrendADX, sitRisk);
+   }
    else if(tideOk && t.trend != 0 && ((P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) || stretched))
    { g_smartSit = 5; why = StringFormat("Dow %s %s, da pha %d lan%s", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs,
                                        stretched ? StringFormat(", gia cach moc vua pha %.1f ATR khung Dow (di qua xa)", stretch) : ""); list = "12,6"; }
@@ -997,7 +1008,8 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    Tr("Tinh huong", 3, "Tình huống: " + SmartSitNameVi(g_smartSit) +
                        (g_smartSit == 7 ? " (không điều kiện nào ở trên đạt)" : StringFormat(" (điều kiện %d là điều kiện đầu tiên đạt)", g_smartSit == 4 ? 5 : g_smartSit == 5 ? 4 : g_smartSit)) +
                        (list == "" ? "" : " → dùng bộ kiến thức: " + SmartListNames(list)) +
-                       (dir != 0 ? (dir > 0 ? "; chỉ lấy setup MUA (theo thủy triều)" : "; chỉ lấy setup BÁN (theo thủy triều)") : ""));
+                       (dir != 0 ? (dir > 0 ? "; chỉ lấy setup MUA (theo thủy triều)" : "; chỉ lấy setup BÁN (theo thủy triều)") : "") +
+                       (sitRisk < 1 ? StringFormat("; xu hướng D1 đã ở giai đoạn cuối nhưng ADX M15 còn mạnh: bỏ Phá vỡ / Sóng Dow, rủi ro ×%.2f", sitRisk) : ""));
    if(list == "") Tr("Kien thuc", 2, g_smartSit == 1 ? "Không xét kiến thức nào: đứng ngoài chờ tin ra" : "Không có bộ kiến thức cho tình huống này: đứng ngoài");
    if(list == "") { g_status = head + " | " + (g_smartSit == 1 ? "dung ngoai cho tin ra" : "khong co bo chien luoc phu hop, dung ngoai"); return true; }
    // Soi setup cua bo chien luoc tinh huong nay
@@ -1025,12 +1037,15 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       useN += (useN == "" ? "" : ", ") + ChainName(m);
       P_Strategy = (ENUM_STRATEGY)m;
       P_FvgCandle = true; P_SpringFull = true; P_BreakRetest = true; P_VwapMode = g_smartSit == 6 ? 2 : 1;
-      if(P_SmartFvgBigATR > 0) P_FvgBigATR = P_SmartFvgBigATR;   // v5.48: nen tao FVG tren khung tinh huong (M15) nho hon H1/H4
+      if(P_SmartFvgBigATR > 0) P_FvgBigATR = P_SmartFvgBigATR;
+      // v5.49: Spring vao som - ngay nen rut chan quay lai hop, SL duoi rau, TP mep hop doi dien (chuoi day du thuong vao qua muon)
+      if(m == 6 && P_SmartSpringEarly) P_SpringFull = false;   // v5.48: nen tao FVG tren khung tinh huong (M15) nho hon H1/H4
       bool b = false, s = false;
       g_inChain = true;
       g_why = "";
       int evAt = StringLen(g_ev);
       bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
+      Prof("kien thuc " + IntegerToString(m));
       g_inChain = false;
       P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw; P_FvgBigATR = kFvgBig;
       if(!ok || (!b && !s))
@@ -1097,6 +1112,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    double mult = agree >= P_ChainFullCount ? 1.0 : MathMax(0.1, MathMin(1.0, P_ChainOneRisk));
    double pM = nb > 0 ? bM : sM;
    if(pM > 0 && pM < 1) mult *= pM;
+   if(sitRisk > 0 && sitRisk < 1) mult *= sitRisk;
    double lF = nb > 0 ? bF : sF;                                     // he so tu du lieu thuc chien (dang thu / chua chac / tin dung)
    if(lF > 0 && lF < 1) mult *= lF;
    g_sigMember = nb > 0 ? bMem : sMem;

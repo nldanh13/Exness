@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.48.0"
-#property version   "5.480"
+#define  BOT_VERSION "5.49.0"
+#property version   "5.490"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -229,6 +229,8 @@ input int             InpSmartNewsHoldMin = 60;         // Tình huống: giữ 
 input bool            InpNewsSkipEnergy   = true;       // Tin: bỏ tin dầu / khí (EIA, Crude Oil, Natural Gas)
 input double          InpSmartChaseADX    = 38;         // Tình huống: bỏ phá vỡ / sóng Dow khi ADX trên (0 = tắt)
 input double          InpSmartChaseSLATR  = 2.2;        // Tình huống: bỏ phá vỡ / sóng Dow khi SL rộng hơn (× ATR, 0 = tắt)
+input bool            InpSmartSpringEarly = true;       // Tình huống: Spring vào sớm (nến rút chân quay lại hộp)
+input double          InpSmartLateStrongRisk = 0.5;     // Tình huống: giai đoạn cuối mà ADX mạnh – rủi ro (×, 0 = như cũ)
 input double          InpSmartFvgBigATR   = 1.2;        // Tình huống: FVG nến lớn tối thiểu (× ATR, 0 = theo FVG)
 input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
 input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
@@ -374,7 +376,8 @@ bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin, P_SmartNewsHoldMin;
 bool            P_NewsSkipEnergy, P_MicroLot;
-double          P_DowStretchATR, P_SmartFvgBigATR;
+double          P_DowStretchATR, P_SmartFvgBigATR, P_SmartLateStrongRisk;
+bool            P_SmartSpringEarly;
 int             P_KVLocalBars;
 double          P_MicroMaxLossPct, P_MicroMaxSLATR;
 double          P_SmartChaseADX, P_SmartChaseSLATR;
@@ -560,7 +563,7 @@ void LoadParams()
    P_KVLookback = InpKVLookback; P_KVBins = InpKVBins; P_KVHighMult = InpKVHighMult; P_KVMaxATR = InpKVMaxATR;
    P_KVMinBars = InpKVMinBars; P_KVMinReact = InpKVMinReact;
    P_VwapMode = InpVwapMode; P_VwapBand1 = InpVwapBand1; P_VwapBand2 = InpVwapBand2; P_VwapBand3 = InpVwapBand3; P_VwapMinRR = InpVwapMinRR;
-   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowStretchATR = InpDowStretchATR; P_SmartFvgBigATR = InpSmartFvgBigATR; P_KVLocalBars = InpKVLocalBars; P_DowVolume = InpDowVolume;
+   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowStretchATR = InpDowStretchATR; P_SmartSpringEarly = InpSmartSpringEarly; P_SmartLateStrongRisk = InpSmartLateStrongRisk; P_SmartFvgBigATR = InpSmartFvgBigATR; P_KVLocalBars = InpKVLocalBars; P_DowVolume = InpDowVolume;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
@@ -688,6 +691,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartNewsHoldMin") { P_SmartNewsHoldMin = (int)StringToInteger(v); return true; }
    if(k == "InpSmartFvgBigATR") { P_SmartFvgBigATR = StringToDouble(v); return true; }
    if(k == "InpKVLocalBars") { P_KVLocalBars = (int)StringToInteger(v); return true; }
+   if(k == "InpSmartSpringEarly") { P_SmartSpringEarly = (v == "true" || v == "1"); return true; }
+   if(k == "InpSmartLateStrongRisk") { P_SmartLateStrongRisk = StringToDouble(v); return true; }
    if(k == "InpDowStretchATR") { P_DowStretchATR = StringToDouble(v); return true; }
    if(k == "InpMicroLot") { P_MicroLot = (v == "true" || v == "1"); return true; }
    if(k == "InpMicroMaxLossPct") { P_MicroMaxLossPct = StringToDouble(v); return true; }
@@ -1492,13 +1497,16 @@ void OnTimer()
    if(!g_stateReady && !TryInitState()) return;
    ulong t0 = GetMicrosecondCount();
    SafetyStep();
+   Prof("an toan");
    TickTimeRecord(GetMicrosecondCount() - t0);
 }
 
 void OnTick()
 {
    ulong t0 = GetMicrosecondCount();
+   ProfBegin();
    OnTickBody();
+   Prof("vao lenh / con lai");
    TickTimeRecord(GetMicrosecondCount() - t0);
 }
 
@@ -1508,11 +1516,17 @@ void OnTickBody()
    AutoSwitch();                    // che do Tu dong: doi sang chien luoc dung dau bang xep hang (khi dang dung ngoai)
    SafetyStep();
    DirectionStep();               // 4-source immutable forecasts + 4/8/16 M15 labels (still independent)
+   Prof("huong 4 nguon");
    SyncDirectionStep();           // v5.44: still the ONLY auto-entry gate
+   Prof("dong bo 9 khung");
    DirectionEngineStep();          // v5.45 SHADOW: compare single score against v5.44 on SAME M15
+   Prof("engine");
    JournalScan();                   // nhat ky + canh bao ky luat (moi 15 giay, chi 1 chart / tai khoan)
+   Prof("nhat ky");
    WriteStatus();                   // trang thai cho giao dien tren trinh duyet (moi 10 giay)
+   Prof("ghi trang thai");
    ManualUI();                      // nut BUY/SELL (InpManualEntry) + bang xu huong (InpTrendBoard)
+   Prof("bang / nut");
    // Moi tick BTC deu goi day; kiem tra lenh / gioi han moi P_ManageEverySec giay la du
    // (server cung khong cho sua SL nhanh hon), tru khi vua co nen moi hoac vua co giao dich.
    datetime barNow = iTime(_Symbol, P_TF, 0);
@@ -1543,6 +1557,7 @@ void OnTickBody()
    CheckReEntry();                  // vao lai sau khi bi cat lo (InpReEntryMax)
    UpdateLiveR();                   // tong R that so voi nguong xem lai (5 phut/lan, bao 1 lan khi xuong duoi)
    UpdatePanel();
+   Prof("quan ly lenh");
    // Danh luoi (chien luoc 13): tu tim vung, dat / huy lenh cho, tat luoi khi gia ra khoi vung (Grid.mqh)
    if(P_Strategy == STRAT_GRID) { GridTick(); return; }
 
@@ -1584,6 +1599,7 @@ void OnTickBody()
    if(!MQLInfoInteger(MQL_TESTER) && AccountInfoInteger(ACCOUNT_LOGIN) > 0) GlobalVariableSet(GVName("lastBarDone"), (double)barTime);
    EvReset();                       // bang chung cua quyet dinh nen nay (v5.33)
    TraceBegin();                    // qua trinh phan tich nen nay, ghi ra file o lan WriteStatus sau (v5.42)
+   Prof("bat dau nen");
 
    if(IsHalted())       { g_status = "DUNG HAN (sut giam)"; return; }
    if(HasOwnPosition())
@@ -1619,6 +1635,7 @@ void OnTickBody()
    bool adxOk = !P_UseADX || adx >= P_ADXMin;
    bool buyBase, sellBase;
    bool baseOk = BaseSignals(atr, trend, fast, c1, h1, l1, buyBase, sellBase);
+   Prof("phan tich setup");
    g_trEvFrom = StringLen(g_ev);    // bang chung tu day tro di: bo loc chung, tinh lot, gui lenh
    if(!baseOk) return;
    bool buySignal  = P_AllowBuy && buyBase

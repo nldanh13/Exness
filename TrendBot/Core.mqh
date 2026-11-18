@@ -253,12 +253,22 @@ ulong  g_tkMaxUs = 0, g_tkSumUs = 0, g_tkFirstUs = 0;
 long   g_tkCount = 0, g_tkSlow = 0;      // so lan > 100 ms
 datetime g_tkMaxAt = 0;
 bool   g_tkFirstDone = false;
+// v5.49: do thoi gian tung cum trong 1 lan xu ly; lan cham nhat ghi chi tiet cac cum >= 20 ms
+ulong  g_pfLast = 0;
+string g_pf = "", g_tkMaxDetail = "";
+void ProfBegin() { g_pfLast = GetMicrosecondCount(); g_pf = ""; }
+void Prof(const string name)
+{
+   ulong now = GetMicrosecondCount(), d = now - g_pfLast;
+   g_pfLast = now;
+   if(d >= 20000) g_pf += (g_pf == "" ? "" : ", ") + name + " " + IntegerToString((long)(d / 1000)) + " ms";
+}
 // v5.47: lan xu ly dau sau khoi dong (tao chi bao 9 khung, nap file hoc / lich su) tach rieng, khong tinh vao "lon nhat"
 void TickTimeRecord(const ulong us)
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
    if(!g_tkFirstDone) { g_tkFirstDone = true; g_tkFirstUs = us; return; }
-   if(us > g_tkMaxUs) g_tkMaxAt = TimeCurrent();
+   if(us > g_tkMaxUs) { g_tkMaxAt = TimeCurrent(); g_tkMaxDetail = g_pf; }
    g_tkCount++; g_tkSumUs += us;
    if(us > g_tkMaxUs) g_tkMaxUs = us;
    if(us > 100000) g_tkSlow++;
@@ -267,7 +277,8 @@ string TickTimeText()
 {
    if(g_tkCount <= 0) return "chua do";
    return StringFormat("TB %.1f ms, lon nhat %.0f ms (luc %s), %I64d lan > 100 ms / %I64d; lan dau sau khoi dong %.0f ms", g_tkSumUs / 1000.0 / g_tkCount,
-                       g_tkMaxUs / 1000.0, g_tkMaxAt > 0 ? TimeToString(g_tkMaxAt, TIME_DATE | TIME_SECONDS) : "-", g_tkSlow, g_tkCount, g_tkFirstUs / 1000.0);
+                       g_tkMaxUs / 1000.0, g_tkMaxAt > 0 ? TimeToString(g_tkMaxAt, TIME_DATE | TIME_SECONDS) : "-", g_tkSlow, g_tkCount, g_tkFirstUs / 1000.0) +
+          (g_tkMaxDetail != "" ? "; lan cham nhat: " + g_tkMaxDetail : "");
 }
 
 bool IsOwnSelected()

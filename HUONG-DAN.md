@@ -1328,3 +1328,10 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 - **FVG trong chiến lược 24** dùng `InpSmartFvgBigATR` (1.2 ATR) thay cho `InpFvgBigATR` (2 ATR, hợp H1/H4). Điều kiện "chưa bị chạm" chỉ loại FVG đã bị chạm từ trước cửa sổ 6 nến chờ mẫu nến, nên giá chạm vùng rồi tạo mẫu nến vẫn được tính; vùng chỉ hỏng khi có nến đóng cửa thủng qua mép đối diện.
 - **Key Volume 2 lớp:** ngoài 200 nến, bot quét thêm `InpKVLocalBars` (80) nến gần nhất để thấy vùng tích lũy mới quanh giá. Các con số "tích lũy / phản ứng" chỉ đếm cho vùng mà nến vừa đóng chạm tới.
 - **Khởi động giữa nến** vẫn ghi dòng `theodoi=` (lần phân tích gần nhất, đánh dấu "truoc khi khoi dong") và `giay=` (lệnh giấy đang chạy).
+
+## v5.49.0: giai đoạn cuối nhưng ADX mạnh, Spring vào sớm, đo thời gian xử lý
+
+- **Giai đoạn cuối + ADX mạnh:** Dow đã giai đoạn cuối (đủ số lần phá hoặc đi quá xa) nhưng ADX khung chính ≥ `InpSmartTrendADX` thì vẫn là XU HƯỚNG MẠNH với FVG + nến, Order block, Premium / discount theo thủy triều (bỏ Phá vỡ và Sóng Dow), rủi ro × `InpSmartLateStrongRisk` (0.5). ADX yếu đi thì mới chuyển sang Hộp phân phối / Spring.
+- **Spring vào sớm** (`InpSmartSpringEarly`): trong chiến lược 24, Spring vào ở nến thủng đáy hộp rồi đóng cửa lại trong hộp, SL dưới râu, TP mép hộp đối diện.
+- **Đo thời gian:** dòng `xuly=` ghi thêm các cụm ≥ 20 ms của lần xử lý chậm nhất (đồng bộ 9 khung, ghi trạng thái, từng kiến thức...).
+- **Lệnh giấy trùng từ bản cũ** được tự gộp khi nạp lại (giữ lệnh vào sớm nhất).
