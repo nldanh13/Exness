@@ -391,9 +391,11 @@ int KVReactions(const double bot, const double top, const int L, const double at
    }
    return react;
 }
-bool KeyVolSignal(const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist)
+// v5.48: quet 1 lop (L nen). Dem dau hieu tich luy / phan ung tren CUNG cua so L nen da tao vung.
+bool KeyVolLayer(const int L, const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist,
+                 int &zN, int &zTouch, int &zBase, int &zReact, string &zNear)
 {
-   int L = P_KVLookback < 50 ? 50 : P_KVLookback, nb = P_KVBins < 10 ? 10 : (P_KVBins > 200 ? 200 : P_KVBins);
+   int nb = P_KVBins < 10 ? 10 : (P_KVBins > 200 ? 200 : P_KVBins);
    int iH = iHighest(_Symbol, P_TF, MODE_HIGH, L, 2), iL = iLowest(_Symbol, P_TF, MODE_LOW, L, 2);
    if(iH < 0 || iL < 0) return false;
    double pHi = iHigh(_Symbol, P_TF, iH), pLo = iLow(_Symbol, P_TF, iL), w = (pHi - pLo) / nb;
@@ -414,8 +416,6 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
    double thr = P_KVHighMult * tot / nb, o1 = iOpen(_Symbol, P_TF, 1), h2 = iHigh(_Symbol, P_TF, 2), l2 = iLow(_Symbol, P_TF, 2);
    double c2 = iClose(_Symbol, P_TF, 2), r1 = h1 - l1;
    int maxBins = (int)MathMax(1, MathFloor(P_KVMaxATR * atr / w));
-   int zN = 0, zTouch = 0, zBase = 0, zReact = 0;
-   string zNear = "";
    for(int k = 0; k < nb; k++)
    {
       if(vb[k] < thr) continue;
@@ -455,13 +455,29 @@ bool KeyVolSignal(const double atr, const double c1, const double h1, const doub
       // Doi vai + nen phan ung ro
       bool fromAbove = c2 > top, fromBelow = c2 < bot;
       if(fromAbove && c1 > top && c1 > o1 && (MathMin(o1, c1) - l1 >= 0.4 * r1 || c1 > h2))
-      { buy = true; slDist = MathMax(c1 - (bot - 0.25 * atr), 0.5 * atr); EvAdd(kvEv + "; gia tu tren ve (ho tro), nen tang dong cua " + Px(c1) + " tren vung"); return true; }
+      { buy = true; slDist = MathMax(c1 - (bot - 0.25 * atr), 0.5 * atr); EvAdd(StringFormat("[lop %d nen] ", L) + kvEv + "; gia tu tren ve (ho tro), nen tang dong cua " + Px(c1) + " tren vung"); return true; }
       if(fromBelow && c1 < bot && c1 < o1 && (h1 - MathMax(o1, c1) >= 0.4 * r1 || c1 < l2))
-      { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); EvAdd(kvEv + "; gia tu duoi len (khang cu), nen giam dong cua " + Px(c1) + " duoi vung"); return true; }
+      { buy = false; slDist = MathMax((top + 0.25 * atr) - c1, 0.5 * atr); EvAdd(StringFormat("[lop %d nen] ", L) + kvEv + "; gia tu duoi len (khang cu), nen giam dong cua " + Px(c1) + " duoi vung"); return true; }
    }
+   return false;
+}
+
+bool KeyVolSignal(const double atr, const double c1, const double h1, const double l1, bool &buy, double &slDist)
+{
+   // Lop 1: InpKVLookback nen (vung can lon). Lop 2 (v5.48): InpKVLocalBars nen gan nhat - vung tich luy moi quanh gia hien tai,
+   // khong bi vung volume cu (gia da troi xa) lan at. Moi lop chi xet vung ma nen vua dong cham toi.
+   int L = P_KVLookback < 50 ? 50 : P_KVLookback;
+   int zN = 0, zTouch = 0, zBase = 0, zReact = 0, lN = 0, lTouch = 0, lBase = 0, lReact = 0;
+   string zNear = "", lNear = "";
+   if(KeyVolLayer(L, atr, c1, h1, l1, buy, slDist, zN, zTouch, zBase, zReact, zNear)) return true;
+   int LL = P_KVLocalBars;
+   bool local = LL >= 30 && LL < L;
+   if(local && KeyVolLayer(LL, atr, c1, h1, l1, buy, slDist, lN, lTouch, lBase, lReact, lNear)) return true;
    Why(StringFormat("%d vùng volume lớn (ô ≥ %.1f × trung bình, %d nến): %s; nến vừa đóng (%s – %s) chạm %d vùng, %d vùng đủ dấu hiệu tích lũy (≥ %d nến đóng cửa trong vùng + từng chạy mạnh ra), "
-                    "%d vùng đã phản ứng ≥ %d lần; chưa có nến phản ứng đổi vai rõ (đóng cửa ra ngoài vùng theo chiều mới)",
-                    zN, P_KVHighMult, L, zN > 0 ? zNear : "không có", Px(l1), Px(h1), zTouch, zBase, P_KVMinBars, zReact, P_KVMinReact));
+                    "%d vùng đã phản ứng ≥ %d lần (chỉ xét vùng nến vừa đóng chạm tới)",
+                    zN, P_KVHighMult, L, zN > 0 ? zNear : "không có", Px(l1), Px(h1), zTouch, zBase, P_KVMinBars, zReact, P_KVMinReact) +
+       (local ? StringFormat("; lớp gần %d nến: %d vùng%s, chạm %d, tích lũy %d, phản ứng %d", LL, lN, lN > 0 ? " (" + lNear + ")" : "", lTouch, lBase, lReact) : "") +
+       "; chưa có nến phản ứng đổi vai rõ (đóng cửa ra ngoài vùng theo chiều mới)");
    return false;
 }
 
@@ -914,15 +930,15 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       bool trOk = tideOk && t.trend != 0 && (trA || trB);
       Tr("Tinh huong", trOk ? 1 : 0, StringFormat("5. Xu hướng mạnh? cần thủy triều rõ (%s) và ADX %.2f %s %.0f", !tideOk || t.trend == 0 ? "CHƯA rõ" : "đã rõ",
                                                   adx, trA ? ">=" : "<", P_SmartTrendADX) +
-                                     (trA ? "" : trB ? StringFormat(", nhưng nến trước đã là XU HƯỚNG MẠNH và ADX ≥ %.0f (vùng đệm) nên giữ", P_SmartTrendADX - 3)
-                                               : StringFormat(" (vùng đệm chỉ giữ khi nến trước đã là xu hướng mạnh cùng chiều và ADX ≥ %.0f)", P_SmartTrendADX - 3)) +
+                                     (trA ? "" : trB ? StringFormat(", nhưng tình huống cấu trúc gần nhất (bỏ qua giờ tin) là XU HƯỚNG MẠNH và ADX ≥ %.0f (vùng đệm) nên giữ", P_SmartTrendADX - 3)
+                                               : StringFormat(" (vùng đệm chỉ giữ khi tình huống cấu trúc gần nhất, bỏ qua giờ tin, là xu hướng mạnh cùng chiều và ADX ≥ %.0f)", P_SmartTrendADX - 3)) +
                                      (trOk ? " → CÓ" : " → không"));
       bool rgA = adx < P_SmartRangeADX && boxH <= P_SmartRangeATR * atr;
       bool rgB = g_smartPrev == 6 && adx < P_SmartRangeADX + 3 && boxH <= P_SmartRangeATR * 1.15 * atr;
       Tr("Tinh huong", rgA || rgB ? 1 : 0, StringFormat("6. Đi ngang? ADX %.2f %s %.0f và hộp %.2f ATR %s %.1f ATR", adx, adx < P_SmartRangeADX ? "<" : ">=", P_SmartRangeADX,
                                                         atr > 0 ? boxH / atr : 0, boxH <= P_SmartRangeATR * atr ? "<=" : ">", P_SmartRangeATR) +
-                                           (rgA ? "" : rgB ? StringFormat("; chưa đạt nhưng nến trước đã là ĐI NGANG, ADX < %.0f và hộp ≤ %.1f ATR (vùng đệm) nên giữ", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)
-                                                     : StringFormat("; vùng đệm (ADX < %.0f, hộp ≤ %.1f ATR) chỉ áp dụng khi nến trước đã là đi ngang", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)) +
+                                           (rgA ? "" : rgB ? StringFormat("; chưa đạt nhưng tình huống cấu trúc gần nhất (bỏ qua giờ tin) là ĐI NGANG, ADX < %.0f và hộp ≤ %.1f ATR (vùng đệm) nên giữ", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)
+                                                     : StringFormat("; vùng đệm (ADX < %.0f, hộp ≤ %.1f ATR) chỉ áp dụng khi tình huống cấu trúc gần nhất (bỏ qua giờ tin) là đi ngang", P_SmartRangeADX + 3, P_SmartRangeATR * 1.15)) +
                                            (rgA || rgB ? " → CÓ" : " → không"));
    }
    nm = nmA;
@@ -968,9 +984,11 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
          if(adx >= P_SmartRangeADX && boxH > P_SmartRangeATR * atr) { list = "15,5,21"; why += " -> nhip nghi trong xu huong"; }
       }
    }
-   if(g_smartSit != g_smartPrev && g_smartPrev != 0)
+   if(g_smartSit != g_smartPrev && g_smartPrev != 0 && g_smartSit != 1 && g_smartSit != 2)
       why += StringFormat(" (doi tu %s)", SmartSitName(g_smartPrev));
-   g_smartPrev = g_smartSit; g_smartPrevDir = tideOk ? t.trend : 0;
+   // v5.48: vung dem so voi tinh huong CAU TRUC gan nhat. Sap co tin / vua ra tin la tinh huong theo lich, khong noi gi ve cau truc
+   // gia, nen khong ghi de: het tin, ADX con trong vung dem thi van giu XU HUONG MANH / DI NGANG nhu truoc tin.
+   if(g_smartSit != 1 && g_smartSit != 2) { g_smartPrev = g_smartSit; g_smartPrevDir = tideOk ? t.trend : 0; }
    SmartStateSave();
    g_wDir = dir;
    g_smartName = SmartSitName(g_smartSit);
@@ -986,7 +1004,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    string ls[];
    int n = StringSplit(list, ',', ls);
    ENUM_STRATEGY keep = P_Strategy;
-   bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest; int kVw = P_VwapMode;
+   bool kFvg = P_FvgCandle, kSpr = P_SpringFull, kRet = P_BreakRetest; int kVw = P_VwapMode; double kFvgBig = P_FvgBigATR;
    // Dac trung boi canh (v5.39): ghi kem moi lan ap dung kien thuc (lenh giay) de cham diem va dieu chinh kien thuc sau nay
    double o1b = iOpen(_Symbol, P_TF, 1), r1b = h1 - l1, vS = 0; int vN = 0;
    for(int q = 2; q <= 21; q++) { long v = iTickVolume(_Symbol, P_TF, q); if(v > 0) { vS += (double)v; vN++; } }
@@ -1007,13 +1025,14 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       useN += (useN == "" ? "" : ", ") + ChainName(m);
       P_Strategy = (ENUM_STRATEGY)m;
       P_FvgCandle = true; P_SpringFull = true; P_BreakRetest = true; P_VwapMode = g_smartSit == 6 ? 2 : 1;
+      if(P_SmartFvgBigATR > 0) P_FvgBigATR = P_SmartFvgBigATR;   // v5.48: nen tao FVG tren khung tinh huong (M15) nho hon H1/H4
       bool b = false, s = false;
       g_inChain = true;
       g_why = "";
       int evAt = StringLen(g_ev);
       bool ok = BaseSignals(atr, trend, fast, c1, h1, l1, b, s);
       g_inChain = false;
-      P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw;
+      P_Strategy = keep; P_FvgCandle = kFvg; P_SpringFull = kSpr; P_BreakRetest = kRet; P_VwapMode = kVw; P_FvgBigATR = kFvgBig;
       if(!ok || (!b && !s))
       {
          g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~0";

@@ -1321,3 +1321,10 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 | `huong` | Chi tiết 4 nguồn (Dow, EMA, MACD, cấu trúc). Chỉ đi vào lệnh qua phiếu `4NGUON` của `huongdongbo`; tự nó không chặn. |
 | `huongso` | Bộ đếm dự báo hướng, chấm điểm sau 4/8/16 nến M15 (`cham=4,8,16`). Chỉ quan sát, không liên quan chiến lược 4/8/16. |
 | `engine` / `engineso` | DirectionEngine chạy thử song song. Chỉ ghi số liệu, không chặn hay mở lệnh. |
+
+## v5.48.0: vùng đệm qua giờ tin, FVG M15, Key Volume lớp gần
+
+- **Vùng đệm bỏ qua giờ tin.** SẮP CÓ TIN / VỪA RA TIN không còn ghi đè "tình huống nến trước". Hết giờ tin, nếu ADX còn trong vùng đệm (≥ 22 cho xu hướng mạnh, < 23 cho đi ngang) thì bot giữ tình huống cấu trúc như trước tin.
+- **FVG trong chiến lược 24** dùng `InpSmartFvgBigATR` (1.2 ATR) thay cho `InpFvgBigATR` (2 ATR, hợp H1/H4). Điều kiện "chưa bị chạm" chỉ loại FVG đã bị chạm từ trước cửa sổ 6 nến chờ mẫu nến, nên giá chạm vùng rồi tạo mẫu nến vẫn được tính; vùng chỉ hỏng khi có nến đóng cửa thủng qua mép đối diện.
+- **Key Volume 2 lớp:** ngoài 200 nến, bot quét thêm `InpKVLocalBars` (80) nến gần nhất để thấy vùng tích lũy mới quanh giá. Các con số "tích lũy / phản ứng" chỉ đếm cho vùng mà nến vừa đóng chạm tới.
+- **Khởi động giữa nến** vẫn ghi dòng `theodoi=` (lần phân tích gần nhất, đánh dấu "truoc khi khoi dong") và `giay=` (lệnh giấy đang chạy).

@@ -157,6 +157,29 @@ void TraceFlush()
    FileClose(h);
 }
 
+// v5.48: lan phan tich gan nhat cho dong "theodoi=" (giu qua khoi dong lai giua nen)
+string   g_wLuc = "", g_wHead = "", g_wTail = "";
+datetime g_wSavedT = 0;
+string WatchFile() { return StringFormat("TrendBot_theodoi_%I64d_%s.txt", AccountInfoInteger(ACCOUNT_LOGIN), _Symbol); }
+void WatchSave()
+{
+   if(MQLInfoInteger(MQL_TESTER)) return;
+   int f = FileOpen(WatchFile(), FILE_WRITE | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ);
+   if(f == INVALID_HANDLE) return;
+   FileWriteString(f, g_wLuc + "\r\n" + g_wHead + "\r\n" + g_wTail + "\r\n");
+   FileClose(f);
+}
+void WatchLoad()
+{
+   static bool tried = false;
+   if(tried || MQLInfoInteger(MQL_TESTER) || !FileIsExist(WatchFile(), FILE_COMMON)) return;
+   tried = true;
+   int f = FileOpen(WatchFile(), FILE_READ | FILE_TXT | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ | FILE_SHARE_WRITE);
+   if(f == INVALID_HANDLE) return;
+   string a = FileReadString(f), b = FileReadString(f), c = FileReadString(f);
+   FileClose(f);
+   if(a != "" && b != "") { g_wLuc = a + " (truoc khi khoi dong)"; g_wHead = b; g_wTail = c; }
+}
 void WriteStatus()
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
@@ -208,25 +231,39 @@ void WriteStatus()
       FileWriteString(h, StringFormat("huongso=%d;hoantat=%d;dangcho=%d;tf=M15;cham=4,8,16;vaitro=chi quan sat\r\n", g_dirLogged, g_dirResolved, ArraySize(g_dirOpen)));
    }
    // Dang theo doi (v5.40): nhung gi bot canh o nen vua phan tich + lenh giay dang chay (giao dien tinh R tam tinh theo gia hien tai)
-   if(P_Strategy == STRAT_SMART && g_wTime > 0)
+   // v5.48: phan "da phan tich" luu ra file; vua khoi dong giua nen (chua phan tich nen nao) thi doc lai lan phan tich gan nhat,
+   // va dong lenh giay luon ghi (khong phu thuoc da phan tich nen nay chua)
+   if(P_Strategy == STRAT_SMART)
    {
       string tf = EnumToString((ENUM_TIMEFRAMES)P_TF);
       StringReplace(tf, "PERIOD_", "");
       long left = (long)(iTime(_Symbol, P_TF, 0) + PeriodSeconds((ENUM_TIMEFRAMES)P_TF) - TimeCurrent());
       int dg = _Digits;
-      FileWriteString(h, "theodoi=luc:" + TimeToString(g_wTime, TIME_MINUTES) +
-                      ";gia:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID), dg) + ";ask:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK), dg) +
-                      ";hi:" + DoubleToString(g_wHi, dg) + ";lo:" + DoubleToString(g_wLo, dg) + ";atr:" + DoubleToString(g_wAtr, dg) +
-                      StringFormat(";adx:%.1f;sit:%d;tide:%d;dir:%d;nen:%d;con:%I64d;tf:%s;adxT:%.0f;adxR:%.0f;boxR:%.2f;b3:%.2f;lmax:%d",
-                                   g_wAdx, g_smartSit, g_wTide, g_wDir, g_wBars, left < 0 ? (long)0 : left, tf, P_SmartTrendADX, P_SmartRangeADX,
-                                   P_SmartRangeATR, P_VwapBand3, P_LearnMaxBars) +
-                      ";vw:" + DoubleToString(g_wVw, dg) + ";vsd:" + DoubleToString(g_wVsd, dg) + ";tv:" + g_wMem + ";kv:" + g_wKV + "\r\n");
+      string wPart = "";
+      if(g_wTime > 0)
+      {
+         wPart = ";hi:" + DoubleToString(g_wHi, dg) + ";lo:" + DoubleToString(g_wLo, dg) + ";atr:" + DoubleToString(g_wAtr, dg) +
+                 StringFormat(";adx:%.1f;sit:%d;tide:%d;dir:%d;nen:%d", g_wAdx, g_smartSit, g_wTide, g_wDir, g_wBars);
+         string tail = StringFormat(";tf:%s;adxT:%.0f;adxR:%.0f;boxR:%.2f;b3:%.2f;lmax:%d", tf, P_SmartTrendADX, P_SmartRangeADX,
+                                    P_SmartRangeATR, P_VwapBand3, P_LearnMaxBars) +
+                       ";vw:" + DoubleToString(g_wVw, dg) + ";vsd:" + DoubleToString(g_wVsd, dg) + ";tv:" + g_wMem + ";kv:" + g_wKV;
+         g_wLuc = TimeToString(g_wTime, TIME_MINUTES); g_wHead = wPart; g_wTail = tail;
+         if(g_wTime != g_wSavedT) { WatchSave(); g_wSavedT = g_wTime; }
+      }
+      else if(g_wHead == "") WatchLoad();
+      if(g_wHead != "")
+         FileWriteString(h, "theodoi=luc:" + g_wLuc +
+                         ";gia:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID), dg) + ";ask:" + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK), dg) +
+                         g_wHead + StringFormat(";con:%I64d", left < 0 ? (long)0 : left) + g_wTail + "\r\n");
       string gs = "";
       if(P_Learn)
+      {
+         LearnLoad();
          for(int i = 0; i < ArraySize(g_lvt) && i < 40; i++)
             gs += (gs == "" ? "" : ",") + TimeToString(g_lvt[i].t, TIME_DATE | TIME_MINUTES) + StringFormat("~%d~%d~%d~", g_lvt[i].sit, g_lvt[i].strat, g_lvt[i].dir) +
                   DoubleToString(g_lvt[i].entry, dg) + "~" + DoubleToString(g_lvt[i].sl, dg) + "~" + DoubleToString(g_lvt[i].tp, dg) + "~" +
                   DoubleToString(g_lvt[i].risk, dg) + StringFormat("~%d~%.2f~%.2f~", g_lvt[i].bars, g_lvt[i].mfe, g_lvt[i].mae) + DoubleToString(g_lvt[i].cost, dg);
+      }
       FileWriteString(h, "giay=" + gs + "\r\n");
    }
    FileWriteString(h, "lydovaoluc=" + (g_lastEntryAt > 0 ?TimeToString(g_lastEntryAt, TIME_DATE | TIME_MINUTES) : "") + "\r\n");
