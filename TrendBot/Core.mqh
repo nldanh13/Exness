@@ -41,6 +41,7 @@ datetime g_autoRead = 0;
 int      g_smartSit = 0;                 // tinh huong thi truong vua chan doan (chien luoc 24, Signals.mqh)
 string   g_smartName = "";
 int      g_smartPrev = 0, g_smartPrevDir = 0;   // tinh huong / chieu thuy trieu o nen truoc (vung dem)
+bool     g_smartStateLoaded = false;          // v5.46: da nap tinh huong nen truoc / tin da dung tu Global Variables (giu qua khoi dong lai)
 // Dang theo doi (v5.40): bot dang canh gi o nen vua phan tich (hop, VWAP, vung Key Volume, trang thai tung kien thuc).
 // Status.mqh ghi ra dong "theodoi=" de giao dien ve khung "Dang theo doi"; chi dung cho che do Theo tinh huong.
 datetime g_wTime = 0;

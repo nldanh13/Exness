@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.45.0"
-#property version   "5.450"
+#define  BOT_VERSION "5.46.0"
+#property version   "5.460"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -223,6 +223,10 @@ input double          InpSmartRangeADX    = 20;         // Tình huống: đi ng
 input int             InpSmartRangeBars   = 40;         // Tình huống: hộp đi ngang (số nến)
 input double          InpSmartRangeATR    = 6.0;        // Tình huống: hộp đi ngang cao tối đa (× ATR)
 input int             InpSmartNewsMin     = 60;         // Tình huống: đứng ngoài trước tin lớn (phút)
+input int             InpSmartNewsHoldMin = 60;         // Tình huống: giữ VỪA RA TIN tối đa (phút sau tin)
+input bool            InpNewsSkipEnergy   = true;       // Tin: bỏ tin dầu / khí (EIA, Crude Oil, Natural Gas)
+input double          InpSmartChaseADX    = 38;         // Tình huống: bỏ phá vỡ / sóng Dow khi ADX trên (0 = tắt)
+input double          InpSmartChaseSLATR  = 2.2;        // Tình huống: bỏ phá vỡ / sóng Dow khi SL rộng hơn (× ATR, 0 = tắt)
 input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
 input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
 input int             InpChainFullCount   = 2;          // Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)
@@ -362,7 +366,9 @@ bool            P_ChainPD;
 double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeATR, P_LearnTryRisk;
 bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
-int             P_SmartRangeBars, P_SmartNewsMin;
+int             P_SmartRangeBars, P_SmartNewsMin, P_SmartNewsHoldMin;
+bool            P_NewsSkipEnergy;
+double          P_SmartChaseADX, P_SmartChaseSLATR;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
 double          P_NewsRangeMaxATR;
@@ -532,7 +538,8 @@ void LoadParams()
    P_FvgLookback = InpFvgLookback; P_FvgCandle = InpFvgCandle;
    P_Learn = InpLearn; P_LearnApply = InpLearnApply; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
    P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
-   P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin;
+   P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin; P_SmartNewsHoldMin = InpSmartNewsHoldMin;
+   P_NewsSkipEnergy = InpNewsSkipEnergy; P_SmartChaseADX = InpSmartChaseADX; P_SmartChaseSLATR = InpSmartChaseSLATR;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
    P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
    P_SpringFull = InpSpringFull; P_SpringDepthATR = InpSpringDepthATR; P_SpringDropATR = InpSpringDropATR;
@@ -668,6 +675,10 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartRangeBars") { P_SmartRangeBars = (int)StringToInteger(v); return true; }
    if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
    if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
+   if(k == "InpSmartNewsHoldMin") { P_SmartNewsHoldMin = (int)StringToInteger(v); return true; }
+   if(k == "InpNewsSkipEnergy") { P_NewsSkipEnergy = (v == "true" || v == "1"); return true; }
+   if(k == "InpSmartChaseADX") { P_SmartChaseADX = StringToDouble(v); return true; }
+   if(k == "InpSmartChaseSLATR") { P_SmartChaseSLATR = StringToDouble(v); return true; }
    if(k == "InpChainList") { P_ChainList = v; return true; }
    if(k == "InpChainPD") { P_ChainPD = (v == "true" || v == "1"); return true; }
    if(k == "InpChainFullCount") { P_ChainFullCount = (int)StringToInteger(v); return true; }
@@ -1070,6 +1081,7 @@ bool g_stateReady = false;
 void ResetRuntimeState()
 {
    g_stateReady   = false;
+   g_smartStateLoaded = false;   // v5.46: nap lai tinh huong nen truoc / tin da dung tu Global Variables
    g_botRiskLoaded = false;
    g_guardRiskLoaded = false;
    g_dirLoaded    = false;
@@ -1512,6 +1524,10 @@ void OnTickBody()
       }
    }
    if(barTime == 0 || barTime == lastBarTime) return;
+   // v5.46: vua ket noi lai / khoi dong lai ma lich su khung chinh chua dong bo thi nen 1 co the con thieu (gia dong cua cu):
+   // chua phan tich, thu lai o tick sau (khong cap nhat lastBarTime)
+   if(!MQLInfoInteger(MQL_TESTER) && !SeriesInfoInteger(_Symbol, P_TF, SERIES_SYNCHRONIZED))
+   { g_status = "Cho dong bo lich su nen " + EnumToString(P_TF); return; }
    lastBarTime = barTime;
    EvReset();                       // bang chung cua quyet dinh nen nay (v5.33)
    TraceBegin();                    // qua trinh phan tich nen nay, ghi ra file o lan WriteStatus sau (v5.42)
@@ -1579,6 +1595,7 @@ void OnTickBody()
    }
    if(P_Strategy == STRAT_SMART && (buySignal || sellSignal) && !SyncEntryAllowed(buySignal))
    {
+      LearnTagBar(g_smartSit, buySignal ? 1 : -1, "dbh=0");   // v5.46: lenh giay cua setup bi chan khong tinh vao thong ke Hoc
       g_status = "Bo setup chua dong bo huong: " + g_syncText;
       EvAdd("CHAN HUONG: " + g_syncText);
       Tr("Dong bo", 0, "Khong cho vao lenh moi: ba bo chi bao chua thong nhat huong MUA/BAN");

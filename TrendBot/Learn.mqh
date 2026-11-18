@@ -62,6 +62,19 @@ void LearnLoadOpen()
    FileClose(h);
    if(ArraySize(g_lvt) > 0) PrintFormat("Hoc tu thuc chien: nap lai %d lenh giay dang mo, cham bu cac nen luc tat may", ArraySize(g_lvt));
 }
+// v5.46: lenh giay bi bo loc dong bo huong chan (dbh=0) van ghi file de doi chieu rieng, nhung KHONG tinh vao thong ke "Hoc":
+// thong ke chi phan anh setup ma bot that su duoc phep vao
+bool LearnCounts(const string feat) { return StringFind(feat, "dbh=0") < 0; }
+// Danh dau cac lenh giay vua dang ky o nen nay (cung tinh huong, cung chieu) sau khi biet ket qua bo loc dong bo huong
+void LearnTagBar(const int sit, const int dir, const string tag)
+{
+   datetime t = iTime(_Symbol, P_TF, 0);
+   bool ch = false;
+   for(int i = 0; i < ArraySize(g_lvt); i++)
+      if(g_lvt[i].t == t && g_lvt[i].sit == sit && g_lvt[i].dir == dir && StringFind(g_lvt[i].feat, "dbh=") < 0)
+      { g_lvt[i].feat += ";" + tag; ch = true; }
+   if(ch) LearnSaveOpen();
+}
 bool LearnKeyOk(const int sit, const int st) { return sit >= 0 && sit < LRN_SIT && st >= 0 && st < LRN_STR; }
 void LearnStat(const int sit, const int st, const double r, const bool real)
 {
@@ -85,7 +98,8 @@ void LearnLoad()
    {
       string p[];
       if(StringSplit(FileReadString(h), ',', p) < 6 || p[0] == "ThoiGian") continue;
-      LearnStat((int)StringToInteger(p[1]), (int)StringToInteger(p[2]), StringToDouble(p[4]), p[5] == "that");
+      if(p[5] == "that" || ArraySize(p) < 11 || LearnCounts(p[10]))
+         LearnStat((int)StringToInteger(p[1]), (int)StringToInteger(p[2]), StringToDouble(p[4]), p[5] == "that");
       rows++;
    }
    FileClose(h);
@@ -126,12 +140,18 @@ void LearnRegister(const int sit, const int st, const int dir, const double entr
    LearnLoad();
    datetime t = iTime(_Symbol, P_TF, 0);
    int n = ArraySize(g_lvt);
-   for(int i = 0; i < n; i++) if(g_lvt[i].t == t && g_lvt[i].sit == sit && g_lvt[i].strat == st && g_lvt[i].dir == dir) return;
+   // v5.46: moi bo (tinh huong, chien luoc, chieu) chi 1 lenh giay dang mo. Truoc chi chan trung trong cung 1 nen nen cung 1 setup
+   // (vd. Quet tin sau khi khoi dong lai) bi ghi 2 lenh giay cach nhau vai nen, dem trung ket qua.
+   for(int i = 0; i < n; i++) if(g_lvt[i].sit == sit && g_lvt[i].strat == st && g_lvt[i].dir == dir) return;
    if(n >= 300) return;
+   // v5.46: gia vao = gia Bid hien tai (cung loai gia voi nen MT5), khong dung gia dong cua nen 1: sau khi mat ket noi / khoi dong lai,
+   // nen 1 co the chua tai du lich su nen gia dong cua la gia cu. Spread van tru rieng o duoi (cost).
+   double bidNow = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double px = !MQLInfoInteger(MQL_TESTER) && bidNow > 0 ? bidNow : entry;
    ArrayResize(g_lvt, n + 1);
-   g_lvt[n].t = t; g_lvt[n].sit = sit; g_lvt[n].strat = st; g_lvt[n].dir = dir; g_lvt[n].entry = entry;
-   g_lvt[n].risk = slDist; g_lvt[n].sl = entry - dir * slDist;
-   g_lvt[n].tp = (dir > 0 ? tpPx > entry : (tpPx > 0 && tpPx < entry)) ? tpPx : entry + dir * 2.0 * slDist;
+   g_lvt[n].t = t; g_lvt[n].sit = sit; g_lvt[n].strat = st; g_lvt[n].dir = dir; g_lvt[n].entry = px;
+   g_lvt[n].risk = slDist; g_lvt[n].sl = px - dir * slDist;
+   g_lvt[n].tp = (dir > 0 ? tpPx > px : (tpPx > 0 && tpPx < px)) ? tpPx : px + dir * 2.0 * slDist;
    g_lvt[n].bars = 0; g_lvt[n].lastT = 0; g_lvt[n].mfe = 0; g_lvt[n].mae = 0; g_lvt[n].feat = feat;
    // Phi: R cua lenh giay tru spread luc thay setup (quy ra R), de bot khong hoc tu con so dep hon thuc te
    g_lvt[n].cost = (double)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) * _Point;
@@ -167,7 +187,7 @@ void LearnUpdate()
       }
       if(!done) continue;
       r -= g_lvt[i].risk > 0 ? g_lvt[i].cost / g_lvt[i].risk : 0;     // tru phi spread
-      LearnStat(g_lvt[i].sit, g_lvt[i].strat, r, false);
+      if(LearnCounts(g_lvt[i].feat)) LearnStat(g_lvt[i].sit, g_lvt[i].strat, r, false);
       LearnSave(g_lvt[i].sit, g_lvt[i].strat, d, r, false, g_lvt[i].mfe, g_lvt[i].mae, g_lvt[i].bars,
                 LearnGrade(r, g_lvt[i].mfe, g_lvt[i].mae, hitTP), g_lvt[i].feat, g_lvt[i].t);
       int last = ArraySize(g_lvt) - 1;
