@@ -315,6 +315,18 @@ double HoursToNews(const datetime t, string &name)
    }
    return best;
 }
+// v5.46: tin hang hoa nang luong (ton kho dau EIA, khi dot...) MT5 xep "quan trong" nhung hau nhu khong tac dong cau truc len BTC.
+// InpNewsSkipEnergy = true: bo cac tin nay khoi "sap co tin" / "vua ra tin" / tranh tin Mỹ. Tin vi mo (FOMC, CPI, PCE, NFP, GDP,
+// tro cap that nghiep...) giu nguyen.
+bool NewsIgnored(const string name)
+{
+   if(!P_NewsSkipEnergy) return false;
+   string s = name;
+   StringToLower(s);
+   string keys[] = {"crude", "oil", "natural gas", "gasoline", "distillate", "heating", "cushing", "rig count", "eia "};
+   for(int i = 0; i < ArraySize(keys); i++) if(StringFind(s, keys[i]) >= 0) return true;
+   return false;
+}
 bool USNewsNear(string &name)
 {
    if(MQLInfoInteger(MQL_TESTER))
@@ -339,7 +351,7 @@ bool USNewsNear(string &name)
    for(int i = 0; i < ArraySize(vals); i++)
    {
       MqlCalendarEvent ev;
-      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH && !NewsIgnored(ev.name))
       { name = ev.name; return true; }
    }
    return false;
@@ -366,7 +378,7 @@ double MinutesToNews(const int aheadMin, string &name)
    for(int i = 0; i < ArraySize(vals); i++)
    {
       MqlCalendarEvent ev;
-      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      if(CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH && !NewsIgnored(ev.name))
       { name = ev.name; return (double)(vals[i].time - now) / 60.0; }
    }
    return -1;
@@ -390,7 +402,7 @@ datetime LastNewsTime(const int backMin, string &name)
    for(int i = 0; i < ArraySize(vals); i++)
    {
       MqlCalendarEvent ev;
-      if(vals[i].time <= now && vals[i].time > best && CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH)
+      if(vals[i].time <= now && vals[i].time > best && CalendarEventById(vals[i].event_id, ev) && ev.importance == CALENDAR_IMPORTANCE_HIGH && !NewsIgnored(ev.name))
       { best = vals[i].time; name = ev.name; }
    }
    return best;

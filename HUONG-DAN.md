@@ -1295,3 +1295,13 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 ## DirectionEngine v5.45.0 (bộ não thử nghiệm)
 
 [Giải thích bộ gộp 3 nhóm và cách so sánh v5.45 với v5.44](DIRECTION-ENGINE-5.45.0.md). Các bộ 9 khung EMA, 4 nguồn Dow/EMA/MACD/cấu trúc và Dow riêng vẫn bảo vệ lệnh thật như v5.44. Engine chỉ ghi dự báo/điểm theo nến M15 đã đóng và chấm ở +4/+8/+16, không mở lệnh hay nới risk. Sau khi đủ dữ liệu CSV chạy `python cong-cu/so_sanh_direction_engine.py <file.csv>`.
+
+## Sửa lỗi Theo tình huống v5.46.0 (từ log BTCUSDm thật)
+
+- **VỪA RA TIN không còn kẹt 4 giờ.** Tình huống 2 chỉ giữ khi tin chưa được Quét tin dùng và còn trong `InpSmartNewsHoldMin` phút (mặc định 60). Hết hạn hoặc tin đã dùng thì bot xét tiếp cú sập / xu hướng mạnh / đi ngang. Đặt 240 để chạy như bản cũ.
+- **Bỏ tin dầu / khí cho BTC** (`InpNewsSkipEnergy = true`): EIA Crude Oil, Natural Gas... không còn tính là tin lớn (sắp có tin, vừa ra tin, tránh tin Mỹ). Tin vĩ mô (FOMC, CPI, PCE, NFP, GDP, trợ cấp thất nghiệp) giữ nguyên.
+- **Giữ trạng thái qua khởi động lại:** tình huống nến trước (vùng đệm ADX) và tin đã dùng cho Quét tin được lưu vào Global Variables, nên khởi động lại không còn rơi vào KHÔNG RÕ hay dùng lại cùng 1 tin.
+- **Lệnh giấy:** mỗi bộ (tình huống, chiến lược, chiều) chỉ 1 lệnh giấy đang mở; giá vào là giá Bid lúc ghi (không dùng giá đóng nến có thể chưa tải đủ sau khi mất kết nối). Bot cũng chờ lịch sử nến đồng bộ xong mới phân tích nến mới. Setup bị bộ lọc đồng bộ hướng chặn vẫn ghi lệnh giấy nhưng gắn `dbh=0` và không tính vào thống kê Học.
+- **KHÔNG RÕ thu hẹp:** khi thủy triều rõ, ADX giữa ngưỡng đi ngang và xu hướng mạnh, hộp rộng hơn hộp đi ngang (nhịp nghỉ trong xu hướng), bot dùng FVG + nến, Order block, Premium / discount theo thủy triều. Lệnh thật vẫn phải qua đồng bộ hướng.
+- **Chặn vào đuổi trong XU HƯỚNG MẠNH:** Phá vỡ + test lại và Sóng Dow không dùng khi ADX > `InpSmartChaseADX` (38) hoặc SL > `InpSmartChaseSLATR` (2.2 ATR); vẫn ghi lệnh giấy `duoi=1` để đối chiếu. Mới dựa trên 5 lệnh giấy thua, cần thêm dữ liệu để chỉnh ngưỡng.
+- **Micro-test vốn nhỏ** (`InpMicroLot`, mặc định TẮT): chỉ chiến lược 24, cho vào đúng 0.01 lot khi vốn quá nhỏ, nếu không có lệnh nào đang mở (tối đa 1 lệnh), SL ≤ `InpMicroMaxSLATR` (2.5 ATR) và 1 lệnh mất ≤ `InpMicroMaxLossPct` (35%) vốn. Mức mất vẫn bị kẹp bởi trần nhóm (`InpMaxGroupRiskPct`), khóa lỗ ngày (`InpMaxDailyLossPct`) và mức dừng hẳn (`InpMaxDrawdownPct`). Muốn chế độ này vào được lệnh thì phải tự nâng cả 3 mức lên ≥ mức mất của 1 lệnh. **Rủi ro cao: 1 lệnh thua có thể mất 20–40% vốn.**

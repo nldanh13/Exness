@@ -797,9 +797,38 @@ string SmartListNames(const string list)
    for(int i = 0; i < n; i++) r += (r == "" ? "" : ", ") + ChainNameVi((int)StringToInteger(ls[i]));
    return r;
 }
+// v5.46: giu tinh huong nen truoc (vung dem ADX) va tin da dung (Quet tin, moi tin 1 lan) qua cac lan khoi dong lai bot / MT5.
+// Truoc day 2 bien nay chi o trong bo nho: khoi dong lai thi vung dem mat (roi vao KHONG RO) va cung 1 tin bi dung lai lan nua.
+void SmartStateLoad()
+{
+   if(g_smartStateLoaded || MQLInfoInteger(MQL_TESTER) || AccountInfoInteger(ACCOUNT_LOGIN) <= 0) return;
+   g_smartStateLoaded = true;
+   if(GlobalVariableCheck(GVName("smNewsUsed")))
+      g_newsUsedT = (datetime)MathMax((double)g_newsUsedT, GlobalVariableGet(GVName("smNewsUsed")));
+   if(g_smartPrev == 0 && GlobalVariableCheck(GVName("smPrevT")) && GlobalVariableCheck(GVName("smPrev")))
+   {
+      // chi dung khi lan chan doan da luu la cua nen ngay truoc (hoac chinh nen nay): nghi lau hon thi vung dem khong con y nghia
+      datetime pt = (datetime)GlobalVariableGet(GVName("smPrevT")), now = iTime(_Symbol, P_TF, 0);
+      if(pt > 0 && now >= pt && now - pt <= 2 * PeriodSeconds(P_TF))
+      {
+         g_smartPrev = (int)GlobalVariableGet(GVName("smPrev"));
+         g_smartPrevDir = GlobalVariableCheck(GVName("smPrevDir")) ? (int)GlobalVariableGet(GVName("smPrevDir")) : 0;
+         PrintFormat("Theo tinh huong: nap lai tinh huong nen truoc %s (luu luc %s) de giu vung dem", SmartSitName(g_smartPrev), TimeToString(pt));
+      }
+   }
+}
+void SmartStateSave()
+{
+   if(MQLInfoInteger(MQL_TESTER) || AccountInfoInteger(ACCOUNT_LOGIN) <= 0) return;
+   GlobalVariableSet(GVName("smPrev"), g_smartPrev);
+   GlobalVariableSet(GVName("smPrevDir"), g_smartPrevDir);
+   GlobalVariableSet(GVName("smPrevT"), (double)iTime(_Symbol, P_TF, 0));
+   if(g_newsUsedT > 0) GlobalVariableSet(GVName("smNewsUsed"), (double)g_newsUsedT);
+}
 bool SmartSignals(const double atr, const double trend, const double fast, const double c1, const double h1, const double l1,
                   bool &buyBase, bool &sellBase)
 {
+   SmartStateLoad();
    buyBase = false; sellBase = false;
    string nm = "", list = "", why = "";
    int dir = 0;                                                     // chieu cho phep: +1 mua, -1 ban, 0 ca hai (theo setup)
@@ -825,6 +854,12 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    string nmA = "", nmB = "";
    double toNewsA = MinutesToNews(P_SmartNewsMin, nmA);
    datetime lastNewsB = LastNewsTime(240, nmB);
+   // v5.46: VUA RA TIN chi giu khi tin chua duoc Quet tin dung va con trong InpSmartNewsHoldMin phut sau tin; het han / da dung
+   // thi xet tiep cac dieu kien 3-6 thay vi ket o "VUA RA TIN | chua co setup" ca 4 gio
+   datetime nowB = MQLInfoInteger(MQL_TESTER) ? TimeCurrent() : TimeTradeServer();
+   double minsB = lastNewsB > 0 ? (double)(nowB - lastNewsB) / 60.0 : 0;
+   bool newsUsedB = lastNewsB > 0 && lastNewsB == g_newsUsedT;
+   bool newsHold = lastNewsB > 0 && !newsUsedB && (P_SmartNewsHoldMin <= 0 || minsB <= P_SmartNewsHoldMin);
    if(g_trOn)
    {
       double o1t = iOpen(_Symbol, P_TF, 1), rgt = h1 - l1, vSt = 0; int vNt = 0;
@@ -852,7 +887,10 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       bool kn = crashDn || spikeUp;
       Tr("Tinh huong", toNewsA >= 0 ? 1 : 0, StringFormat("1. Sắp có tin lớn trong %d phút? %s", P_SmartNewsMin,
                                                           toNewsA >= 0 ? StringFormat("CÓ: %s, sau %.0f phút", nmA, toNewsA) : "không"));
-      Tr("Tinh huong", lastNewsB > 0 ? 1 : 0, "2. Vừa ra tin trong 4 giờ? " + (lastNewsB > 0 ? "CÓ: " + nmB + " lúc " + TimeToString(lastNewsB, TIME_MINUTES) : "không"));
+      Tr("Tinh huong", newsHold ? 1 : 0, "2. Vừa ra tin trong 4 giờ? " + (lastNewsB == 0 ? "không" :
+                                      "CÓ: " + nmB + " lúc " + TimeToString(lastNewsB, TIME_MINUTES) + StringFormat(", đã %.0f phút", minsB) +
+                                      (newsUsedB ? " → tin đã dùng cho Quét tin, xét tiếp điều kiện sau" :
+                                       !newsHold ? StringFormat(" → quá %d phút chưa có setup Quét tin, xét tiếp điều kiện sau", P_SmartNewsHoldMin) : " → CÓ")));
       Tr("Tinh huong", kn ? 1 : 0, StringFormat("3. Cú sập / tăng dựng đứng? biên độ %d nến %.2f ATR %s ngưỡng %.1f ATR, cực trị ở nến thứ %d (cần ≤ 10)", kb,
                                                 atr > 0 ? (kHi - kLo) / atr : 0, kHi - kLo >= P_KnifeDropATR * atr ? ">=" : "<", P_KnifeDropATR,
                                                 (int)MathMin(iH, iL)) + (kn ? (crashDn ? " → CÓ (giảm)" : " → CÓ (tăng)") : " → không"));
@@ -877,7 +915,7 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    nm = nmA;
    if(toNewsA >= 0)
    { g_smartSit = 1; why = "sap ra tin " + nm + " trong " + IntegerToString(P_SmartNewsMin) + " phut"; }
-   else if(lastNewsB > 0)
+   else if(newsHold)
    { nm = nmB; g_smartSit = 2; why = "tin " + nm + " vua ra (< 4 gio)"; list = "20"; }
    else if(crashDn || spikeUp)
    { g_smartSit = 3; why = StringFormat("%s %.1f ATR trong %d nen", crashDn ? "giam" : "tang", (kHi - kLo) / atr, kb); list = "14"; }
@@ -908,11 +946,18 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    else
    {
       g_smartSit = 7; why = StringFormat("ADX %.2f, hop %d nen cao %.1f ATR, thuy trieu %s", adx, rb, boxH / atr, !tideOk || t.trend == 0 ? "chua ro" : (t.trend > 0 ? "tang" : "giam"));
-      if(tideOk && t.trend != 0) { dir = t.trend; list = "15,5,18"; }
+      if(tideOk && t.trend != 0)
+      {
+         dir = t.trend; list = "15,5,18";
+         // v5.46: ADX giua 2 nguong (khong du manh, khong di ngang) va hop rong hon hop di ngang = nhip nghi / hoi trong xu huong:
+         // dung FVG + nen, order block, premium / discount theo thuy trieu (Key Volume la cong cu cua hop di ngang)
+         if(adx >= P_SmartRangeADX && boxH > P_SmartRangeATR * atr) { list = "15,5,21"; why += " -> nhip nghi trong xu huong"; }
+      }
    }
    if(g_smartSit != g_smartPrev && g_smartPrev != 0)
       why += StringFormat(" (doi tu %s)", SmartSitName(g_smartPrev));
    g_smartPrev = g_smartSit; g_smartPrevDir = tideOk ? t.trend : 0;
+   SmartStateSave();
    g_wDir = dir;
    g_smartName = SmartSitName(g_smartSit);
    string head = "Tinh huong: " + g_smartName;
@@ -979,7 +1024,20 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       // Kien thuc da dieu chinh (ban duyet tren giao dien): setup khong thoa dieu kien bo sung thi khong dung, van ghi lenh giay
       string ruleWhy = "";
       bool ruleOk = KnowRulesOk(m, g_smartSit, feat, ruleWhy);
-      LearnRegister(g_smartSit, m, dm, c1, sd, g_sigTP, feat + (ruleOk ? "" : ";luat=1"));
+      // v5.46: xu huong manh - pha vo + test lai / song Dow vao duoi khi ADX qua cao hoac SL qua rong (gia da chay xa) thi khong dung;
+      // van ghi lenh giay (danh dau duoi=1) de sau nay doi chieu nguong
+      bool chase = g_smartSit == 4 && (m == 1 || m == 16) &&
+                   ((P_SmartChaseADX > 0 && adx > P_SmartChaseADX) || (P_SmartChaseSLATR > 0 && sd > P_SmartChaseSLATR * atr));
+      LearnRegister(g_smartSit, m, dm, c1, sd, g_sigTP, feat + (chase ? ";duoi=1" : "") + (ruleOk ? "" : ";luat=1"));
+      if(chase && ruleOk)
+      {
+         string cw = StringFormat("ADX %.2f (trần %.0f), SL cách %.2f ATR (trần %.1f)", adx, P_SmartChaseADX, sd / atr, P_SmartChaseSLATR);
+         Tr("Kien thuc", 0, ChainNameVi(m) + ": vào đuổi khi giá đã chạy xa – " + cw + " → không dùng");
+         g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "2" : "-2");
+         EvAdd("Vao duoi - " + ChainName(m) + StringFormat(": ADX %.1f, SL %.2f ATR -> khong dung", adx, sd / atr));
+         outN += (outN == "" ? "" : ", ") + ChainName(m) + " (vao duoi)";
+         continue;
+      }
       if(!ruleOk) { Tr("Kien thuc", 0, ChainNameVi(m) + ": điều kiện bổ sung (bạn đã duyệt) không thỏa – " + ruleWhy + " → không dùng"); g_wMem += (g_wMem == "" ? "" : ",") + IntegerToString(m) + "~" + (b ? "2" : "-2"); EvAdd("Kien thuc da dieu chinh - " + ChainName(m) + ": " + ruleWhy + " -> khong dung"); outN += (outN == "" ? "" : ", ") + ChainName(m) + " (dieu kien bo sung)"; continue; }
       double lf; string lt;
       int lv = LearnVerdict(g_smartSit, m, lf, lt);
@@ -1707,6 +1765,8 @@ bool BaseSignals(const double atr, const double trend, const double fast,
       { sellBase = true; g_sigSL = MathMax(ext + 0.25 * atr - c1, 0.5 * atr); g_newsUsedT = nt; }
       if(dir == -1 && l1 >= ext && c1 > rLo && c1 > iHigh(_Symbol, P_TF, xs) && c1 > o1)
       { buyBase = true; g_sigSL = MathMax(c1 - (ext - 0.25 * atr), 0.5 * atr); g_newsUsedT = nt; }
+      if((buyBase || sellBase) && !MQLInfoInteger(MQL_TESTER) && AccountInfoInteger(ACCOUNT_LOGIN) > 0)
+         GlobalVariableSet(GVName("smNewsUsed"), (double)g_newsUsedT);   // v5.46: khoi dong lai cung khong dung lai tin nay
       if(!buyBase && !sellBase)
          Why(StringFormat("tin %s: vùng trước tin %s – %s; %s; nến vừa đóng %s chưa đóng cửa quay lại trong vùng và thủng nến tạo cú quét", nm, Px(rLo), Px(rHi),
                           dir == 0 ? "chưa có cú quét ra ngoài vùng" : (dir > 0 ? "đã quét lên " : "đã quét xuống ") + Px(ext), Px(c1)));

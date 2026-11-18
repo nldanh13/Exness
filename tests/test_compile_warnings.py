@@ -36,7 +36,8 @@ class MetaEditorWarningsTests(unittest.TestCase):
         # `override` and friends are reserved in MQL5 even as variable names.
         reserved = ("final|override|template|typename|interface|operator|namespace|"
                     "delete|new|this|sizeof|virtual|explicit|offsetof|dynamic_cast|"
-                    "input|sinput|export|import|default")
+                    "input|sinput|export|import|default|class|struct|enum|union|public|"
+                    "private|protected|static|extern|const|void|group")
         decl = re.compile(
             r"\b(?:int|double|string|bool|long|ulong|uint|datetime|color|float|char|short)"
             r"\s+&?(" + reserved + r")\s*[=;,)\[]")

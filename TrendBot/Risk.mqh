@@ -284,6 +284,35 @@ double CalcLots(const double slDistance)
    double capPct = riskBase > 0 ? roundCap / riskBase * 100.0 : 0;   // tran lam tron THAT sau moi gioi han
    string capTxt = capClipped && capWhy != "" ? StringFormat("%.1f%% (InpMaxRiskRoundUp %.1f%% bi kep boi %s)", capPct, P_MaxRiskRoundUp, capWhy)
                                               : StringFormat("%.1f%%", capPct);
+   // v5.46 Micro-test (InpMicroLot, mac dinh TAT): von qua nho de 0,01 lot nam duoi tran lam tron. Cho vao DUNG lot toi thieu khi:
+   // chien luoc 24, khong co lenh nao dang mo (cua bot va ca nhom BTC/ETH: toi da 1 lenh), SL <= InpMicroMaxSLATR ATR,
+   // va 1 lenh mat <= InpMicroMaxLossPct % von. Van bi kep boi tran nhom va lo ngay con lai (allowed): muon micro-test chay thi
+   // InpMaxGroupRiskPct va InpMaxDailyLossPct phai >= muc mat cua 1 lenh, neu khong khoa lo ngay se dong lenh truoc SL.
+   string microWhy = "";
+   if(lots < minL && P_MicroLot && riskBase > 0 && !(P_MaxRiskRoundUp > 0 && minL * lossPerLot <= roundCap))
+   {
+      double atrM = 0, minLossM = minL * lossPerLot;
+      if(!GetValue(hATR, 0, 1, atrM)) atrM = 0;
+      double mCap = MathMin(riskBase * P_MicroMaxLossPct / 100.0, allowed);
+      if(P_MaxDrawdownPct > 0) mCap = MathMin(mCap, riskBase * P_MaxDrawdownPct / 100.0);   // 1 lenh thua khong duoc tu lam bot dung han
+      if(P_Strategy != STRAT_SMART) microWhy = "micro-test chi dung cho chien luoc 24";
+      else if(own > 0 || HasOwnPosition() || (InGroup() && GroupOpenRisk(stdRisk) > 0)) microWhy = "micro-test: da co lenh dang mo (toi da 1 lenh)";
+      else if(atrM <= 0 || slDistance > P_MicroMaxSLATR * atrM)
+         microWhy = StringFormat("micro-test: SL %.2f ATR > tran %.1f ATR", atrM > 0 ? slDistance / atrM : 0, P_MicroMaxSLATR);
+      else if(minLossM > mCap)
+         microWhy = StringFormat("micro-test: 1 lenh mat %.1f%% von > tran %.1f%%%s", minLossM / riskBase * 100.0,
+                                 mCap / riskBase * 100.0, mCap < riskBase * P_MicroMaxLossPct / 100.0 ? " (kep boi tran nhom / lo ngay / dung han khi sut)" : "");
+      else
+      {
+         g_roundUps++;
+         string mt = StringFormat("MICRO-TEST: vao %.2f lot, SL cach %s gia (%.2f ATR), dinh SL mat %.0f %s = %.1f%% von (tran micro %.1f%%)",
+                                  minL, Px(slDistance), slDistance / atrM, minLossM, AccountInfoString(ACCOUNT_CURRENCY),
+                                  minLossM / riskBase * 100.0, P_MicroMaxLossPct);
+         Print(mt); EvAdd(mt);
+         lots = minL;
+      }
+      if(microWhy != "") EvAdd(microWhy);
+   }
    if(lots < minL && P_MaxRiskRoundUp > 0 && riskBase > 0 && minL * lossPerLot <= roundCap)
    {
       g_roundUps++;
