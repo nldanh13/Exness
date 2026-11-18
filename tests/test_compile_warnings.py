@@ -31,6 +31,22 @@ class MetaEditorWarningsTests(unittest.TestCase):
             source,
         )
 
+    def test_no_mql5_reserved_word_used_as_identifier(self):
+        # MetaEditor rejects e.g. `string final = ...` (error 149/228): `final`,
+        # `override` and friends are reserved in MQL5 even as variable names.
+        reserved = ("final|override|template|typename|interface|operator|namespace|"
+                    "delete|new|this|sizeof|virtual|explicit|offsetof|dynamic_cast|"
+                    "input|sinput|export|import|default")
+        decl = re.compile(
+            r"\b(?:int|double|string|bool|long|ulong|uint|datetime|color|float|char|short)"
+            r"\s+&?(" + reserved + r")\s*[=;,)\[]")
+        files = [ROOT / "BTC_EMA_Pullback_v2.mq5", *sorted((ROOT / "TrendBot").glob("*.mqh"))]
+        for path in files:
+            for no, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+                code = line.split("//", 1)[0]
+                m = decl.search(code)
+                self.assertIsNone(m, f"{path.name}:{no} dung tu khoa MQL5 '{m and m.group(1)}' lam ten bien")
+
 
 if __name__ == "__main__":
     unittest.main()
