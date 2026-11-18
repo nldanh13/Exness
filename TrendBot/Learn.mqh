@@ -60,6 +60,23 @@ void LearnLoadOpen()
       g_lvt[n].feat = ArraySize(p) > 13 ? p[13] : "";
    }
    FileClose(h);
+   // v5.49: gop lenh giay trung (cung tinh huong, chien luoc, chieu) con sot tu ban cu (< 5.46): giu lenh vao som nhat
+   int removed = 0;
+   for(int i = ArraySize(g_lvt) - 1; i >= 0; i--)
+   {
+      bool dup = false;
+      for(int j = 0; j < ArraySize(g_lvt) && !dup; j++)
+         if(j != i && g_lvt[j].sit == g_lvt[i].sit && g_lvt[j].strat == g_lvt[i].strat && g_lvt[j].dir == g_lvt[i].dir &&
+            (g_lvt[j].t < g_lvt[i].t || (g_lvt[j].t == g_lvt[i].t && j < i))) dup = true;
+      if(!dup) continue;
+      PrintFormat("Hoc tu thuc chien: bo lenh giay trung %s tinh huong %d chien luoc %d chieu %d (da co lenh som hon)",
+                  TimeToString(g_lvt[i].t, TIME_DATE | TIME_MINUTES), g_lvt[i].sit, g_lvt[i].strat, g_lvt[i].dir);
+      int last = ArraySize(g_lvt) - 1;
+      for(int k = i; k < last; k++) g_lvt[k] = g_lvt[k + 1];
+      ArrayResize(g_lvt, last);
+      removed++;
+   }
+   if(removed > 0) LearnSaveOpen();
    if(ArraySize(g_lvt) > 0) PrintFormat("Hoc tu thuc chien: nap lai %d lenh giay dang mo, cham bu cac nen luc tat may", ArraySize(g_lvt));
 }
 // v5.46: lenh giay bi bo loc dong bo huong chan (dbh=0) van ghi file de doi chieu rieng, nhung KHONG tinh vao thong ke "Hoc":
