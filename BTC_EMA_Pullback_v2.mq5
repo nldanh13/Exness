@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.47.0"
-#property version   "5.470"
+#define  BOT_VERSION "5.48.0"
+#property version   "5.480"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -206,6 +206,7 @@ input double          InpVwapBand2        = 2.0;        // VWAP: cặp đường
 input double          InpVwapBand3        = 3.0;        // VWAP: cặp đường 3 – bắt nhịp kéo về (× độ lệch chuẩn)
 input double          InpVwapMinRR        = 1.0;        // VWAP: bỏ nếu lời tới mục tiêu nhỏ hơn (× SL)
 input int             InpKVLookback       = 200;        // Key Volume: Volume Profile trong (số nến)
+input int             InpKVLocalBars      = 80;         // Key Volume: lớp gần – quét thêm (số nến gần nhất, 0 = tắt)
 input int             InpKVBins           = 50;         // Key Volume: số ô giá của Volume Profile
 input double          InpKVHighMult       = 1.5;        // Key Volume: ô volume cao ≥ (× trung bình)
 input double          InpKVMaxATR         = 2.0;        // Key Volume: vùng rộng tối đa (× ATR)
@@ -228,6 +229,7 @@ input int             InpSmartNewsHoldMin = 60;         // Tình huống: giữ 
 input bool            InpNewsSkipEnergy   = true;       // Tin: bỏ tin dầu / khí (EIA, Crude Oil, Natural Gas)
 input double          InpSmartChaseADX    = 38;         // Tình huống: bỏ phá vỡ / sóng Dow khi ADX trên (0 = tắt)
 input double          InpSmartChaseSLATR  = 2.2;        // Tình huống: bỏ phá vỡ / sóng Dow khi SL rộng hơn (× ATR, 0 = tắt)
+input double          InpSmartFvgBigATR   = 1.2;        // Tình huống: FVG nến lớn tối thiểu (× ATR, 0 = theo FVG)
 input string          InpChainList        = "15,5,18,19,21,6,16,1,17"; // Chuỗi: các chiến lược soi setup (thứ tự ưu tiên)
 input bool            InpChainPD          = true;       // Chuỗi: mua chỉ ở vùng rẻ, bán chỉ ở vùng đắt (hộp D1)
 input int             InpChainFullCount   = 2;          // Chuỗi: đủ rủi ro khi có từ (số setup cùng chiều)
@@ -372,7 +374,8 @@ bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin, P_SmartNewsHoldMin;
 bool            P_NewsSkipEnergy, P_MicroLot;
-double          P_DowStretchATR;
+double          P_DowStretchATR, P_SmartFvgBigATR;
+int             P_KVLocalBars;
 double          P_MicroMaxLossPct, P_MicroMaxSLATR;
 double          P_SmartChaseADX, P_SmartChaseSLATR;
 double          P_SpringDepthATR, P_SpringDropATR;
@@ -557,7 +560,7 @@ void LoadParams()
    P_KVLookback = InpKVLookback; P_KVBins = InpKVBins; P_KVHighMult = InpKVHighMult; P_KVMaxATR = InpKVMaxATR;
    P_KVMinBars = InpKVMinBars; P_KVMinReact = InpKVMinReact;
    P_VwapMode = InpVwapMode; P_VwapBand1 = InpVwapBand1; P_VwapBand2 = InpVwapBand2; P_VwapBand3 = InpVwapBand3; P_VwapMinRR = InpVwapMinRR;
-   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowStretchATR = InpDowStretchATR; P_DowVolume = InpDowVolume;
+   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowStretchATR = InpDowStretchATR; P_SmartFvgBigATR = InpSmartFvgBigATR; P_KVLocalBars = InpKVLocalBars; P_DowVolume = InpDowVolume;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
@@ -683,6 +686,8 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
    if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
    if(k == "InpSmartNewsHoldMin") { P_SmartNewsHoldMin = (int)StringToInteger(v); return true; }
+   if(k == "InpSmartFvgBigATR") { P_SmartFvgBigATR = StringToDouble(v); return true; }
+   if(k == "InpKVLocalBars") { P_KVLocalBars = (int)StringToInteger(v); return true; }
    if(k == "InpDowStretchATR") { P_DowStretchATR = StringToDouble(v); return true; }
    if(k == "InpMicroLot") { P_MicroLot = (v == "true" || v == "1"); return true; }
    if(k == "InpMicroMaxLossPct") { P_MicroMaxLossPct = StringToDouble(v); return true; }
