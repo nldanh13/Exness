@@ -91,21 +91,25 @@ int TrendOf(const int i)
 
 // The last COMPLETED candle of each timeframe at the end of a specific
 // closed M15 bar (NOT current live M1 or an unfinished H4/D1 candle).
+// v5.47: so khung thieu du lieu o lan goi gan nhat (chi bao chua tinh xong / lich su chua tai). 0 phieu vi THIEU du lieu khac
+// 0 phieu vi EMA dan xen: SyncDirectionStep cho tick sau thay vi ket luan tren 6/9 khung.
+int g_tbMissing = 0;
 int TrendAtM15Close(const int i, const datetime closeAt)
 {
-   if(i < 0 || i >= 9 || closeAt <= 0 || !g_tbReady) return 0;
+   if(i < 0 || i >= 9 || closeAt <= 0 || !g_tbReady) { g_tbMissing++; return 0; }
    ENUM_TIMEFRAMES tf = g_tbTF[i];
    int seconds = PeriodSeconds(tf);
    if(seconds <= 0) return 0;
    int shift = iBarShift(_Symbol, tf, closeAt - 1, false);
-   if(shift < 0) return 0;
+   if(shift < 0) { g_tbMissing++; return 0; }
    datetime opened = iTime(_Symbol, tf, shift);
-   if(opened <= 0) return 0;
+   if(opened <= 0) { g_tbMissing++; return 0; }
    if(opened + seconds > closeAt) shift++; // unfinished HTF bar
    double e20, e50;
-   if(!GetValue(g_tbE20[i], 0, shift, e20) || !GetValue(g_tbE50[i], 0, shift, e50)) return 0;
+   if(BarsCalculated(g_tbE20[i]) < shift + 50 || BarsCalculated(g_tbE50[i]) < shift + 50 ||
+      !GetValue(g_tbE20[i], 0, shift, e20) || !GetValue(g_tbE50[i], 0, shift, e50)) { g_tbMissing++; return 0; }
    double c = iClose(_Symbol, tf, shift);
-   if(c <= 0) return 0;
+   if(c <= 0) { g_tbMissing++; return 0; }
    if(c > e20 && e20 > e50) return 1;
    if(c < e20 && e20 < e50) return -1;
    return 0;

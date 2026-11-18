@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.46.0"
-#property version   "5.460"
+#define  BOT_VERSION "5.47.0"
+#property version   "5.470"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -122,6 +122,7 @@ input bool            InpDowFilter        = false;      // Lý thuyết Dow: ch�
 input ENUM_TIMEFRAMES InpDowTF            = PERIOD_D1;  // Dow: khung của thủy triều
 input int             InpDowPivot         = 3;          // Dow: đỉnh / đáy = cao / thấp nhất trong ± (số nến)
 input int             InpDowLateLegs      = 4;          // Dow: giai đoạn cuối từ lần phá đỉnh thứ (0 = không xét)
+input double          InpDowStretchATR    = 4.0;        // Dow: giai đoạn cuối khi giá cách mốc vừa phá ≥ (× ATR D1, 0 = tắt)
 input bool            InpDowVolume        = false;      // Dow: volume phải xác nhận thủy triều
 
 input group "5. Bộ lọc dữ liệu bên ngoài"
@@ -371,6 +372,7 @@ bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin, P_SmartNewsHoldMin;
 bool            P_NewsSkipEnergy, P_MicroLot;
+double          P_DowStretchATR;
 double          P_MicroMaxLossPct, P_MicroMaxSLATR;
 double          P_SmartChaseADX, P_SmartChaseSLATR;
 double          P_SpringDepthATR, P_SpringDropATR;
@@ -555,7 +557,7 @@ void LoadParams()
    P_KVLookback = InpKVLookback; P_KVBins = InpKVBins; P_KVHighMult = InpKVHighMult; P_KVMaxATR = InpKVMaxATR;
    P_KVMinBars = InpKVMinBars; P_KVMinReact = InpKVMinReact;
    P_VwapMode = InpVwapMode; P_VwapBand1 = InpVwapBand1; P_VwapBand2 = InpVwapBand2; P_VwapBand3 = InpVwapBand3; P_VwapMinRR = InpVwapMinRR;
-   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowVolume = InpDowVolume;
+   P_DowFilter = InpDowFilter; P_DowTF = InpDowTF; P_DowPivot = InpDowPivot; P_DowLateLegs = InpDowLateLegs; P_DowStretchATR = InpDowStretchATR; P_DowVolume = InpDowVolume;
    P_RangeBars = InpRangeBars;
    P_RangeMaxATR = InpRangeMaxATR;
    P_FibLookback = InpFibLookback; P_FibMinSwingATR = InpFibMinSwingATR; P_VPBins = InpVPBins;
@@ -681,6 +683,7 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
    if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
    if(k == "InpSmartNewsHoldMin") { P_SmartNewsHoldMin = (int)StringToInteger(v); return true; }
+   if(k == "InpDowStretchATR") { P_DowStretchATR = StringToDouble(v); return true; }
    if(k == "InpMicroLot") { P_MicroLot = (v == "true" || v == "1"); return true; }
    if(k == "InpMicroMaxLossPct") { P_MicroMaxLossPct = StringToDouble(v); return true; }
    if(k == "InpMicroMaxSLATR") { P_MicroMaxSLATR = StringToDouble(v); return true; }
@@ -1015,6 +1018,10 @@ bool InitHandles()
 int OnInit()
 {
    ResetRuntimeState();     // doi thong so / doi khung: MT5 KHONG nap lai bien toan cuc, phai tu xoa trang thai cu
+   // v5.47: ghi ly do lan tat truoc de biet vi sao bot "Khoi dong" lai (doi thong so, compile lai, doi chart, tat MT5...)
+   g_firstBarCheck = true;
+   g_status = "Khoi dong (lan tat truoc: " + DeinitReasonText(UninitializeReason()) + ")";
+   Print("TrendBot ", BOT_VERSION, " ", g_status);
    LoadParams();
    if(InpPreset > 0 && !ApplyPreset(InpPreset)) return INIT_PARAMETERS_INCORRECT;
    // Tai khoan Cent dung BTCUSDc/ETHUSDc, khong phai BTCUSDm/ETHUSDm.
@@ -1086,6 +1093,22 @@ bool g_stateReady = false;
 // Goi dau OnInit. Khi doi thong so (hoac doi khung chart), MT5 chi goi lai OnDeinit/OnInit ma giu nguyen bien toan cuc:
 // neu khong xoa, TryInitState bo qua (g_stateReady van true) nen doi "Von danh cho bot" khong dat lai moc, va moc dau ngay
 // cu (vd 50 trieu) bi so voi von moi (1 trieu) -> bot tuong lo 98%, dung han va khoa lo ngay.
+string DeinitReasonText(const int r)
+{
+   switch(r)
+   {
+      case REASON_REMOVE:      return "go bot khoi chart";
+      case REASON_RECOMPILE:   return "compile lai (cap nhat bot)";
+      case REASON_CHARTCHANGE: return "doi ma / khung chart";
+      case REASON_CHARTCLOSE:  return "dong chart";
+      case REASON_PARAMETERS:  return "doi thong so";
+      case REASON_ACCOUNT:     return "doi tai khoan / ket noi lai";
+      case REASON_TEMPLATE:    return "nap template";
+      case REASON_INITFAILED:  return "khoi tao that bai";
+      case REASON_CLOSE:       return "tat MT5";
+   }
+   return "mo lan dau (hoac bot tu go)";
+}
 void ResetRuntimeState()
 {
    g_stateReady   = false;
@@ -1536,7 +1559,24 @@ void OnTickBody()
    // chua phan tich, thu lai o tick sau (khong cap nhat lastBarTime)
    if(!MQLInfoInteger(MQL_TESTER) && !SeriesInfoInteger(_Symbol, P_TF, SERIES_SYNCHRONIZED))
    { g_status = "Cho dong bo lich su nen " + EnumToString(P_TF); return; }
+   // v5.47: nen dau tien sau khi khoi dong lai. Bot da phan tich nen nay truoc khi tat (ghi trong Global Variable) hoac khoi dong
+   // giua nen (> 60 giay sau khi nen mo) thi KHONG phan tich lai / khong vao lenh: chi nap trang thai, cho nen sau mo.
+   // Truoc day lastBarTime = 0 sau khoi dong nen bot phan tich ngay nen da dong tu vai phut truoc, va chay dup khi vua khoi dong.
+   if(g_firstBarCheck && !MQLInfoInteger(MQL_TESTER))
+   {
+      g_firstBarCheck = false;
+      bool done = GlobalVariableCheck(GVName("lastBarDone")) && (datetime)GlobalVariableGet(GVName("lastBarDone")) == barTime;
+      if(done || TimeCurrent() - barTime > 60)
+      {
+         lastBarTime = barTime;
+         g_status = StringFormat("Vua khoi dong %s: cho nen %s mo (%s) moi phan tich", done ? "(nen nay da phan tich truoc khi tat)" : "giua nen",
+                                 EnumToString(P_TF), TimeToString(barTime + PeriodSeconds(P_TF), TIME_MINUTES));
+         Print(g_status);
+         return;
+      }
+   }
    lastBarTime = barTime;
+   if(!MQLInfoInteger(MQL_TESTER) && AccountInfoInteger(ACCOUNT_LOGIN) > 0) GlobalVariableSet(GVName("lastBarDone"), (double)barTime);
    EvReset();                       // bang chung cua quyet dinh nen nay (v5.33)
    TraceBegin();                    // qua trinh phan tich nen nay, ghi ra file o lan WriteStatus sau (v5.42)
 

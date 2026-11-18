@@ -46,12 +46,23 @@ void SyncDirectionStep()
    // "latest bars" at arbitrary later moments. Only completed TF bars.
    datetime at = lastClosed + PeriodSeconds(PERIOD_M15);
    int votes[9], up = 0, dn = 0;
+   g_tbMissing = 0;
    for(int i = 0; i < 9; i++)
    {
       votes[i] = TrendAtM15Close(i, at);
       g_tbSnapshotVotes[i] = votes[i];
       if(votes[i] > 0) up++;
       else if(votes[i] < 0) dn++;
+   }
+   // v5.47: khung nao chua du du lieu (vua khoi dong, H4/D1/W1 chua tai xong) thi chua ket luan; thu lai o tick sau.
+   // Van la DUNG NGOAI (fail-closed) trong luc cho.
+   if(g_tbMissing > 0)
+   {
+      g_tbSnapshotReady = false; g_tbSnapshotBar = 0;
+      g_tbSnapshotLabel = "CHO DU LIEU 9 KHUNG";
+      g_syncReady = false; g_syncDir = 0; g_syncBar = 0;
+      g_syncText = StringFormat("CHO DU LIEU 9 KHUNG (thieu %d khung): DUNG NGOAI", g_tbMissing);
+      return;
    }
    int nine = 0;
    // 6+ of 9 AND all three higher frames H1/H4/D1 must agree.

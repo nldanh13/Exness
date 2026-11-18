@@ -115,6 +115,7 @@ GROUPS = [
         ("InpDowTF",     "Dow: khung của thủy triều", "Thủy triều kéo dài nhiều tháng: nên dùng D1 hoặc W1."),
         ("InpDowPivot",  "Dow: đỉnh / đáy = cao / thấp nhất trong ± (số nến)", "Lớn hơn thì bỏ qua gợn sóng nhỏ, chỉ giữ các đỉnh / đáy quan trọng."),
         ("InpDowLateLegs", "Dow: giai đoạn cuối từ lần phá đỉnh thứ (0 = không xét)", "Đếm số lần phá đỉnh (BOS) từ khi xu hướng đổi chiều: lần 1 = giai đoạn đầu, giữa là lúc tăng mạnh nhất, từ lần này trở đi = giai đoạn cuối (đám đông lao vào, người mua sớm bán ra): không vào lệnh mới."),
+        ("InpDowStretchATR",  "Dow: giai đoạn cuối khi giá cách mốc vừa phá ≥ (× ATR D1, 0 = tắt)", "v5.47. Bộ đếm lần phá chỉ tăng khi có đỉnh / đáy pivot mới, nên khi giá rơi / tăng một mạch nó đứng yên. Giá đã đi quá mốc vừa phá từ số ATR (của khung Dow) này thì bot coi là xu hướng giai đoạn cuối: không đuổi theo, chỉ chờ phân phối / spring."),
         ("InpDowVolume", "Dow: volume phải xác nhận thủy triều", "Xu hướng tăng khỏe: nến tăng có khối lượng lớn, nến hồi khối lượng nhỏ. Bật thì chỉ mua khi khối lượng TB của nến tăng ≥ nến giảm trong 20 nến khung Dow (số tick của Exness)."),
     ]),
     ("5. Bộ lọc dữ liệu bên ngoài", [

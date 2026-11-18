@@ -327,6 +327,32 @@ bool NewsIgnored(const string name)
    for(int i = 0; i < ArraySize(keys); i++) if(StringFind(s, keys[i]) >= 0) return true;
    return false;
 }
+// v5.47: bo nho dem lich tin My quan trong (that, khong backtest). Moi nen bot hoi lich 4-5 lan, moi lan quet CalendarValueHistory +
+// CalendarEventById tung su kien; lich doi it nen chi tai lai moi 10 phut (khoang -1 ngay .. +2 ngay), roi tra loi tu bo nho.
+datetime g_calT[];
+string   g_calN[];
+datetime g_calLoaded = 0;
+bool     g_calOk = false;
+bool CalCache()
+{
+   datetime now = TimeTradeServer();
+   if(g_calLoaded > 0 && now - g_calLoaded < 600 && now >= g_calLoaded) return g_calOk;
+   MqlCalendarValue vals[];
+   int n = CalendarValueHistory(vals, now - 86400, now + 2 * 86400, "US");
+   g_calLoaded = now;
+   if(n < 0) { g_calOk = false; ArrayResize(g_calT, 0); ArrayResize(g_calN, 0); return false; }
+   ArrayResize(g_calT, 0); ArrayResize(g_calN, 0);
+   for(int i = 0; i < n; i++)
+   {
+      MqlCalendarEvent ev;
+      if(!CalendarEventById(vals[i].event_id, ev) || ev.importance != CALENDAR_IMPORTANCE_HIGH || NewsIgnored(ev.name)) continue;
+      int k = ArraySize(g_calT);
+      ArrayResize(g_calT, k + 1); ArrayResize(g_calN, k + 1);
+      g_calT[k] = vals[i].time; g_calN[k] = ev.name;
+   }
+   g_calOk = true;
+   return true;
+}
 bool USNewsNear(string &name)
 {
    if(MQLInfoInteger(MQL_TESTER))
@@ -373,6 +399,18 @@ double MinutesToNews(const int aheadMin, string &name)
       }
       return -1;
    }
+   if(aheadMin <= 2 * 24 * 60 - 15 && CalCache())
+   {
+      // tin som nhat trong [now, now + aheadMin]
+      double best = -1;
+      for(int i = 0; i < ArraySize(g_calT); i++)
+      {
+         if(g_calT[i] < now || g_calT[i] > now + aheadMin * 60) continue;
+         double m = (double)(g_calT[i] - now) / 60.0;
+         if(best < 0 || m < best) { best = m; name = g_calN[i]; }
+      }
+      return best;
+   }
    MqlCalendarValue vals[];
    if(CalendarValueHistory(vals, now, now + aheadMin * 60, "US") <= 0) return -1;
    for(int i = 0; i < ArraySize(vals); i++)
@@ -395,6 +433,12 @@ datetime LastNewsTime(const int backMin, string &name)
          if(g_newsT[i] > now) break;
          if(now - g_newsT[i] <= backMin * 60) { best = g_newsT[i]; name = g_newsN[i]; }
       }
+      return best;
+   }
+   if(backMin <= 24 * 60 - 15 && CalCache())
+   {
+      for(int i = 0; i < ArraySize(g_calT); i++)
+         if(g_calT[i] <= now && now - g_calT[i] <= backMin * 60 && g_calT[i] > best) { best = g_calT[i]; name = g_calN[i]; }
       return best;
    }
    MqlCalendarValue vals[];

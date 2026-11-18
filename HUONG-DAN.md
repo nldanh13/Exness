@@ -1305,3 +1305,19 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 - **KHÔNG RÕ thu hẹp:** khi thủy triều rõ, ADX giữa ngưỡng đi ngang và xu hướng mạnh, hộp rộng hơn hộp đi ngang (nhịp nghỉ trong xu hướng), bot dùng FVG + nến, Order block, Premium / discount theo thủy triều. Lệnh thật vẫn phải qua đồng bộ hướng.
 - **Chặn vào đuổi trong XU HƯỚNG MẠNH:** Phá vỡ + test lại và Sóng Dow không dùng khi ADX > `InpSmartChaseADX` (38) hoặc SL > `InpSmartChaseSLATR` (2.2 ATR); vẫn ghi lệnh giấy `duoi=1` để đối chiếu. Mới dựa trên 5 lệnh giấy thua, cần thêm dữ liệu để chỉnh ngưỡng.
 - **Micro-test vốn nhỏ** (`InpMicroLot`, mặc định TẮT): chỉ chiến lược 24, cho vào đúng 0.01 lot khi vốn quá nhỏ, nếu không có lệnh nào đang mở (tối đa 1 lệnh), SL ≤ `InpMicroMaxSLATR` (2.5 ATR) và 1 lệnh mất ≤ `InpMicroMaxLossPct` (35%) vốn. Mức mất vẫn bị kẹp bởi trần nhóm (`InpMaxGroupRiskPct`), khóa lỗ ngày (`InpMaxDailyLossPct`) và mức dừng hẳn (`InpMaxDrawdownPct`). Muốn chế độ này vào được lệnh thì phải tự nâng cả 3 mức lên ≥ mức mất của 1 lệnh. **Rủi ro cao: 1 lệnh thua có thể mất 20–40% vốn.**
+
+## v5.47.0: khởi động lại, dữ liệu 9 khung, Dow đi quá xa
+
+- **Khởi động lại không phân tích giữa nến.** Khởi động muộn hơn 60 giây sau khi nến mở, hoặc nến này đã được phân tích trước khi tắt, thì bot chỉ nạp trạng thái và chờ nến sau mới phân tích / vào lệnh. Trạng thái `Khoi dong` giờ ghi kèm lý do lần tắt trước (compile lại, đổi thông số, đổi chart, tắt MT5, kết nối lại...).
+- **9 khung phải đủ dữ liệu.** Khung nào chưa tính xong EMA20/50 (thường H4/D1 ngay sau khởi động) thì đồng bộ hướng ghi `CHO DU LIEU 9 KHUNG` và đứng ngoài, thử lại ở tick sau, thay vì kết luận trên 6/9 khung.
+- **Dow đi quá xa** (`InpDowStretchATR`, mặc định 4): bộ đếm lần phá chỉ tăng khi có đỉnh / đáy pivot mới, nên khi giá rơi một mạch nó đứng yên. Giá cách mốc vừa phá ≥ 4 ATR khung Dow thì tính là giai đoạn cuối.
+- **Lịch tin** được đọc một lần mỗi 10 phút rồi trả lời từ bộ nhớ. Dòng `xuly=` tách riêng lần xử lý đầu sau khởi động và ghi thời điểm của lần chậm nhất.
+
+### Lớp nào được chặn lệnh thật (chiến lược 24)
+
+| Dòng trạng thái | Vai trò |
+|---|---|
+| `huongdongbo` / `huonglenh` | **Duy nhất** quyết định hướng cho lệnh tự động mới: 9 khung + 4 nguồn + Dow D1 phải cùng hướng, không thì đứng ngoài. |
+| `huong` | Chi tiết 4 nguồn (Dow, EMA, MACD, cấu trúc). Chỉ đi vào lệnh qua phiếu `4NGUON` của `huongdongbo`; tự nó không chặn. |
+| `huongso` | Bộ đếm dự báo hướng, chấm điểm sau 4/8/16 nến M15 (`cham=4,8,16`). Chỉ quan sát, không liên quan chiến lược 4/8/16. |
+| `engine` / `engineso` | DirectionEngine chạy thử song song. Chỉ ghi số liệu, không chặn hay mở lệnh. |
