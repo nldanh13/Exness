@@ -845,6 +845,19 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    if(iH < 0 || iL < 0 || rH < 0 || rL < 0) return false;
    double kHi = iHigh(_Symbol, P_TF, iH), kLo = iLow(_Symbol, P_TF, iL), boxH = iHigh(_Symbol, P_TF, rH) - iLow(_Symbol, P_TF, rL);
    bool crashDn = kHi - kLo >= P_KnifeDropATR * atr && iL <= 10 && iH > iL;
+   // v5.47: Dow D1 chi dem "lan pha" khi co dinh / day pivot moi (can InpDowPivot nen moi ben). Gia roi / tang mot mach thi khong
+   // co pivot moi nen bo dem dung yen (vd. van 3 lan pha, day 76160 khi gia da 62800). Gia cach moc vua pha >= InpDowStretchATR ATR D1
+   // = xu huong da di qua xa, coi nhu giai doan cuoi.
+   double atrD1 = 0; int nD1 = 0;
+   for(int q = 1; q <= 14; q++) { double hq = iHigh(_Symbol, P_DowTF, q), lq = iLow(_Symbol, P_DowTF, q); if(hq > 0 && lq > 0) { atrD1 += hq - lq; nD1++; } }
+   atrD1 = nD1 > 0 ? atrD1 / nD1 : 0;
+   double stretch = 0;
+   if(tideOk && atrD1 > 0)
+   {
+      if(t.trend < 0 && t.pl > 0 && c1 < t.pl) stretch = (t.pl - c1) / atrD1;
+      if(t.trend > 0 && t.ph > 0 && c1 > t.ph) stretch = (c1 - t.ph) / atrD1;
+   }
+   bool stretched = P_DowStretchATR > 0 && stretch >= P_DowStretchATR;
    bool spikeUp = kHi - kLo >= P_KnifeDropATR * atr && iH <= 10 && iL > iH;
    // Dang theo doi (v5.40): chup lai nhung gi bot canh o nen nay cho giao dien
    g_wTime = TimeCurrent(); g_wHi = iHigh(_Symbol, P_TF, rH); g_wLo = iLow(_Symbol, P_TF, rL); g_wAtr = atr; g_wAdx = adx;
@@ -894,9 +907,9 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
       Tr("Tinh huong", kn ? 1 : 0, StringFormat("3. Cú sập / tăng dựng đứng? biên độ %d nến %.2f ATR %s ngưỡng %.1f ATR, cực trị ở nến thứ %d (cần ≤ 10)", kb,
                                                 atr > 0 ? (kHi - kLo) / atr : 0, kHi - kLo >= P_KnifeDropATR * atr ? ">=" : "<", P_KnifeDropATR,
                                                 (int)MathMin(iH, iL)) + (kn ? (crashDn ? " → CÓ (giảm)" : " → CÓ (tăng)") : " → không"));
-      bool late = tideOk && t.trend != 0 && P_DowLateLegs > 0 && t.legs >= P_DowLateLegs;
-      Tr("Tinh huong", late ? 1 : 0, StringFormat("4. Xu hướng giai đoạn cuối? thủy triều %s, đã phá %d lần %s %d", !tideOk || t.trend == 0 ? "chưa rõ" : (t.trend > 0 ? "tăng" : "giảm"),
-                                                  t.legs, t.legs >= P_DowLateLegs ? ">=" : "<", P_DowLateLegs) + (late ? " → CÓ" : " → không"));
+      bool late = tideOk && t.trend != 0 && ((P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) || stretched);
+      Tr("Tinh huong", late ? 1 : 0, StringFormat("4. Xu hướng giai đoạn cuối? thủy triều %s, đã phá %d lần %s %d; giá cách mốc vừa phá %.1f ATR khung Dow %s %.1f", !tideOk || t.trend == 0 ? "chưa rõ" : (t.trend > 0 ? "tăng" : "giảm"),
+                                                  t.legs, t.legs >= P_DowLateLegs ? ">=" : "<", P_DowLateLegs, stretch, stretched ? ">=" : "<", P_DowStretchATR) + (late ? " → CÓ" : " → không"));
       bool trA = adx >= P_SmartTrendADX, trB = g_smartPrev == 4 && g_smartPrevDir == t.trend && adx >= P_SmartTrendADX - 3;
       bool trOk = tideOk && t.trend != 0 && (trA || trB);
       Tr("Tinh huong", trOk ? 1 : 0, StringFormat("5. Xu hướng mạnh? cần thủy triều rõ (%s) và ADX %.2f %s %.0f", !tideOk || t.trend == 0 ? "CHƯA rõ" : "đã rõ",
@@ -919,8 +932,9 @@ bool SmartSignals(const double atr, const double trend, const double fast, const
    { nm = nmB; g_smartSit = 2; why = "tin " + nm + " vua ra (< 4 gio)"; list = "20"; }
    else if(crashDn || spikeUp)
    { g_smartSit = 3; why = StringFormat("%s %.1f ATR trong %d nen", crashDn ? "giam" : "tang", (kHi - kLo) / atr, kb); list = "14"; }
-   else if(tideOk && t.trend != 0 && P_DowLateLegs > 0 && t.legs >= P_DowLateLegs)
-   { g_smartSit = 5; why = StringFormat("Dow %s %s, da pha %d lan", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs); list = "12,6"; }
+   else if(tideOk && t.trend != 0 && ((P_DowLateLegs > 0 && t.legs >= P_DowLateLegs) || stretched))
+   { g_smartSit = 5; why = StringFormat("Dow %s %s, da pha %d lan%s", EnumToString(P_DowTF), t.trend > 0 ? "tang" : "giam", t.legs,
+                                       stretched ? StringFormat(", gia cach moc vua pha %.1f ATR khung Dow (di qua xa)", stretch) : ""); list = "12,6"; }
    // Vung dem (v5.39.1): da o tinh huong nao thi giu cho toi khi chi so ra han khoi nguong (+-3 ADX), tranh doi bo kien thuc moi nen
    // khi ADX dao dong quanh nguong ("nhin gon song tuong thuy trieu"). Xu huong: giu khi ADX >= nguong - 3 va thuy trieu khong doi chieu.
    else if(tideOk && t.trend != 0 && (adx >= P_SmartTrendADX || (g_smartPrev == 4 && g_smartPrevDir == t.trend && adx >= P_SmartTrendADX - 3)))

@@ -41,6 +41,7 @@ datetime g_autoRead = 0;
 int      g_smartSit = 0;                 // tinh huong thi truong vua chan doan (chien luoc 24, Signals.mqh)
 string   g_smartName = "";
 int      g_smartPrev = 0, g_smartPrevDir = 0;   // tinh huong / chieu thuy trieu o nen truoc (vung dem)
+bool     g_firstBarCheck = false;             // v5.47: nen dau tien sau khoi dong: kiem tra da phan tich / khoi dong giua nen
 bool     g_smartStateLoaded = false;          // v5.46: da nap tinh huong nen truoc / tin da dung tu Global Variables (giu qua khoi dong lai)
 // Dang theo doi (v5.40): bot dang canh gi o nen vua phan tich (hop, VWAP, vung Key Volume, trang thai tung kien thuc).
 // Status.mqh ghi ra dong "theodoi=" de giao dien ve khung "Dang theo doi"; chi dung cho che do Theo tinh huong.
@@ -248,11 +249,16 @@ void LogStopSlippage(const ulong deal)
 }
 
 // Thoi gian xu ly moi lan OnTick / OnTimer (v5.10.13), de xem bot co xu ly cham lam lo tick khong
-ulong  g_tkMaxUs = 0, g_tkSumUs = 0;
+ulong  g_tkMaxUs = 0, g_tkSumUs = 0, g_tkFirstUs = 0;
 long   g_tkCount = 0, g_tkSlow = 0;      // so lan > 100 ms
+datetime g_tkMaxAt = 0;
+bool   g_tkFirstDone = false;
+// v5.47: lan xu ly dau sau khoi dong (tao chi bao 9 khung, nap file hoc / lich su) tach rieng, khong tinh vao "lon nhat"
 void TickTimeRecord(const ulong us)
 {
    if(MQLInfoInteger(MQL_TESTER)) return;
+   if(!g_tkFirstDone) { g_tkFirstDone = true; g_tkFirstUs = us; return; }
+   if(us > g_tkMaxUs) g_tkMaxAt = TimeCurrent();
    g_tkCount++; g_tkSumUs += us;
    if(us > g_tkMaxUs) g_tkMaxUs = us;
    if(us > 100000) g_tkSlow++;
@@ -260,7 +266,8 @@ void TickTimeRecord(const ulong us)
 string TickTimeText()
 {
    if(g_tkCount <= 0) return "chua do";
-   return StringFormat("TB %.1f ms, lon nhat %.0f ms, %I64d lan > 100 ms / %I64d", g_tkSumUs / 1000.0 / g_tkCount, g_tkMaxUs / 1000.0, g_tkSlow, g_tkCount);
+   return StringFormat("TB %.1f ms, lon nhat %.0f ms (luc %s), %I64d lan > 100 ms / %I64d; lan dau sau khoi dong %.0f ms", g_tkSumUs / 1000.0 / g_tkCount,
+                       g_tkMaxUs / 1000.0, g_tkMaxAt > 0 ? TimeToString(g_tkMaxAt, TIME_DATE | TIME_SECONDS) : "-", g_tkSlow, g_tkCount, g_tkFirstUs / 1000.0);
 }
 
 bool IsOwnSelected()

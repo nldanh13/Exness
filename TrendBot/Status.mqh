@@ -205,7 +205,7 @@ void WriteStatus()
       FileWriteString(h, StringFormat("huonglenh=%d;huong9=%d;tang9=%d;giam9=%d;huong4=%d;dongbo=%d;m15=%I64d\r\n",
                                     g_syncDir, g_syncNineDir, g_syncNineUp, g_syncNineDn,
                                     g_dirLastVote, g_syncReady ? 1 : 0, (long)g_syncBar));
-      FileWriteString(h, StringFormat("huongso=%d;hoantat=%d;dangcho=%d;tf=M15;chan=4,8,16\r\n", g_dirLogged, g_dirResolved, ArraySize(g_dirOpen)));
+      FileWriteString(h, StringFormat("huongso=%d;hoantat=%d;dangcho=%d;tf=M15;cham=4,8,16;vaitro=chi quan sat\r\n", g_dirLogged, g_dirResolved, ArraySize(g_dirOpen)));
    }
    // Dang theo doi (v5.40): nhung gi bot canh o nen vua phan tich + lenh giay dang chay (giao dien tinh R tam tinh theo gia hien tai)
    if(P_Strategy == STRAT_SMART && g_wTime > 0)
