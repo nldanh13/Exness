@@ -63,10 +63,20 @@ class Smart546(unittest.TestCase):
             self.assertRegex(main, r"(?m)^input\s+\w+\s+" + k + r"\s*=")
             self.assertIn('k == "%s"' % k, main)
 
-    def test_risk_cap_unchanged(self):
-        # Loi 3 (von nho so voi tran 6%) KHONG duoc tu dong noi: lot toi thieu vuot tran van bi tu choi
-        risk = source("TrendBot/Risk.mqh")
-        self.assertNotRegex(risk, r"ChoPhepLotToiThieuVuotTran|AllowMinLotOverCap")
+    def test_micro_lot_off_by_default_and_bounded(self):
+        main = source("BTC_EMA_Pullback_v2.mq5")
+        self.assertRegex(main, r"(?m)^input\s+bool\s+InpMicroLot\s*=\s*false;")
+        calc = function("CalcLots", "TrendBot/Risk.mqh")
+        i = calc.index("P_MicroLot")
+        blk = calc[i:calc.index("if(lots < minL && P_MaxRiskRoundUp > 0", i)]
+        for frag in ("P_Strategy != STRAT_SMART", "HasOwnPosition()", "GroupOpenRisk(stdRisk) > 0",
+                     "P_MicroMaxSLATR * atrM", "MathMin(riskBase * P_MicroMaxLossPct / 100.0, allowed)",
+                     "riskBase * P_MaxDrawdownPct / 100.0", "lots = minL;"):
+            self.assertIn(frag, blk)
+        # chi lot toi thieu, khong bao gio lon hon
+        self.assertNotIn("lots = minL *", blk)
+        for k in ("InpMicroLot", "InpMicroMaxLossPct", "InpMicroMaxSLATR"):
+            self.assertIn('k == "%s"' % k, main)
 
 
 if __name__ == "__main__":

@@ -247,6 +247,9 @@ input int             InpHedgeMaxBars     = 48;         // Khóa quá (số nế
 input group "8. Khối lượng và rủi ro"
 input double          InpRiskPercent      = 1.0;        // Rủi ro mỗi lệnh (% vốn)
 input double          InpMaxRiskRoundUp   = 0.0;        // Vào lot tối thiểu nếu rủi ro thật ≤ (%, 0 = bỏ lệnh)
+input bool            InpMicroLot         = false;      // Micro-test: cho lot tối thiểu vượt trần làm tròn (vốn nhỏ)
+input double          InpMicroMaxLossPct  = 35.0;       // Micro-test: 1 lệnh lot tối thiểu mất tối đa (% vốn)
+input double          InpMicroMaxSLATR    = 2.5;        // Micro-test: SL tối đa (× ATR)
 input bool            InpDDScale          = false;      // Giảm rủi ro khi đang sụt giảm
 input string          InpCorrSymbols      = "BTCUSDm,ETHUSDm"; // Nhóm mã đi cùng nhau
 input double          InpCorrRiskScale    = 0.5;        // Hệ số rủi ro khi mã cùng nhóm đang có lệnh (1 = tắt)
@@ -367,7 +370,8 @@ double          P_ChainOneRisk, P_SmartTrendADX, P_SmartRangeADX, P_SmartRangeAT
 bool            P_Learn, P_LearnApply;
 int             P_LearnMinN, P_LearnMaxBars;
 int             P_SmartRangeBars, P_SmartNewsMin, P_SmartNewsHoldMin;
-bool            P_NewsSkipEnergy;
+bool            P_NewsSkipEnergy, P_MicroLot;
+double          P_MicroMaxLossPct, P_MicroMaxSLATR;
 double          P_SmartChaseADX, P_SmartChaseSLATR;
 double          P_SpringDepthATR, P_SpringDropATR;
 double          P_ScaleStepATR;
@@ -539,6 +543,7 @@ void LoadParams()
    P_Learn = InpLearn; P_LearnApply = InpLearnApply; P_LearnMinN = InpLearnMinN; P_LearnTryRisk = InpLearnTryRisk; P_LearnMaxBars = InpLearnMaxBars;
    P_SmartTrendADX = InpSmartTrendADX; P_SmartRangeADX = InpSmartRangeADX; P_SmartRangeBars = InpSmartRangeBars;
    P_SmartRangeATR = InpSmartRangeATR; P_SmartNewsMin = InpSmartNewsMin; P_SmartNewsHoldMin = InpSmartNewsHoldMin;
+   P_MicroLot = InpMicroLot; P_MicroMaxLossPct = InpMicroMaxLossPct; P_MicroMaxSLATR = InpMicroMaxSLATR;
    P_NewsSkipEnergy = InpNewsSkipEnergy; P_SmartChaseADX = InpSmartChaseADX; P_SmartChaseSLATR = InpSmartChaseSLATR;
    P_ChainList = InpChainList; P_ChainPD = InpChainPD; P_ChainFullCount = InpChainFullCount; P_ChainOneRisk = InpChainOneRisk;
    P_PDDays = InpPDDays; P_PDLookback = InpPDLookback;
@@ -676,6 +681,9 @@ bool SetParam(const string k, const string v)
    if(k == "InpSmartRangeATR") { P_SmartRangeATR = StringToDouble(v); return true; }
    if(k == "InpSmartNewsMin") { P_SmartNewsMin = (int)StringToInteger(v); return true; }
    if(k == "InpSmartNewsHoldMin") { P_SmartNewsHoldMin = (int)StringToInteger(v); return true; }
+   if(k == "InpMicroLot") { P_MicroLot = (v == "true" || v == "1"); return true; }
+   if(k == "InpMicroMaxLossPct") { P_MicroMaxLossPct = StringToDouble(v); return true; }
+   if(k == "InpMicroMaxSLATR") { P_MicroMaxSLATR = StringToDouble(v); return true; }
    if(k == "InpNewsSkipEnergy") { P_NewsSkipEnergy = (v == "true" || v == "1"); return true; }
    if(k == "InpSmartChaseADX") { P_SmartChaseADX = StringToDouble(v); return true; }
    if(k == "InpSmartChaseSLATR") { P_SmartChaseSLATR = StringToDouble(v); return true; }

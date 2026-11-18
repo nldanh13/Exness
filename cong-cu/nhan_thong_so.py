@@ -240,6 +240,9 @@ GROUPS = [
     ("8. Khối lượng và rủi ro", [
         ("InpRiskPercent",     "Rủi ro mỗi lệnh (% vốn)", "Lot được tính để chạm SL thì mất đúng mức này. Mức đã kiểm thử: 1%."),
         ("InpMaxRiskRoundUp",  "Vào lot tối thiểu nếu rủi ro thật ≤ (%, 0 = bỏ lệnh)", "Dùng khi lot tính ra nhỏ hơn 0,01. Với vốn nhỏ, rủi ro thật có thể lớn hơn nhiều so với rủi ro mỗi lệnh."),
+        ("InpMicroLot",        "Micro-test: cho lot tối thiểu vượt trần làm tròn (vốn nhỏ)", "v5.46, mặc định TẮT. Chỉ chiến lược 24. Khi vốn quá nhỏ để 0,01 lot nằm dưới trần làm tròn, bot vẫn vào đúng 0,01 lot nếu: không có lệnh nào đang mở (tối đa 1 lệnh), SL ≤ 'Micro-test: SL tối đa' ATR và 1 lệnh mất ≤ 'Micro-test: mất tối đa' % vốn. RỦI RO CAO: 1 lệnh thua có thể mất 20–40% vốn. Vẫn bị kẹp bởi trần nhóm và khóa lỗ ngày, nên phải nâng 2 mức đó (và mức dừng hẳn khi sụt) lên ≥ mức mất của 1 lệnh thì chế độ này mới vào được lệnh."),
+        ("InpMicroMaxLossPct", "Micro-test: 1 lệnh lot tối thiểu mất tối đa (% vốn)", "Lệnh 0,01 lot có SL làm mất quá mức này thì vẫn bỏ."),
+        ("InpMicroMaxSLATR",   "Micro-test: SL tối đa (× ATR)", "SL rộng hơn số ATR này thì micro-test không vào."),
         ("InpDDScale",         "Giảm rủi ro khi đang sụt giảm", "Sụt 5–10%: còn 50%. Trên 10%: còn 25%. Trở lại 100% khi lập đỉnh vốn mới."),
         ("InpCorrSymbols",     "Nhóm mã đi cùng nhau", "Đang có lệnh ở mã khác trong nhóm thì giảm rủi ro của lệnh mới."),
         ("InpCorrRiskScale",   "Hệ số rủi ro khi mã cùng nhóm đang có lệnh (1 = tắt)", ""),
