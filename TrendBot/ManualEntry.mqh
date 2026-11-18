@@ -156,8 +156,8 @@ void DrawTrendBoard(int &y)
    string sum = snap && !fresh ? "Đang đợi nến M15 đã đóng" :
                 StringFormat("Tăng %d · Giảm %d · Ngang %d", up, dn, 9 - up - dn);
    MELabel("tb_sum", 18, y, sum, up >= 7 ? C'90,200,120' : dn >= 7 ? C'235,95,85' : C'205,210,220', 8, "Segoe UI"); y += 22;
-   string final = snap ? (fresh ? g_tbSnapshotLabel : "CHỜ DỮ LIỆU M15") : "9 khung: chỉ báo độc lập";
-   MELabel("tb_sync", 18, y, final, snap && fresh && (SyncEntryAllowed(true) || SyncEntryAllowed(false)) ?
+   string syncText = snap ? (fresh ? g_tbSnapshotLabel : "CHỜ DỮ LIỆU M15") : "9 khung: chỉ báo độc lập";
+   MELabel("tb_sync", 18, y, syncText, snap && fresh && (SyncEntryAllowed(true) || SyncEntryAllowed(false)) ?
            C'90,200,120' : C'240,180,60', 8, "Segoe UI");
    y += 24;
 }
