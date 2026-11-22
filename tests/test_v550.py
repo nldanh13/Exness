@@ -49,7 +49,7 @@ class V550(unittest.TestCase):
         self.assertEqual(g.count('IvNote("BOT"'), 4)
 
     def test_report_script_sends_new_file(self):
-        self.assertIn('"TrendBot_cantiep.csv"', source("GuiNhatKy.ps1"))
+        self.assertIn('"TrendBot_cantiep"', source("GuiNhatKy.ps1"))
 
 
 if __name__ == "__main__":

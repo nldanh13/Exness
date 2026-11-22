@@ -1361,3 +1361,16 @@ Mở file bằng Excel (Data → From Text/CSV) và lọc cột `Ai`. Nút 4 "G�
 `cai-dat/` giờ chỉ còn **`01-TrendBot-tat-ca-trong-1-M15.set`**. Bộ này gồm chiến lược Theo tình huống M15 của bộ 33 cũ, phần bảo vệ lệnh tay của bộ 04 cũ, và nhật ký. 29 bộ thử nghiệm còn lại (05 → 33) đã bị xóa. Nút 2 "Cập nhật bot vào MT5" cũng tự xóa chúng khỏi danh sách Load trong MT5. Nếu cần lại bộ cũ, lấy trong lịch sử git (commit trước ngày 22/11/2026).
 
 Cách dùng: mở 1 chart BTCUSDm M15, kéo bot vào, tab Inputs bấm **Load** và chọn `01-TrendBot-tat-ca-trong-1-M15`. Không cần gắn thêm chart thứ hai để bảo vệ lệnh tay. Nếu chỉ muốn bot canh lệnh tay mà không tự vào lệnh, đặt `InpAllowBuy = false` và `InpAllowSell = false`.
+
+## v5.51.0: lệnh tay quá to bị giảm lot thay vì khóa cả ngày, file nhật ký theo tài khoản, ghi lại lúc bot bị gián đoạn
+
+Rút ra từ tối 22/11/2026: lệnh tay BUY 0,10 lot không SL bị bot đóng ngay trong 1 giây (lỗ 28.136 VND). Nguyên nhân là tiền spread lúc vào đã vượt mức lỗ ngày 1% của lệnh tay, nên bot khóa lệnh tay tới hết ngày. Sau đó lệnh 0,01 lot cũng bị đóng ngay.
+
+- **Spread không còn tính là "lỗ trong ngày".** Khi xét khóa lỗ ngày (lệnh tay 1%, thuật toán 2%, tổng 10%), bot cộng lại phí spread của các lệnh **đang mở**. Lệnh vừa mở luôn âm bằng đúng spread, đó không phải lỗ thật. Lỗ thật vì giá chạy ngược vẫn được tính như cũ.
+- **Lệnh tay quá to thì giảm lot, không đóng cả lệnh.** Bot đặt SL cách giá vào `InpGuardSLPct` (nếu chưa có). Nếu chạm SL mà mất quá `InpGuardMaxRiskPct` vốn, bot đóng bớt phần thừa. Ví dụ với tài khoản ~940 nghìn: 0,10 lot giảm còn 0,01 lot. Tiền lỗ do bot đóng bớt phần thừa (chủ yếu là spread) **không tính** vào lỗ ngày của bạn, nên lần bấm nhầm lot không làm khóa cả ngày.
+- **Mỗi tài khoản một file nhật ký:** `TrendBot_nhatky_<số TK>.csv`, `TrendBot_tongket_<số TK>.csv`, `TrendBot_cantiep_<số TK>.csv`, `TrendBot_truotgia_<số TK>.csv`. Trước đây các tài khoản đăng nhập trên cùng máy ghi chung một file nên dòng bị lặp và lẫn vào nhau. Lần đầu chạy bản mới, bot ghi lại toàn bộ lịch sử của tài khoản vào file riêng, không cảnh báo lại. File chung cũ (không có số TK) có thể xóa. Nút 4 gửi nhật ký đổi số tài khoản thành `tk1`, `tk2`... để không đưa số tài khoản lên GitHub.
+- **Ghi lại lúc bot bị gián đoạn.** Tối 22/11 có một lần xử lý mất 251 giây, nhưng phần code bị đo (Dao rơi, quét 60 nến) rất nhẹ, nên nhiều khả năng máy ngủ hoặc MT5 bị treo. Từ bản này, nhật ký can thiệp có thêm dòng `HE THONG`:
+  - `BOT BI GIAN DOAN`: bot không chạy ≥ 2 phút theo đồng hồ máy;
+  - `XU LY QUA LAU`: một lần xử lý ≥ 30 giây. Dòng này ghi cả số giây theo đồng hồ máy lẫn số giây đo trong bot. Hai số lệch nhau nhiều thì máy ngủ giữa chừng, không phải code chậm.
+
+  Trong lúc đó bot không bảo vệ lệnh. Nếu chạy trên laptop, tắt chế độ ngủ (Sleep) hoặc dùng VPS.

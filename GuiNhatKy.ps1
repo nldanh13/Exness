@@ -1,5 +1,5 @@
 # GuiNhatKy.ps1 - Gui nhat ky tai khoan that cho Claude doi chieu (nut 4 trong VS Code)
-# Chep 4 file bot ghi trong Common\Files vao ket-qua\thuc-te\ roi day len GitHub (repo rieng tu cua ban):
+# Chep cac file bot ghi trong Common\Files vao ket-qua\thuc-te\ roi day len GitHub (repo rieng tu cua ban):
 #   TrendBot_nhatky.csv  : moi giao dich (bot, lenh tay, nap, rut) + cac canh bao ky luat
 #   TrendBot_tongket.csv : tong ket moi ngay
 #   TrendBot_truotgia.csv: truot gia that cua bot (so voi backtest)
@@ -43,24 +43,36 @@ function Get-Reduced([string[]]$lines, [string[]]$dropKinds, [string[]]$blankCol
     return $out.ToArray()
 }
 $rules = @{
-    "TrendBot_nhatky.csv"  = @{ Drop = @("NAP", "RUT"); Blank = @("SoDuHienTai") }
-    "TrendBot_tongket.csv" = @{ Drop = @(); Blank = @("Nap", "Rut", "SoDu", "Equity") }
+    "TrendBot_nhatky"  = @{ Drop = @("NAP", "RUT"); Blank = @("SoDuHienTai") }
+    "TrendBot_tongket" = @{ Drop = @(); Blank = @("Nap", "Rut", "SoDu", "Equity") }
 }
 
-$names = @("TrendBot_nhatky.csv", "TrendBot_tongket.csv", "TrendBot_truotgia.csv", "TrendBot_cantiep.csv")
+# v5.51: moi tai khoan 1 file TrendBot_<loai>_<so tai khoan>.csv. Khi gui, so tai khoan duoc doi thanh tk1, tk2...
+# (theo thu tu so) de khong dua so tai khoan len GitHub. File chung cu (khong co so tai khoan) van gui neu con.
+$bases = @("TrendBot_nhatky", "TrendBot_tongket", "TrendBot_truotgia", "TrendBot_cantiep")
+$logins = @(Get-ChildItem -Path $mt5.CommonFiles -Filter "TrendBot_*_*.csv" -ErrorAction SilentlyContinue |
+    ForEach-Object { if ($_.BaseName -match '^TrendBot_(nhatky|tongket|truotgia|cantiep)_(\d+)$') { $Matches[2] } } |
+    Sort-Object -Unique)
 $copied = @()
 Write-Host $(if ($DayDu) { "Che do: DAY DU (ca nap/rut va so du)." } else { "Che do: RUT GON (bo nap/rut, so du). Ban day du: -DayDu." }) -ForegroundColor Cyan
-foreach ($n in $names) {
-    $src = Join-Path $mt5.CommonFiles $n
-    if (Test-Path $src) {
-        $all = Read-CsvLines $src
-        $keep = if (-not $DayDu -and $rules.ContainsKey($n)) { Get-Reduced $all $rules[$n].Drop $rules[$n].Blank } else { $all }
-        [IO.File]::WriteAllLines((Join-Path $dst $n), [string[]]$keep, [Text.Encoding]::Default)
-        $lines = $keep.Count
-        Write-Host "  $n : $lines dong" -ForegroundColor Green
-        $copied += "ket-qua/thuc-te/$n"
-    } else { Write-Host "  Chua co $n (bot chua chay tren tai khoan that / demo, hoac chua co giao dich)." -ForegroundColor Yellow }
+foreach ($b in $bases) {
+    $items = @()
+    $legacy = Join-Path $mt5.CommonFiles "$b.csv"
+    if (Test-Path $legacy) { $items += @{ Src = $legacy; Out = "$b.csv" } }
+    for ($i = 0; $i -lt $logins.Count; $i++) {
+        $f = Join-Path $mt5.CommonFiles ("{0}_{1}.csv" -f $b, $logins[$i])
+        if (Test-Path $f) { $items += @{ Src = $f; Out = ("{0}_tk{1}.csv" -f $b, ($i + 1)) } }
+    }
+    if ($items.Count -eq 0) { Write-Host "  Chua co $b (bot chua chay tren tai khoan that / demo, hoac chua co giao dich)." -ForegroundColor Yellow; continue }
+    foreach ($it in $items) {
+        $all = Read-CsvLines $it.Src
+        $keep = if (-not $DayDu -and $rules.ContainsKey($b)) { Get-Reduced $all $rules[$b].Drop $rules[$b].Blank } else { $all }
+        [IO.File]::WriteAllLines((Join-Path $dst $it.Out), [string[]]$keep, [Text.Encoding]::Default)
+        Write-Host ("  {0} : {1} dong" -f $it.Out, $keep.Count) -ForegroundColor Green
+        $copied += "ket-qua/thuc-te/$($it.Out)"
+    }
 }
+if ($logins.Count -gt 1) { Write-Host ("  Co {0} tai khoan: tk1..tk{0} theo thu tu so tai khoan tang dan." -f $logins.Count) -ForegroundColor Cyan }
 if ($copied.Count -eq 0) { Write-Host "Khong co gi de gui." -ForegroundColor Yellow; exit 0 }
 
 Write-Host ""

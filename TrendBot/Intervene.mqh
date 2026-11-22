@@ -11,7 +11,7 @@
 //| MT5 khong cho biet ai sua SL / TP. Bot tu danh dau moi lan chinh no sua; thay doi khong co dau cua bot = BAN
 //| (hoac EA khac). Cho 3 giay truoc khi ket luan de chart bot khac kip danh dau.
 //+------------------------------------------------------------------+
-#define IV_FILE     "TrendBot_cantiep.csv"
+#define IV_FILE     AcctFile("TrendBot_cantiep")   // v5.51: TrendBot_cantiep_<so tai khoan>.csv
 #define IV_HEAD     "ThoiGianServer,GioMay,Ai,HanhDong,Ma,Ve,LenhCua,Chieu,Lot,Gia,SL_Cu,SL_Moi,TP_Cu,TP_Moi,LaiLo,GiaThiTruong,LyDo"
 #define IV_GRACE_MS 3000
 
@@ -555,6 +555,31 @@ void IvBotDone(const bool ok, const string kind, const string detail, const stri
    // Bot mo lenh moi / dat lenh cho moi: ghi o IvOnDeal / IvScan (ly do vao lenh co trong nhat ky quyet dinh)
 }
 
+//--- v5.51: bot bi gian doan (may ngu, MT5 treo, mat mang) hoac 1 lan xu ly qua lau: luc do KHONG co gi bao ve lenh.
+// Do bang dong ho may (TimeLocal), doc lap voi code cua bot, de lan sau biet chac nguyen nhan.
+datetime g_ivBeat = 0;
+void IvHeartbeat()
+{
+   if(!IvOn()) return;
+   datetime now = TimeLocal();
+   if(g_ivBeat > 0 && now - g_ivBeat >= 120)
+      IvNote("HE THONG", "BOT BI GIAN DOAN", _Symbol,
+             StringFormat("bot khong chay %d giay (tu %s gio may) - may ngu / tat man hinh tiet kiem dien, MT5 treo, hoac mat mang. "
+                          "Trong luc do KHONG co bao ve lenh", (int)(now - g_ivBeat), TimeToString(g_ivBeat, TIME_MINUTES | TIME_SECONDS)));
+   g_ivBeat = now;
+}
+// wall = giay theo dong ho may, us = micro giay do trong bot; lech nhieu = may ngu giua chung, khong phai code cham
+void IvSlowTick(const datetime w0, const ulong us, const string parts)
+{
+   if(!IvOn()) return;
+   long wall = (long)(TimeLocal() - w0);
+   if(wall < 30 && us < 30000000) return;
+   IvNote("HE THONG", "XU LY QUA LAU", _Symbol,
+          StringFormat("1 lan xu ly mat %d giay theo dong ho may (%.1f giay do trong bot). Cac phan cham: %s. Trong luc do bot KHONG quan ly lenh",
+                       (int)wall, us / 1e6, parts != "" ? parts : "khong ro"));
+   g_ivBeat = TimeLocal();
+}
+
 // Go bot / doi thong so / tat MT5: bot ngung bao ve tu luc nay
 string IvDeinitWhy(const int r)
 {
@@ -580,4 +605,5 @@ void IvRelease(const int reason)
    g_ivOwner = false;
    g_ivOwnMs = 0;
    g_ivStarted = false;
+   g_ivBeat = 0;                                              // bot tat: khong tinh la gian doan
 }

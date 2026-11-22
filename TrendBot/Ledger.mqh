@@ -49,9 +49,14 @@ bool LedgerOrigin(const ulong pid, string &sym, int &source, long &magic,
 // cung cac EA magic khac) moi symbol. Khong bo sot lenh dong voi magic khac.
 // Khong co lich su mo lenh hoac khong co gia D1 => fail closed, caller khong
 // duoc coi gia tri 0 la bang chung da khong lo.
+// v5.51: phi spread cua cac vi the DANG MO thuoc bucket (lan goi LedgerDayPL gan nhat). Guard cong lai khi xet khoa ngay:
+// lenh vua mo luon am dung bang spread, khong phai lo that (lenh 0,10 lot tung bi khoa ca ngay chi vi spread luc vao).
+double g_ledgerOpenSpread = 0;
 bool LedgerDayPL(const int bucket, double &pl)
 {
    pl = 0;
+   g_ledgerOpenSpread = 0;
+   double sprd = 0;
    datetime start = TimeCurrent() - TimeCurrent() % 86400;
    if(!HistorySelect(start, TimeCurrent() + 60)) { g_ledgerHealthy = false; return false; }
    ulong tickets[];
@@ -117,6 +122,9 @@ bool LedgerDayPL(const int bucket, double &pl)
                      bucket == 1 ? src == 1 : src >= 2;
       if(!belongs) continue;
       pl += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
+      double ask = SymbolInfoDouble(sm, SYMBOL_ASK), bid = SymbolInfoDouble(sm, SYMBOL_BID), sc = 0;
+      if(ask > bid && bid > 0 && OrderCalcProfit(ORDER_TYPE_BUY, sm, PositionGetDouble(POSITION_VOLUME), ask, bid, sc))
+         sprd += MathAbs(sc);
       if(ot < start)
       {
          double dayOpen = iOpen(sm, PERIOD_D1, 0), oldPL = 0;
@@ -127,6 +135,7 @@ bool LedgerDayPL(const int bucket, double &pl)
       }
    }
    g_ledgerHealthy = true;
+   g_ledgerOpenSpread = sprd;
    return true;
 }
 
