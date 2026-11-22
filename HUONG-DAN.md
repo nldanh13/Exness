@@ -257,8 +257,7 @@ Bản `-von1tr-rr5`: vẫn vào 0,01 lot nếu dính SL mất tối đa 5% tài 
 
 | File | Nội dung | Trạng thái |
 |---|---|---|
-| `04-Bao-ve-lenh-tay-von-1-trieu.set` | Bot không tự vào lệnh, chỉ canh lệnh bạn vào tay (cả lệnh chờ): SL 0,25%, rủi ro tối đa 6%, khóa lỗ ngày 10%, hòa vốn ở 1R, kéo SL, tự nhồi tối đa 3 lớp | Công cụ hỗ trợ cho vốn 1 triệu |
-| `05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM.set` | Như 04, thêm bot tự vào 0,01 lot khi ≥ 6/9 khung cùng chiều (có H1 và H4) và nến M1 hồi về EMA20 | **Chưa backtest**, chỉ chạy demo |
+| `01-TrendBot-tat-ca-trong-1-M15.set` | **Bộ duy nhất (từ 22/11/2026).** Bot tự giao dịch theo tình huống trên M15 (chiến lược 24, chỉ vào 0,01 lot khi dính SL mất ≤ 6% vốn), đồng thời bảo vệ lệnh bạn vào tay (SL 0,25%, rủi ro tối đa 6%, chặn nhồi lệnh lỗ, hòa vốn ở 1R rồi kéo SL), ghi nhật ký giao dịch và nhật ký can thiệp | **Thử nghiệm**, chạy demo trước |
 
 Các bộ 01, 02, 03 và TN1 … TN7 đã bỏ (11/2026) vì cần vốn từ 3.000 USD hoặc chưa đạt kiểm thử. Lần cập nhật kế tiếp tự xóa chúng khỏi danh sách Load trong MT5. Muốn dùng lại, lấy từ lịch sử GitHub hoặc tự lưu bộ riêng trong `cai-dat-rieng`.
 
@@ -1356,3 +1355,9 @@ Dời SL xa giá hơn (rủi ro tăng) được ghi riêng là `NOI SL xa hon (t
 Cách hoạt động: một chart mỗi tài khoản (chart bật đầu tiên) ghi phần "bạn làm gì" cho **mọi mã**. Chart nào gửi lệnh thì tự ghi phần "bot làm gì" của chart đó. Mỗi lần bot sửa SL / TP, nó để lại dấu. Thay đổi nào không có dấu của bot thì ghi là BẠN, sau 3 giây chờ. Lúc bot tắt (MT5 đóng, mất điện) thì việc mở / đóng vẫn có trong `TrendBot_nhatky.csv`, nhưng các lần sửa SL / TP trong lúc đó không ghi được.
 
 Mở file bằng Excel (Data → From Text/CSV) và lọc cột `Ai`. Nút 4 "Gửi nhật ký tài khoản thật" gửi kèm file này. Bảng tay `nhat-ky-can-thiep.md` vẫn dùng để ghi **lý do và cảm xúc** trước khi can thiệp, vì bot không biết được những điều đó.
+
+## Gộp còn 1 bộ cài đặt (22/11/2026)
+
+`cai-dat/` giờ chỉ còn **`01-TrendBot-tat-ca-trong-1-M15.set`**. Bộ này gồm chiến lược Theo tình huống M15 của bộ 33 cũ, phần bảo vệ lệnh tay của bộ 04 cũ, và nhật ký. 29 bộ thử nghiệm còn lại (05 → 33) đã bị xóa. Nút 2 "Cập nhật bot vào MT5" cũng tự xóa chúng khỏi danh sách Load trong MT5. Nếu cần lại bộ cũ, lấy trong lịch sử git (commit trước ngày 22/11/2026).
+
+Cách dùng: mở 1 chart BTCUSDm M15, kéo bot vào, tab Inputs bấm **Load** và chọn `01-TrendBot-tat-ca-trong-1-M15`. Không cần gắn thêm chart thứ hai để bảo vệ lệnh tay. Nếu chỉ muốn bot canh lệnh tay mà không tự vào lệnh, đặt `InpAllowBuy = false` và `InpAllowSell = false`.

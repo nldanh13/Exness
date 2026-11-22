@@ -102,7 +102,9 @@ function Invoke-BotCompile($mt5, [string]$src) {
                            # Bo da bo (11/2026): chi giu 04 va 05 cho von 1 trieu
                            "01-Chuan-Donchian-H4", "02-Tu-bam-lenh-H4", "03-Bao-ve-lenh-tay", "TN1-Donchian-H4-nhoi-3-lop",
                            "TN2-Donchian-M30-khoi-luong", "TN3-RSI-M15", "TN4-ORB-M5-phien-My", "TN5-Wyckoff-M15-von-nho",
-                           "TN6-Demo-1-trieu-M5", "TN7-Demo-1-trieu-H4-SL-M5")) {
+                           "TN6-Demo-1-trieu-M5", "TN7-Demo-1-trieu-H4-SL-M5",
+                           # Gop thanh 1 bo "01-TrendBot-tat-ca-trong-1-M15" (11/2026)
+                           "04-Bao-ve-lenh-tay-von-1-trieu", "05-Tu-vao-lenh-von-1-trieu-THU-NGHIEM", "06-Nhoi-chot-gop-von-1-trieu-THU-NGHIEM", "07-Nhoi-nhanh-von-1-trieu-THU-NGHIEM", "08-Fib-Volume-Profile-H1-THU-NGHIEM", "09-Phan-ky-RSI-CVD-H1-THU-NGHIEM", "10-Big-Trades-H1-THU-NGHIEM", "11-Hop-phan-phoi-H1-THU-NGHIEM", "12-Danh-luoi-H1-THU-NGHIEM", "13-Phong-cach-Scalp-M5-THU-NGHIEM", "14-Phong-cach-Swing-H4-THU-NGHIEM", "15-Khoa-lenh-Hedging-H4-THU-NGHIEM", "16-Gio-cao-diem-London-NewYork-H1-THU-NGHIEM", "17-Dao-roi-nho-lon-giu-H1-THU-NGHIEM", "18-Nhoi-khi-thang-kim-tu-thap-H4-THU-NGHIEM", "19-Order-block-5-phan-ung-H1-THU-NGHIEM", "20-Pha-vo-that-du-3-dieu-H4-THU-NGHIEM", "21-FVG-nen-xac-nhan-H1-THU-NGHIEM", "22-Dow-thuy-trieu-con-song-H4-THU-NGHIEM", "23-VWAP-3-cap-dai-M15-THU-NGHIEM", "24-Vung-Key-Volume-H1-THU-NGHIEM", "25-Ba-cau-hoi-don-gian-H4-THU-NGHIEM", "26-Quet-tin-lon-M15-THU-NGHIEM", "27-Bon-ky-thuat-danh-H4-THU-NGHIEM", "28-Wyckoff-Spring-day-du-H1-THU-NGHIEM", "29-Premium-Discount-D1-H4-THU-NGHIEM", "30-Chuoi-phan-tich-H1-THU-NGHIEM", "31-Tu-dong-1-chart-THU-NGHIEM", "32-Theo-tinh-huong-H1-THU-NGHIEM", "33-Theo-tinh-huong-von-770-nghin-M15-THU-NGHIEM")) {
             $f = Join-Path $setDst "$old.set"
             if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
         }
