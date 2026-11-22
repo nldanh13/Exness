@@ -136,6 +136,8 @@ bool PrepSend() { ResetLastError(); return true; }
 // Nhat ky can thiep BAN <-> BOT (TrendBot/Intervene.mqh, v5.50.0). g_ivWhy: ly do chi tiet cho lenh sua / dong sap gui
 // (noi goi dat ngay truoc lenh, TradeDone tu xoa). Khong dat thi ghi kind + detail.
 string g_ivWhy = "";
+// v5.51: moi tai khoan 1 file nhat ky (truoc day moi tai khoan dang nhap tren may cung ghi chung 1 file, bi lan va lap dong)
+string AcctFile(const string base) { return base + "_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + ".csv"; }
 void IvBotDone(const bool ok, const string kind, const string detail, const string err);
 void IvNote(const string who, const string act, const string sym, const string why);
 
@@ -218,7 +220,7 @@ void LogSlippage(const bool isBuy, const double fill)
 void LogSlippageAt(const bool isBuy, const double req, const long spread, const double fill, const long magic)
 {
    if(MQLInfoInteger(MQL_TESTER) || req <= 0 || fill <= 0) return;
-   string f = "TrendBot_truotgia.csv";
+   string f = AcctFile("TrendBot_truotgia");
    bool isNew = !FileIsExist(f, FILE_COMMON);
    int h = FileOpen(f, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ, ',');
    if(h == INVALID_HANDLE) return;
@@ -243,7 +245,7 @@ void LogStopSlippage(const ulong deal)
    if(lvl <= 0 || px <= 0) return;
    bool closeBySell = HistoryDealGetInteger(deal, DEAL_TYPE) == DEAL_TYPE_SELL;   // dong lenh Buy = deal Sell
    double slip = (closeBySell ? lvl - px : px - lvl) / _Point;                   // duong = khop xau hon muc dat
-   string f = "TrendBot_truotgia.csv";
+   string f = AcctFile("TrendBot_truotgia");
    bool isNew = !FileIsExist(f, FILE_COMMON);
    int h = FileOpen(f, FILE_READ | FILE_WRITE | FILE_CSV | FILE_ANSI | FILE_COMMON | FILE_SHARE_READ, ',');
    if(h == INVALID_HANDLE) return;

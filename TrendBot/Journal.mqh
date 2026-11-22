@@ -7,8 +7,9 @@
 //|   vao qua nhieu lenh, thua lien tiep, thang lon (nhac rut tien / nghi), lai thang dat moc (nhac rut).
 //| Moi tai khoan chi 1 chart ghi nhat ky (chart dau tien bat), cac bot khac tu bo qua.
 //+------------------------------------------------------------------+
-#define JR_FILE "TrendBot_nhatky.csv"
-#define JS_FILE "TrendBot_tongket.csv"
+// v5.51: moi tai khoan 1 file (TrendBot_nhatky_<so tai khoan>.csv); file chung cu khong con ghi
+#define JR_FILE AcctFile("TrendBot_nhatky")
+#define JS_FILE AcctFile("TrendBot_tongket")
 
 datetime g_jLast = 0;
 double   g_jLots[];                          // lot cac lenh tay gan nhat (toi da 20)
@@ -138,6 +139,11 @@ void JournalScan()
    datetime now = TimeCurrent();
    bool first = !GlobalVariableCheck(JKey("last"));
    ulong last = (ulong)JGet("last");
+   // v5.51: tai khoan da ghi tu truoc nhung chua co file rieng: ghi lai toan bo lich su vao file moi,
+   // KHONG canh bao lai, KHONG doi bo dem (thua lien tiep, nap trong thang, lot thuong dung)
+   bool replay = !first && !FileIsExist(JR_FILE, FILE_COMMON);
+   if(replay) last = 0;
+   bool quiet = first || replay;
 
    // Ngay / thang moi
    int dk = JDayKey(now), mk = JMonKey(now);
@@ -156,7 +162,7 @@ void JournalScan()
    }
 
    // Thu cac giao dich moi
-   if(!HistorySelect(first ? 0 : now - 30 * 86400, now + 60)) return;
+   if(!HistorySelect(quiet ? 0 : now - 30 * 86400, now + 60)) return;
    JDeal arr[]; int n = 0;
    for(int i = 0; i < HistoryDealsTotal(); i++)
    {
@@ -172,18 +178,18 @@ void JournalScan()
       arr[n].cmt = HistoryDealGetString(d, DEAL_COMMENT);
       n++;
    }
-   if(first && n > 0) PrintFormat("Nhat ky: lan dau, ghi lai %d giao dich cu vao Common\\Files\\%s", n, JR_FILE);
+   if(quiet && n > 0) PrintFormat("Nhat ky: lan dau, ghi lai %d giao dich cu vao Common\\Files\\%s", n, JR_FILE);
 
    for(int k = 0; k < n; k++)
    {
       JDeal x = arr[k];
       if(x.tk > last) last = x.tk;
-      bool warn = !first && x.t > now - 3600;               // chi canh bao giao dich vua xay ra
+      bool warn = !quiet && x.t > now - 3600;               // chi canh bao giao dich vua xay ra
       if(x.type == DEAL_TYPE_BALANCE)
       {
          bool dep = x.pl > 0;
          JRow(x.t, dep ? "NAP" : "RUT", "", -1, "", 0, 0, 0, x.pl, -1, 0, "");   // bo ghi chu: co ma giao dich ngan hang
-         if(!first && JMonKey(x.t) == mk) JSet("monDep", JGet("monDep") + x.pl);
+         if(!quiet && JMonKey(x.t) == mk) JSet("monDep", JGet("monDep") + x.pl);
          if(dep && warn)
          {
             double d2, w2; datetime lw;
@@ -217,7 +223,7 @@ void JournalScan()
             if(InpWarnMaxTradesDay > 0 && (int)JGet("tday") == InpWarnMaxTradesDay + 1)
                JWarn(StringFormat("Hom nay da vao %d lenh tay (muc toi da %d). Vao nhieu lenh thuong la dang go hoac dang hung phan: nghi.", InpWarnMaxTradesDay + 1, InpWarnMaxTradesDay));
          }
-         JPushLot(x.vol);
+         if(!replay) JPushLot(x.vol);
       }
       else
       {
@@ -230,7 +236,7 @@ void JournalScan()
                if(HistoryDealGetInteger(d, DEAL_ENTRY) == DEAL_ENTRY_IN) { hold = (double)(x.t - (datetime)HistoryDealGetInteger(d, DEAL_TIME)) / 3600.0; break; }
             }
          JRow(x.t, "RA", x.sym, x.magic, side, x.vol, x.price, 0, x.pl, hold, x.pos, x.cmt);
-         if(x.magic == 0 && !first)
+         if(x.magic == 0 && !quiet)
          {
             double st = x.pl < 0 ? JGet("streak") + 1 : 0;
             JSet("streak", st);

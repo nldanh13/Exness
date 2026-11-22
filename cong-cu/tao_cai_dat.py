@@ -31,7 +31,7 @@ PRESETS = [
         "2) Bảo vệ lệnh tay (như bộ 04 cũ): lệnh chưa có SL thì đặt SL cách giá vào 0,25%; lệnh tay rủi ro quá 6% vốn thì giảm lot;",
         "   chặn nhồi vào lệnh đang lỗ; đóng lệnh lỗ giữ quá 24 giờ; lời 1R dời SL hòa vốn rồi kéo SL 2 × ATR M15; sửa cả lệnh chờ.",
         "   Bucket lệnh tay 1%/ngày, thuật toán 2%/ngày, tổng magic 0 khóa ở 10%. Với 0,01 lot, một lệnh thua có thể vượt bucket.",
-        "3) Nhật ký (bật sẵn): TrendBot_nhatky.csv (mọi giao dịch) và TrendBot_cantiep.csv (bạn hay bot đã làm gì với từng lệnh).",
+        "3) Nhật ký (bật sẵn, mỗi tài khoản 1 file): TrendBot_nhatky_<số TK>.csv (mọi giao dịch), TrendBot_cantiep_<số TK>.csv (bạn hay bot làm gì).",
     ], {"InpStrategy": "24", "InpTF": "15", "InpUseADX": "false", "InpUseHTF": "false", "InpRR": "2", "InpDowTF": "16408",
         "InpDowLateLegs": "4", "InpChainFullCount": "2", "InpChainOneRisk": "0.5", "InpNewsNFP": "true",
         "InpRiskPercent": "1.0", "InpMaxRiskRoundUp": "6.0", "InpMaxDailyLossPct": "6.0", "InpMaxGroupRiskPct": "6.0", "InpMaxDrawdownPct": "15.0",

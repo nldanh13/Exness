@@ -308,6 +308,20 @@ void GuardBucketSetLock(const int bucket)
    GlobalVariableSet(GAcctKey(bucket == 1 ? "humanLock" : "algoLock"), GDayKey(TimeCurrent()));
    if(!MQLInfoInteger(MQL_TESTER)) GlobalVariablesFlush();
 }
+// v5.51: lai/lo khi BOT giam lot lenh tay qua to (buoc 4) trong ngay. Day la chi phi cua viec bot sua lenh, khong tinh vao
+// muc lo ngay cua ban: truoc day giam 0,10 -> 0,01 lot tra ngay tien spread cua 0,09 lot, vuot bucket 1% va bi khoa ca ngay.
+double GuardCutPL()
+{
+   string d = GAcctKey("cutDay");
+   return GlobalVariableCheck(d) && (int)GlobalVariableGet(d) == GDayKey(TimeCurrent()) ? GlobalVariableGet(GAcctKey("cut")) : 0;
+}
+void GuardAddCutPL(const double v)
+{
+   double c = GuardCutPL() + v;
+   GlobalVariableSet(GAcctKey("cutDay"), GDayKey(TimeCurrent()));
+   GlobalVariableSet(GAcctKey("cut"), c);
+}
+
 // So tien lo thuat toan duoc phep them theo bucket ngay (co the = 0).
 double GuardAlgoBudgetRemaining()
 {
@@ -435,6 +449,7 @@ void GuardManual()
       // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
       // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double base = eq - pl;                                  // uoc tinh von dau ngay
+      pl += g_ledgerOpenSpread - GuardCutPL();                // v5.51: khong tinh spread lenh dang mo + chi phi bot giam lot
       if(base > 0 && pl <= -base * InpGuardDayLossPct / 100.0)
       {
          locked = true; GuardSetDayLock();                    // luu qua khoi dong lai, het hieu luc sang ngay moi
@@ -452,6 +467,7 @@ void GuardManual()
       // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
       // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double hb = eq - hp;
+      hp += g_ledgerOpenSpread - GuardCutPL();                // v5.51: spread luc vao / bot giam lot khong phai ban lo
       if(hb > 0 && hp <= -hb * P_GuardHumanDayPct / 100.0)
       {
          GuardBucketSetLock(1); humanLocked = true;
@@ -465,6 +481,7 @@ void GuardManual()
       // Khong chan qua trinh bao ve SL/dong vi the chi vi history tam thoi loi.
       // LedgerDayPL=0 neu loi; entry se fail-closed tai EntryMarginOk().
       double ab = eq - ap;
+      ap += g_ledgerOpenSpread;                               // v5.51: spread lenh dang mo
       if(ab > 0 && ap <= -ab * P_GuardAlgoDayPct / 100.0)
       {
          GuardBucketSetLock(2); algoLocked = true;
@@ -554,8 +571,16 @@ void GuardManual()
                double keep = MathFloor(vol * allow / -pr / step) * step;
                string why  = StringFormat("neu cham SL se lo %.1f%% von (gioi han %.1f%%)", -pr / eq * 100.0, InpGuardMaxRiskPct);
                if(keep < vmin - 1e-9) { GuardClose(t, why + ", lot nho nhat van qua rui ro"); continue; }
-               if(PrepSend() && TradeDone(trade.PositionClosePartial(t, NormalizeDouble(vol - keep, 2)), "Giam lot lenh tay", why))
+               double cutVol = NormalizeDouble(vol - keep, 2);
+               bool   human  = !GuardPositionAuto();
+               g_ivWhy = StringFormat("lenh %.2f lot qua to: %s. Giam xuong %.2f lot (InpGuardMaxRiskPct), KHONG dong ca lenh", vol, why, keep);
+               if(PrepSend() && TradeDone(trade.PositionClosePartial(t, cutVol), "Giam lot lenh tay", why))
+               {
+                  double cut = 0;
+                  if(human && OrderCalcProfit(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, _Symbol, cutVol, open, trade.ResultPrice(), cut))
+                     GuardAddCutPL(cut);                      // chi phi giam lot khong tinh vao lo ngay lenh tay
                   Notify(StringFormat("[%s] BAO VE LENH TAY: lenh #%I64u %s. Da giam tu %.2f xuong %.2f lot.", _Symbol, t, why, vol, keep));
+               }
                continue;
             }
          }

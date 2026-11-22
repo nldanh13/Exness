@@ -316,7 +316,7 @@ GROUPS = [
         ("InpGuardAutoRiskPct",     "Rủi ro mỗi lệnh tự vào (% vốn, 0 = lot nhỏ nhất)", "Bot tính lot TRƯỚC khi vào để lỗ khi chạm SL không vượt mức này (và không vượt Rủi ro tối đa mỗi lệnh tay). Vốn tăng thì lot tăng. Lot nhỏ nhất đã vượt giới hạn thì bỏ tín hiệu, không mở rồi đóng ngay."),
     ]),
     ("12. Nhật ký và kỷ luật giao dịch", [
-        ("InpJournal",           "Ghi nhật ký mọi giao dịch của tài khoản", "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky.csv."),
+        ("InpJournal",           "Ghi nhật ký mọi giao dịch của tài khoản", "Ghi lệnh bot, lệnh tay, nạp và rút vào Common\\Files\\TrendBot_nhatky_<số tài khoản>.csv, và việc bạn / bot làm với từng lệnh vào TrendBot_cantiep_<số tài khoản>.csv."),
         ("InpWarnProfitPct",     "Nhắc rút tiền khi lãi trong tháng đạt (%, 0 = tắt)", ""),
         ("InpWarnBigWinPct",     "Nhắc khi một lệnh lãi trên (% số dư, 0 = tắt)", "Nhắc rút tiền, nghỉ 1–2 ngày và không tăng lot."),
         ("InpWarnRedepositDays", "Cảnh báo nạp lại trong (ngày sau khi rút, 0 = tắt)", ""),

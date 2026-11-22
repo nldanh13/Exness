@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.50.0"
-#property version   "5.500"
+#define  BOT_VERSION "5.51.0"
+#property version   "5.510"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -1498,6 +1498,7 @@ void SafetyStep()
 void OnTimer()
 {
    if(!g_stateReady && !TryInitState()) return;
+   IvHeartbeat();                   // v5.51: phat hien bot bi gian doan (may ngu / MT5 treo)
    ulong t0 = GetMicrosecondCount();
    SafetyStep();
    Prof("an toan");
@@ -1506,11 +1507,15 @@ void OnTimer()
 
 void OnTick()
 {
+   if(g_stateReady) IvHeartbeat();  // v5.51: phat hien bot bi gian doan (may ngu / MT5 treo)
    ulong t0 = GetMicrosecondCount();
+   datetime w0 = TimeLocal();
    ProfBegin();
    OnTickBody();
    Prof("vao lenh / con lai");
-   TickTimeRecord(GetMicrosecondCount() - t0);
+   ulong us = GetMicrosecondCount() - t0;
+   TickTimeRecord(us);
+   if(g_stateReady) IvSlowTick(w0, us, g_pf);   // v5.51: 1 lan xu ly >= 30 giay: ghi vao nhat ky can thiep
 }
 
 void OnTickBody()
