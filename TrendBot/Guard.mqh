@@ -157,6 +157,7 @@ bool GuardCheckAcctDD(const double eq)
    if(dd < InpGuardMaxDDPct) return false;
    GlobalVariableSet(GAcctKey("halt"), (double)TimeCurrent());
    GuardRiskSave(true);
+   IvNote("BOT", "DUNG HAN (sut giam tai khoan)", _Symbol, StringFormat("von tai khoan sut %.1f%% tu dinh %.0f (gioi han %.1f%%): dong lenh tay, ngung tu vao / nhoi", dd, peak, InpGuardMaxDDPct));
    Notify(StringFormat("[%s] DUNG HAN: von tai khoan sut %.1f%% tu dinh %.0f (gioi han %.1f%%). Dong lenh tay, ngung tu vao va nhoi. "
                        "Muon chay lai: dat InpResetHalt = true mot lan roi doi ve false.", _Symbol, dd, peak, InpGuardMaxDDPct));
    return true;
@@ -383,6 +384,9 @@ void GuardProfitLock(const ulong t, const bool buy, const double open, const dou
    if(!tpNew) ntp = tp;
    if(nsl == sl && ntp == tp) return;
    bool toBE = !beDone && (buy ? nsl >= open : nsl <= open);
+   g_ivWhy = StringFormat("lenh dang lai %.1fR: ", rNow) +
+             (nsl == sl ? "" : toBE ? "doi SL ve hoa von (InpGuardBreakevenR)" : StringFormat("keo SL theo gia, cach %.1f x ATR M%d (InpGuardTrailATR)", InpGuardTrailATR, GuardTFmin())) +
+             (ntp != tp ? StringFormat("%sdat TP co dinh %.1fR (InpGuardTPR)", nsl == sl ? "" : " + ", InpGuardTPR) : "");
    if(PrepSend() && TradeDone(trade.PositionModify(t, nsl, ntp), nsl != sl ? "Sua SL" : "Dat TP", "lenh tay #" + (string)t) && toBE)
       Notify(StringFormat("[%s] BAO VE LENH TAY: lenh #%I64u lai %.1fR, da doi SL ve hoa von %.2f. Tu gio lenh nay khong con lo; bot keo SL theo gia.",
                           _Symbol, t, rNow, nsl));
@@ -434,6 +438,7 @@ void GuardManual()
       if(base > 0 && pl <= -base * InpGuardDayLossPct / 100.0)
       {
          locked = true; GuardSetDayLock();                    // luu qua khoi dong lai, het hieu luc sang ngay moi
+         IvNote("BOT", "KHOA lenh tay het ngay", _Symbol, StringFormat("lenh tay lo %.1f%% trong ngay (gioi han %.1f%%): dong het, khong cho lenh tay moi toi 0:00 gio server", -pl / base * 100.0, InpGuardDayLossPct));
          Notify(StringFormat("[%s] BAO VE LENH TAY: lenh tay lo %.1f%% trong ngay (gioi han %.1f%%). Dong het va khong cho lenh tay moi toi 0:00 (gio server).",
                              _Symbol, -pl / base * 100.0, InpGuardDayLossPct));
       }
@@ -450,6 +455,7 @@ void GuardManual()
       if(hb > 0 && hp <= -hb * P_GuardHumanDayPct / 100.0)
       {
          GuardBucketSetLock(1); humanLocked = true;
+         IvNote("BOT", "KHOA lenh tay het ngay (bucket nguoi)", _Symbol, StringFormat("lenh ban vao lo %.1f%% trong ngay (gioi han %.1f%%)", -hp / hb * 100.0, P_GuardHumanDayPct));
          Notify(StringFormat("[%s] KHOA LENH TAY: lo ngay %.1f%% >= %.1f%%.", _Symbol, -hp / hb * 100.0, P_GuardHumanDayPct));
       }
    }
@@ -462,6 +468,7 @@ void GuardManual()
       if(ab > 0 && ap <= -ab * P_GuardAlgoDayPct / 100.0)
       {
          GuardBucketSetLock(2); algoLocked = true;
+         IvNote("BOT", "KHOA thuat toan het ngay", _Symbol, StringFormat("lenh bot tu vao lo %.1f%% trong ngay (gioi han %.1f%%)", -ap / ab * 100.0, P_GuardAlgoDayPct));
          Notify(StringFormat("[%s] KHOA THUAT TOAN: lo ngay %.1f%% >= %.1f%%.", _Symbol, -ap / ab * 100.0, P_GuardAlgoDayPct));
       }
    }
@@ -526,6 +533,7 @@ void GuardManual()
          double px  = buy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
          double nsl = NormalizeDouble(buy ? open * (1 - InpGuardSLPct / 100.0) : open * (1 + InpGuardSLPct / 100.0), dg);
          if((buy && nsl >= px) || (!buy && nsl <= px)) { GuardClose(t, StringFormat("khong co SL va da lo qua %.1f%%", InpGuardSLPct)); continue; }
+         g_ivWhy = StringFormat("lenh tay chua co SL: dat SL cach gia vao %.2f%% (InpGuardSLPct)", InpGuardSLPct);
          if(PrepSend() && TradeDone(trade.PositionModify(t, nsl, tp), "Dat SL lenh tay"))
          {
             sl = nsl;
@@ -677,6 +685,7 @@ void GuardPending(const bool locked, const datetime since, const double eq)
       if(sl == 0 && InpGuardSLPct > 0)
       {
          double nsl = NormalizeDouble(buy ? entry * (1 - InpGuardSLPct / 100.0) : entry * (1 + InpGuardSLPct / 100.0), dg);
+         g_ivWhy = StringFormat("lenh cho chua co SL: dat SL cach gia vao %.2f%% (InpGuardSLPct)", InpGuardSLPct);
          if(PrepSend() && TradeDone(trade.OrderModify(t, price, nsl, tp, tt, exp, lim), "Dat SL lenh cho tay"))
          {
             sl = nsl;

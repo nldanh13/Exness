@@ -191,6 +191,8 @@ void CheckDailyLoss()
    GlobalVariableSet(GVName("dayLock"), currentDay);
    if(!dailyNotified)
    {
+      IvNote("BOT", "KHOA chien luoc bot het ngay", _Symbol, StringFormat("cham gioi han lo ngay %.1f%% (lai/lo ngay %.2f): ngung vao lenh den mai%s",
+             P_MaxDailyLossPct, DayPL(), P_CloseOnDailyLoss ? ", dong lenh bot dang mo" : ""));
       Notify(StringFormat("[%s] Cham gioi han lo ngay %.1f%% (%.2f). Ngung vao lenh den mai%s.",
                           _Symbol, P_MaxDailyLossPct, DayPL(), P_CloseOnDailyLoss ? ", da dong lenh dang mo" : ""));
       dailyNotified = true;
@@ -232,6 +234,7 @@ void CheckDrawdown()
    {
       GlobalVariableSet(GVName("halt"), 1);
       BotRiskSave(true);
+      IvNote("BOT", "DUNG HAN chien luoc bot", _Symbol, StringFormat("von cua bot sut %.1f%% tu dinh %.2f: ngung vao lenh, can InpResetHalt = true de chay lai", (1.0 - eq / peak) * 100.0, peak));
       Notify(StringFormat("[%s] BOT DUNG HAN: von cua bot sut %.1f%% tu dinh %.2f. Dat InpResetHalt=true de chay lai.",
                           _Symbol, (1.0 - eq / peak) * 100.0, peak));
       if(P_CloseOnHalt) CloseAll();

@@ -1,8 +1,9 @@
 # GuiNhatKy.ps1 - Gui nhat ky tai khoan that cho Claude doi chieu (nut 4 trong VS Code)
-# Chep 3 file bot ghi trong Common\Files vao ket-qua\thuc-te\ roi day len GitHub (repo rieng tu cua ban):
+# Chep 4 file bot ghi trong Common\Files vao ket-qua\thuc-te\ roi day len GitHub (repo rieng tu cua ban):
 #   TrendBot_nhatky.csv  : moi giao dich (bot, lenh tay, nap, rut) + cac canh bao ky luat
 #   TrendBot_tongket.csv : tong ket moi ngay
 #   TrendBot_truotgia.csv: truot gia that cua bot (so voi backtest)
+#   TrendBot_cantiep.csv : nhat ky can thiep BAN <-> BOT (ai mo / dong / sua SL, TP, ly do) - v5.50.0
 # Gioi han du lieu (v5.10.12). Mac dinh gui BAN RUT GON, du de doi chieu voi backtest:
 #   - nhatky : bo cac dong NAP / RUT, bo cot SoDuHienTai, che so tien trong dong canh bao (CANHBAO)
 #   - tongket: bo cot Nap, Rut, SoDu, Equity
@@ -46,7 +47,7 @@ $rules = @{
     "TrendBot_tongket.csv" = @{ Drop = @(); Blank = @("Nap", "Rut", "SoDu", "Equity") }
 }
 
-$names = @("TrendBot_nhatky.csv", "TrendBot_tongket.csv", "TrendBot_truotgia.csv")
+$names = @("TrendBot_nhatky.csv", "TrendBot_tongket.csv", "TrendBot_truotgia.csv", "TrendBot_cantiep.csv")
 $copied = @()
 Write-Host $(if ($DayDu) { "Che do: DAY DU (ca nap/rut va so du)." } else { "Che do: RUT GON (bo nap/rut, so du). Ban day du: -DayDu." }) -ForegroundColor Cyan
 foreach ($n in $names) {
