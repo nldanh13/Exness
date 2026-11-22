@@ -363,7 +363,7 @@ Canh bao (gui ve dien thoai, ghi vao nhat ky), rut ra tu sao ke giao dich tay:
 - Qua 10 lenh tay trong ngay; thua tay 3 lenh lien tiep.
 - 1 lenh lai > 10% so du, hoac tai khoan lai moi 20% trong thang: nhac RUT tien goc + mot nua lai, nghi 1-2 ngay, khong tang lot.
 
-Nut 4 "Gui nhat ky tai khoan that": chep 3 file (nhatky, tongket, truotgia) vao ket-qua\thuc-te\, hoi y roi day len GitHub
+Nut 4 "Gui nhat ky tai khoan that": chep 4 file (nhatky, tongket, truotgia, cantiep tu v5.50.0) vao ket-qua\thuc-te\, hoi y roi day len GitHub
 de Claude doi chieu voi backtest (ty le thang, R trung binh, truot gia, thoi gian giu).
 
 ### Sua theo review (v5.3)
@@ -1335,3 +1335,24 @@ Với chiến lược `InpStrategy=24` (Theo tình huống), mô-đun `TrendBot/
 - **Spring vào sớm** (`InpSmartSpringEarly`): trong chiến lược 24, Spring vào ở nến thủng đáy hộp rồi đóng cửa lại trong hộp, SL dưới râu, TP mép hộp đối diện.
 - **Đo thời gian:** dòng `xuly=` ghi thêm các cụm ≥ 20 ms của lần xử lý chậm nhất (đồng bộ 9 khung, ghi trạng thái, từng kiến thức...).
 - **Lệnh giấy trùng từ bản cũ** được tự gộp khi nạp lại (giữ lệnh vào sớm nhất).
+
+## v5.50.0: nhật ký can thiệp giữa bạn và bot
+
+Bot ghi thêm file `Common\Files\TrendBot_cantiep.csv` (bật cùng `InpJournal`, chỉ tài khoản thật / demo). Mỗi dòng là một hành động, kèm giờ server, giờ máy, giá lúc đó và lý do, để biết **ai** đã làm gì với lệnh:
+
+| Cột `Ai` | Nghĩa |
+|---|---|
+| `BAN (web)`, `BAN (dien thoai)`, `BAN (MT5 may tinh)` | Bạn mở / đóng / đóng một phần lệnh, đặt / hủy lệnh chờ. MT5 cho biết bạn bấm từ đâu. |
+| `BAN` | Bạn đặt / dời / xóa SL, TP hoặc sửa lệnh chờ. MT5 không cho biết sửa từ thiết bị nào, nên chỉ ghi là bạn (hoặc một EA khác không phải bot này). |
+| `BOT` | Bot đặt SL cho lệnh chưa có SL, dời SL về hòa vốn, kéo SL theo giá, đặt TP, giảm lot, đóng lệnh, sửa / hủy lệnh chờ, khóa lệnh tay khi lỗ ngày. Cột `LyDo` ghi rõ vì sao (ví dụ "nhồi thêm vào lệnh cùng chiều đang lỗ", "lệnh đang lãi 1.2R: dời SL về hòa vốn"). |
+| `BOT (that bai)` | Bot thử làm nhưng sàn từ chối (kèm mã lỗi). |
+| `SAN (cham SL)`, `SAN (cham TP)`, `SAN (stop out)` | Sàn đóng lệnh. `LyDo` ghi SL / TP đó do BẠN hay BOT đặt lần cuối. |
+| `HE THONG` | Bot bật / tắt (gỡ khỏi chart, đổi thông số, tắt MT5...) và danh sách lệnh đang mở lúc bot bật. Lúc bot tắt thì không có gì bảo vệ lệnh. |
+
+Các cột còn lại: `Ma`, `Ve` (số ticket), `LenhCua` (lệnh TAY hay lệnh bot), `Chieu`, `Lot`, `Gia`, `SL_Cu` → `SL_Moi`, `TP_Cu` → `TP_Moi` ("khong" = không có), `LaiLo` (lãi / lỗ đang chạy khi sửa, hoặc lãi / lỗ khi đóng), `GiaThiTruong`.
+
+Dời SL xa giá hơn (rủi ro tăng) được ghi riêng là `NOI SL xa hon (tang rui ro)`, xóa SL là `XOA SL`, để cuối tuần dễ lọc ra những lần mình tự nới lỗ.
+
+Cách hoạt động: một chart mỗi tài khoản (chart bật đầu tiên) ghi phần "bạn làm gì" cho **mọi mã**. Chart nào gửi lệnh thì tự ghi phần "bot làm gì" của chart đó. Mỗi lần bot sửa SL / TP, nó để lại dấu. Thay đổi nào không có dấu của bot thì ghi là BẠN, sau 3 giây chờ. Lúc bot tắt (MT5 đóng, mất điện) thì việc mở / đóng vẫn có trong `TrendBot_nhatky.csv`, nhưng các lần sửa SL / TP trong lúc đó không ghi được.
+
+Mở file bằng Excel (Data → From Text/CSV) và lọc cột `Ai`. Nút 4 "Gửi nhật ký tài khoản thật" gửi kèm file này. Bảng tay `nhat-ky-can-thiep.md` vẫn dùng để ghi **lý do và cảm xúc** trước khi can thiệp, vì bot không biết được những điều đó.

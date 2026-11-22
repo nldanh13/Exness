@@ -14,6 +14,8 @@ Expert Advisor cho MT5 (sàn Exness, mã `BTCUSDm`), kèm bộ script PowerShell
 
 **Mới v5.45.0 — DirectionEngine tập trung (chạy thử song song):** [3 nhóm không đếm trùng Dow/EMA/MACD, điểm MUA/BÁN và đánh giá đúng hạn 4/8/16 nến M15](DIRECTION-ENGINE-5.45.0.md). **Không đổi lệnh tự động hoặc mức rủi ro đang áp dụng của v5.44.** So sánh kết quả bằng `python cong-cu/so_sanh_direction_engine.py <CSV>`.
 
+**Mới v5.50.0 – nhật ký can thiệp:** bot ghi `Common\Files\TrendBot_cantiep.csv`, mỗi dòng là một việc **bạn** hoặc **bot** đã làm với lệnh (mở, đóng, đặt / dời / xóa SL, TP, hủy lệnh chờ, khóa), có giờ, giá và lý do. Xem [HUONG-DAN.md](HUONG-DAN.md#v5500-nhật-ký-can-thiệp-giữa-bạn-và-bot).
+
 ## Bắt đầu nhanh
 
 1. Clone repo về máy Windows có MT5 (Exness) và VS Code.

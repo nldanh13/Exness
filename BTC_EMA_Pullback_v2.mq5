@@ -5,8 +5,8 @@
 //| thu muc TrendBot/ (moi file mot viec, xem dau moi file).         |
 //| CHI DUNG DE THU NGHIEM - BACKTEST VA CHAY DEMO TRUOC             |
 //+------------------------------------------------------------------+
-#define  BOT_VERSION "5.49.0"
-#property version   "5.490"
+#define  BOT_VERSION "5.50.0"
+#property version   "5.500"
 #property description "Bot giao dịch theo xu hướng: phá vỡ kênh Donchian H4, dừng lỗ theo ATR, trailing stop, bảo vệ tài khoản."
 
 #include <Trade\Trade.mqh>
@@ -962,6 +962,7 @@ bool SyncEntryAllowed(const bool buy);
 #include "TrendBot/Hedge.mqh"
 #include "TrendBot/Guard.mqh"
 #include "TrendBot/Journal.mqh"
+#include "TrendBot/Intervene.mqh"     // nhat ky can thiep BAN <-> BOT (TrendBot_cantiep.csv)
 #include "TrendBot/ManualEntry.mqh"
 #include "TrendBot/DirectionSync.mqh"
 #include "TrendBot/DirectionEngine.mqh"   // SHADOW ONLY: does not modify SyncEntryAllowed or risk
@@ -1222,6 +1223,7 @@ void OnDeinit(const int reason)
    if(P_Strategy == STRAT_GRID && reason == REASON_REMOVE) GridCancel();
    ManualUIDelete();
    if(P_ExportTFmin > 0 && MQLInfoInteger(MQL_TESTER)) ExportBars();
+   IvRelease(reason);               // ghi "BOT TAT" vao nhat ky can thiep
    if(!MQLInfoInteger(MQL_TESTER)) { ReleaseMagic(); JournalRelease(); StatusRelease(); GuardOwnerRelease(); }
    if(P_Strategy == STRAT_SMART && g_engineLoaded) EngineSavePending();
    if(P_Strategy == STRAT_SMART && g_dirLoaded) DirSavePending();
@@ -1483,6 +1485,7 @@ void OnTickBody();
 ulong g_gvFlush = 0;
 void SafetyStep()
 {
+   IvScan();                        // nhat ky can thiep: chup lenh TRUOC khi bot sua, de biet ban vua doi gi
    GuardManual();                   // bao ve lenh tay (tu kiem tra moi 2 giay)
    GuardExit();                     // chot loi linh hoat: chot gop, de loi chay, chot khi dao chieu
    BotRiskSave();                   // sao luu peak/halt chien luoc chinh toi da 30s (tester skip)
@@ -2023,6 +2026,7 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
                         const MqlTradeRequest &request,
                         const MqlTradeResult &result)
 {
+   IvOnTx(trans);                                   // nhat ky can thiep: ban / bot / san mo, dong, sua lenh (moi ma)
    if(trans.type != TRADE_TRANSACTION_DEAL_ADD || !g_stateReady) return;
    if(!HistoryDealSelect(trans.deal)) return;
    LogStopSlippage(trans.deal);                     // truot gia khi cham SL / TP (moi magic tren ma nay, v5.10.13)
